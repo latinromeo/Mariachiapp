@@ -123,16 +123,16 @@ export default function DashboardPage() {
         </div>
         <Button asChild>
           <Link href="/dashboard/events/new">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nuevo Evento
+              <PlusCircle className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Nuevo Evento</span>
           </Link>
         </Button>
       </div>
       
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
             <h2 className="text-xl font-semibold">Actividades Pendientes ({pendingActivities.length})</h2>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
                 <Select value={String(selectedMonth)} onValueChange={(value) => setSelectedMonth(Number(value))}>
                 <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="Mes" />

@@ -66,15 +66,15 @@ export default function ClientsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-       <div className="flex items-center justify-between">
+       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
             Gestión de Clientes
         </h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
                 <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Agregar Cliente
+                    <PlusCircle className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Agregar Cliente</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">

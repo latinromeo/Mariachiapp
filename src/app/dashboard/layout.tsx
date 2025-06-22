@@ -186,8 +186,8 @@ export default function DashboardLayout({
           </div>
           <Button asChild>
             <Link href="/dashboard/events/new">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Nuevo Evento
+                <PlusCircle className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Nuevo Evento</span>
             </Link>
           </Button>
         </header>

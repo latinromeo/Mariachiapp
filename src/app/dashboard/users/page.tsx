@@ -51,13 +51,13 @@ const users = [
 export default function UsersPage() {
   return (
     <div className="flex flex-col gap-6">
-       <div className="flex items-center justify-between">
+       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
             Administrar Usuarios
         </h1>
         <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Invitar Usuario
+            <PlusCircle className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Invitar Usuario</span>
         </Button>
        </div>
       <Card>

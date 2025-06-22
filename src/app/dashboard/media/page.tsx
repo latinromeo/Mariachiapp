@@ -22,7 +22,8 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogTrigger, 
-  DialogFooter 
+  DialogFooter,
+  DialogClose
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -104,7 +105,7 @@ export default function MediaPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-headline text-3xl font-bold tracking-tight">
             Multimedia
@@ -162,13 +163,16 @@ export default function MediaPage() {
           <TabsList className="grid w-full grid-cols-4 sm:w-auto">
             <TabsTrigger value="all">Todo</TabsTrigger>
             <TabsTrigger value="image">
-                <ImageIcon className="mr-2 h-4 w-4 sm:hidden"/>Imágenes
+                <ImageIcon className="mr-2 h-4 w-4"/>
+                <span className="hidden sm:inline">Imágenes</span>
             </TabsTrigger>
             <TabsTrigger value="video">
-                <Video className="mr-2 h-4 w-4 sm:hidden"/>Videos
+                <Video className="mr-2 h-4 w-4"/>
+                <span className="hidden sm:inline">Videos</span>
             </TabsTrigger>
             <TabsTrigger value="audio">
-                <Music className="mr-2 h-4 w-4 sm:hidden"/>Audio
+                <Music className="mr-2 h-4 w-4"/>
+                <span className="hidden sm:inline">Audio</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>

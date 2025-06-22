@@ -67,7 +67,7 @@ export default function RepertoirePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 className="font-headline text-3xl font-bold tracking-tight">
             Repertorio
@@ -79,8 +79,8 @@ export default function RepertoirePage() {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
                 <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Añadir Canción
+                    <PlusCircle className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Añadir Canción</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">

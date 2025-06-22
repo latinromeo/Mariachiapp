@@ -108,7 +108,7 @@ export default function EventsCalendarPage() {
 
   return (
     <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
              <div>
                 <h1 className="font-headline text-3xl font-bold tracking-tight">
                     Calendario de Eventos
@@ -120,18 +120,18 @@ export default function EventsCalendarPage() {
             <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={goToToday}>Hoy</Button>
                 <Button variant="outline" size="icon" onClick={goToPreviousMonth}><ChevronLeft className="h-4 w-4" /></Button>
-                <span className="font-semibold text-lg w-36 text-center capitalize">{format(currentMonth, "MMMM yyyy", { locale: es })}</span>
+                <span className="font-semibold text-lg text-center capitalize">{format(currentMonth, "MMMM yyyy", { locale: es })}</span>
                 <Button variant="outline" size="icon" onClick={goToNextMonth}><ChevronRight className="h-4 w-4" /></Button>
                  <Button asChild>
                     <Link href="/dashboard/events/new">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Crear Evento
+                        <PlusCircle className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Crear Evento</span>
                     </Link>
                 </Button>
             </div>
         </div>
 
-        <div className="grid grid-cols-7 text-center font-semibold text-sm text-muted-foreground border-b">
+        <div className="grid grid-cols-7 text-center font-semibold text-xs sm:text-sm text-muted-foreground border-b">
             {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
                 <div key={day} className="py-2">{day}</div>
             ))}
@@ -154,7 +154,7 @@ export default function EventsCalendarPage() {
                     key={day.toString()}
                     onClick={() => handleDayClick(day)}
                     className={cn(
-                    "bg-card p-2 flex flex-col gap-1 min-h-[7rem] cursor-pointer hover:bg-muted/50 transition-colors",
+                    "bg-card p-1 sm:p-2 flex flex-col gap-1 min-h-[6rem] sm:min-h-[7rem] cursor-pointer hover:bg-muted/50 transition-colors",
                     !isSameMonth(day, currentMonth) && "bg-card/50 text-muted-foreground"
                     )}
                 >

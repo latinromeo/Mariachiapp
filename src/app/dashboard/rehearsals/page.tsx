@@ -66,12 +66,12 @@ export default function RehearsalsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
             Ensayos
         </h1>
-        <div className="flex items-center gap-2 flex-1 min-w-[300px]">
-           <div className="relative w-full max-w-sm">
+        <div className="flex flex-wrap items-center gap-2">
+           <div className="relative w-full max-w-xs">
              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
              <Input
                type="search"
@@ -83,8 +83,8 @@ export default function RehearsalsPage() {
            </div>
             <Button asChild>
                 <Link href="/dashboard/rehearsals/new">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Programar Ensayo
+                    <PlusCircle className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Programar Ensayo</span>
                 </Link>
             </Button>
         </div>
