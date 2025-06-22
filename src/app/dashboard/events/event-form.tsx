@@ -19,7 +19,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 
 const formSchema = z.object({
   clientName: z.string().min(2, { message: "El nombre del cliente es obligatorio." }),
@@ -80,6 +80,23 @@ export function EventForm() {
 
   const [pendingBalance, setPendingBalance] = useState(0)
   const [profit, setProfit] = useState(0)
+
+  const timeOptions = useMemo(() => {
+    const options = [];
+    for (let i = 0; i < 24; i++) {
+      for (let j = 0; j < 2; j++) {
+        const hour = i;
+        const minute = j * 30;
+        const date = new Date();
+        date.setHours(hour, minute);
+        const formattedHour = (date.getHours() % 12) || 12;
+        const formattedMinute = date.getMinutes().toString().padStart(2, '0');
+        const ampm = date.getHours() >= 12 ? 'PM' : 'AM';
+        options.push(`${formattedHour}:${formattedMinute} ${ampm}`);
+      }
+    }
+    return options;
+  }, []);
 
   useEffect(() => {
     const balance = (contractedAmount || 0) - (amountPaid || 0);
@@ -191,7 +208,20 @@ export function EventForm() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Hora</FormLabel>
-                                            <FormControl><Input type="time" {...field} /></FormControl>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Seleccionar hora..." />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {timeOptions.map((time) => (
+                                                        <SelectItem key={time} value={time}>
+                                                            {time}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
