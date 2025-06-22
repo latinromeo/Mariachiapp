@@ -2,7 +2,7 @@
 
 export const EVENT_TYPES = [
   { value: "boda", label: "Boda" },
-  { value: "cumpleanos", label: "Cumpleaños" },
+  { value: "cumpleaños", label: "Cumpleaños" },
   { value: "serenata", label: "Serenata" },
   { value: "corporativo", label: "Corporativo" },
   { value: "otro", label: "Otro" },

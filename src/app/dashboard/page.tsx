@@ -174,7 +174,7 @@ export default function DashboardPage() {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-muted-foreground text-sm">
                                                 <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary"/> {activity.eventTime}</p>
                                                 <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary"/> {activity.location}</p>
-                                                <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary"/> <a href={`https://wa.me/${activity.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{activity.clientPhone}</a></p>
+                                                <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary"/> <a href={`https://wa.me/${activity.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{activity.clientPhone}</a></p>
                                                 <p className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary"/> Plan: {activity.plan}</p>
                                             </div>
 

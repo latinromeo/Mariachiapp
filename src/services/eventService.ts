@@ -477,7 +477,7 @@ export async function getSuggestedSongs(eventType: string): Promise<SongDetail[]
 
     const categoryMap: Record<string, string[]> = {
         'boda': ['Románticas', 'Pop en Mariachi'],
-        'cumpleanos': ['Cumpleaños', 'Infantiles', 'Rancheras'],
+        'cumpleaños': ['Cumpleaños', 'Infantiles', 'Rancheras'],
         'serenata': ['Serenatas', 'Románticas'],
         'funeral': ['Dolor'],
         'corporativo': ['Clásicos Mexicanos', 'Pop en Mariachi', 'Sones']
