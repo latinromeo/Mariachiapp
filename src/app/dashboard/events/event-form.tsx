@@ -35,18 +35,9 @@ const formSchema = z.object({
   paymentMethod: z.string({ required_error: "Debe seleccionar un método de pago." }),
   location: z.string().min(2, { message: "La ubicación es obligatoria." }),
   sector: z.string().min(2, { message: "El sector es obligatorio." }),
-  contractedAmount: z.preprocess(
-    (a) => parseFloat(String(a).replace(/[^0-9.-]+/g, "") || "0"),
-    z.number().min(0, { message: "El monto debe ser positivo." })
-  ),
-  amountPaid: z.preprocess(
-    (a) => parseFloat(String(a).replace(/[^0-9.-]+/g, "") || "0"),
-    z.number().min(0, { message: "El monto debe ser positivo." })
-  ),
-  musiciansPay: z.preprocess(
-    (a) => parseFloat(String(a).replace(/[^0-9.-]+/g, "") || "0"),
-    z.number().min(0, { message: "El monto debe ser positivo." }).optional()
-  ),
+  contractedAmount: z.coerce.number().min(0, { message: "El monto debe ser positivo." }),
+  amountPaid: z.coerce.number().min(0, { message: "El monto debe ser positivo." }),
+  musiciansPay: z.coerce.number().min(0, { message: "El monto debe ser positivo." }).optional(),
   externalGroup: z.boolean().default(false),
   notes: z.string().optional(),
 })
@@ -127,12 +118,12 @@ export function EventForm() {
   }, [clientPhone, checkClient]);
 
   useEffect(() => {
-    const balance = (contractedAmount || 0) - (amountPaid || 0);
+    const balance = (Number(contractedAmount) || 0) - (Number(amountPaid) || 0);
     setPendingBalance(balance);
   }, [contractedAmount, amountPaid])
 
   useEffect(() => {
-    const calculatedProfit = (contractedAmount || 0) - (musiciansPay || 0);
+    const calculatedProfit = (Number(contractedAmount) || 0) - (Number(musiciansPay) || 0);
     setProfit(calculatedProfit);
   }, [contractedAmount, musiciansPay])
 
@@ -347,7 +338,7 @@ export function EventForm() {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Monto Contratado</FormLabel>
-                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
+                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -358,7 +349,7 @@ export function EventForm() {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Monto Pagado</FormLabel>
-                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value))}/></FormControl>
+                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -369,7 +360,7 @@ export function EventForm() {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Pago a Músicos</FormLabel>
-                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" disabled={externalGroup} {...field} onChange={e => field.onChange(parseFloat(e.target.value))}/></FormControl>
+                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" disabled={externalGroup} {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
