@@ -16,6 +16,7 @@ import {
   LogOut,
   PlusCircle,
   Moon,
+  Bot,
 } from "lucide-react"
 
 import {
@@ -37,16 +38,24 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { AssistantChat } from "./assistant/assistant-chat"
+
+// This is a mock user object. In a real app, you'd get this from your auth provider.
+const currentUser = {
+    name: "Administrador",
+    role: "Admin",
+    avatarFallback: "AD"
+};
 
 function SidebarUserProfile() {
     return (
         <div className="flex flex-col items-center text-center p-4 gap-2">
             <Avatar className="h-16 w-16 border">
-                <AvatarFallback className="text-3xl font-bold bg-muted text-muted-foreground">AD</AvatarFallback>
+                <AvatarFallback className="text-3xl font-bold bg-muted text-muted-foreground">{currentUser.avatarFallback}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col gap-1">
-                <p className="font-semibold text-sm capitalize">administrador</p>
-                <Badge variant="outline" className="border-primary/50 text-primary font-medium">Administrador General</Badge>
+                <p className="font-semibold text-sm capitalize">{currentUser.name}</p>
+                <Badge variant="outline" className="border-primary/50 text-primary font-medium">{currentUser.role}</Badge>
             </div>
         </div>
     )
@@ -56,16 +65,16 @@ function BottomNav() {
     const pathname = usePathname();
 
     const navItems = [
-    { href: '/dashboard', icon: LayoutGrid, label: 'Panel' },
-    { href: '/dashboard/clients', icon: Users, label: 'Clientes' },
-    { href: '/dashboard/events', icon: Calendar, label: 'Calendario' },
-    { href: '/dashboard/finance', icon: DollarSign, label: 'Finanzas' },
-    { href: '/dashboard/profile', icon: UserCircle2, label: 'Perfil' },
+        { href: '/dashboard', icon: LayoutGrid, label: 'Panel' },
+        { href: '/dashboard/clients', icon: Users, label: 'Clientes' },
+        { href: '/dashboard/events', icon: Calendar, label: 'Calendario' },
+        { href: '/dashboard/finance', icon: DollarSign, label: 'Finanzas' },
+        { href: '/dashboard/profile', icon: UserCircle2, label: 'Perfil' },
     ];
     
     const isActive = (path: string) => {
-    if (path === '/dashboard') return pathname === path;
-    return pathname.startsWith(path);
+        if (path === '/dashboard') return pathname === path;
+        return pathname.startsWith(path);
     }
 
     return (
@@ -230,11 +239,12 @@ export default function DashboardLayout({
                     <span className="sr-only">Toggle theme</span>
                 </Button>
                 <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">MA</AvatarFallback>
+                    <AvatarFallback className="text-xs">{currentUser.avatarFallback}</AvatarFallback>
                 </Avatar>
             </div>
         </header>
         <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">{children}</main>
+         {currentUser.role === 'Admin' && <AssistantChat />}
       </SidebarInset>
        <BottomNav />
     </SidebarProvider>
