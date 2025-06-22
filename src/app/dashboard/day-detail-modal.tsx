@@ -4,7 +4,7 @@
 import Link from "next/link"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { Calendar, Clock, MapPin, Music, PlusCircle, User, ListMusic } from "lucide-react"
+import { Calendar, Clock, MapPin, Music, PlusCircle, User, ListMusic, FileText, Video } from "lucide-react"
 
 import { type EventData, type RehearsalData } from "@/services/eventService"
 import { Button } from "@/components/ui/button"
@@ -86,9 +86,23 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                                 {rehearsal.songs && rehearsal.songs.length > 0 && (
                                     <div>
                                         <h4 className="flex items-center gap-2 font-medium text-foreground mb-1"><ListMusic className="h-4 w-4"/>Canciones a Ensayar:</h4>
-                                        <ul className="list-disc list-inside text-xs pl-2 space-y-0.5">
+                                        <ul className="list-none text-xs pl-0 space-y-1">
                                             {rehearsal.songs.map((song, index) => (
-                                                <li key={index}>{song.name}{song.key ? ` (${song.key})` : ''}</li>
+                                                <li key={index} className="flex items-center justify-between bg-background/50 p-1.5 rounded-md">
+                                                    <span>{song.name}{song.key ? ` (${song.key})` : ''}</span>
+                                                    <div className="flex items-center gap-3 pr-2">
+                                                        {song.youtubeUrl && (
+                                                            <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground transition-colors hover:text-primary" title="Ver en YouTube">
+                                                                <Video className="h-4 w-4" />
+                                                            </a>
+                                                        )}
+                                                        {song.sheetMusicUrl && (
+                                                            <a href={song.sheetMusicUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground transition-colors hover:text-primary" title="Ver Partitura">
+                                                                <FileText className="h-4 w-4" />
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </li>
                                             ))}
                                         </ul>
                                     </div>

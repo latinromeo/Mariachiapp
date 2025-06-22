@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { useState, useMemo } from "react"
-import { Loader2, CalendarIcon, Clock, MapPin, Music, Link as LinkIcon, Trash2, KeyRound, PlusCircle } from "lucide-react"
+import { Loader2, CalendarIcon, Clock, MapPin, Music, Link as LinkIcon, Trash2, KeyRound, PlusCircle, FileText } from "lucide-react"
 import { createRehearsal } from "@/services/eventService"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,6 +30,7 @@ const songSchema = z.object({
   artist: z.string().optional(),
   key: z.string().optional(),
   youtubeUrl: z.string().url({ message: "URL de YouTube no válida." }).optional().or(z.literal("")),
+  sheetMusicUrl: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")),
 });
 
 const formSchema = z.object({
@@ -56,7 +57,7 @@ export function RehearsalForm() {
       time: "",
       location: "",
       focus: "",
-      songs: [{ name: "", artist: "", key: "", youtubeUrl: "" }],
+      songs: [{ name: "", artist: "", key: "", youtubeUrl: "", sheetMusicUrl: "" }],
       notes: "",
     },
   })
@@ -198,7 +199,7 @@ export function RehearsalForm() {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Nombre Canción</FormLabel>
-                                        <FormControl><Input placeholder="Ej: El Rey" {...field} /></FormControl>
+                                        <FormControl><Input placeholder="Ej: El Rey" {...field} value={field.value ?? ""} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -210,7 +211,7 @@ export function RehearsalForm() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Artista (Opcional)</FormLabel>
-                                            <FormControl><Input placeholder="Ej: José Alfredo Jiménez" {...field} /></FormControl>
+                                            <FormControl><Input placeholder="Ej: José Alfredo Jiménez" {...field} value={field.value ?? ""} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -238,14 +239,25 @@ export function RehearsalForm() {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="flex items-center gap-2"><LinkIcon className="h-4 w-4" />Enlace YouTube (Opcional)</FormLabel>
-                                        <FormControl><Input type="url" placeholder="https://youtube.com/watch?v=..." {...field} /></FormControl>
+                                        <FormControl><Input type="url" placeholder="https://youtube.com/watch?v=..." {...field} value={field.value ?? ""} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name={`songs.${index}.sheetMusicUrl`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4" />Enlace Partitura (Opcional)</FormLabel>
+                                        <FormControl><Input type="url" placeholder="https://..." {...field} value={field.value ?? ""} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
                            </div>
                         ))}
-                        <Button type="button" variant="secondary" onClick={() => append({ name: "", artist: "", key: "", youtubeUrl: "" })}>
+                        <Button type="button" variant="secondary" onClick={() => append({ name: "", artist: "", key: "", youtubeUrl: "", sheetMusicUrl: "" })}>
                            <PlusCircle className="mr-2 h-4 w-4" /> Agregar Otra Canción
                         </Button>
                     </CardContent>

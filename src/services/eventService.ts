@@ -60,6 +60,7 @@ export interface SongToRehearse {
   artist?: string;
   key?: string;
   youtubeUrl?: string;
+  sheetMusicUrl?: string;
 }
 
 export interface RehearsalData {
