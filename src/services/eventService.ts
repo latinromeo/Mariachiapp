@@ -108,6 +108,7 @@ type EventInputData = Omit<EventData, 'id'|'clientId'|'pendingBalance'|'profit'|
 type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;
 type RehearsalInputData = Omit<RehearsalData, 'id'|'createdAt'|'updatedAt'>;
 type ManualFinanceEntryInputData = Omit<ManualFinanceEntry, 'id'|'createdBy'|'createdAt'>;
+type SongInputData = Omit<SongDetail, 'id'>;
 
 
 // --- HELPER FUNCTIONS ---
@@ -321,6 +322,20 @@ export async function getSongs(): Promise<SongDetail[]> {
         return [];
     }
 }
+
+export async function createSong(data: SongInputData): Promise<{ success: boolean; songId?: string, error?: string }> {
+  try {
+    const docRef = await addDoc(collection(db, "songs"), {
+        ...data,
+        createdAt: serverTimestamp(),
+    });
+    return { success: true, songId: docRef.id };
+  } catch (error) {
+     console.error("Error creating song:", error);
+     return { success: false, error: "Failed to create song in database." };
+  }
+}
+
 
 export async function getMedia(): Promise<MediaFile[]> {
     console.log("Fetching media from Firestore");

@@ -11,29 +11,34 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Music, KeyRound, Star } from "lucide-react";
+import { Search, Music, KeyRound, Star, PlusCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSongs, type SongDetail } from "@/services/eventService";
 import { SONG_CATEGORIES } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { SongForm } from "./song-form";
 
 export default function RepertoirePage() {
   const [allSongs, setAllSongs] = useState<SongDetail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const fetchSongs = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getSongs();
+      setAllSongs(data);
+    } catch (error) {
+      console.error("Failed to fetch songs", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchSongs = async () => {
-      setIsLoading(true);
-      try {
-        const data = await getSongs();
-        setAllSongs(data);
-      } catch (error) {
-        console.error("Failed to fetch songs", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchSongs();
   }, []);
   
@@ -55,15 +60,39 @@ export default function RepertoirePage() {
     }, {} as Record<string, SongDetail[]>);
   }, [filteredSongs]);
 
+  const handleSuccess = () => {
+    setIsDialogOpen(false);
+    fetchSongs();
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="font-headline text-3xl font-bold tracking-tight">
-          Repertorio
-        </h1>
-        <p className="text-muted-foreground">
-          Explora y gestiona el catálogo de canciones de tu banda.
-        </p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+            <h1 className="font-headline text-3xl font-bold tracking-tight">
+            Repertorio
+            </h1>
+            <p className="text-muted-foreground">
+            Explora y gestiona el catálogo de canciones de tu banda.
+            </p>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Añadir Canción
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Añadir Nueva Canción al Repertorio</DialogTitle>
+                    <DialogDescription>
+                        Completa la información para registrar una nueva canción.
+                    </DialogDescription>
+                </DialogHeader>
+                <SongForm onSuccess={handleSuccess} />
+            </DialogContent>
+        </Dialog>
       </div>
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
