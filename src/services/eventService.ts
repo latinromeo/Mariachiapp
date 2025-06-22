@@ -55,7 +55,33 @@ export interface RehearsalData {
   updatedAt: string;
 }
 
-// Un arreglo en memoria para actuar como base de datos por ahora
+export interface SongDetail {
+  id: string;
+  title: string;
+  artist?: string;
+  category: string;
+  key?: string;
+  suggestedEvents?: string[];
+  notes?: string;
+}
+
+export const SONG_CATEGORIES = [
+  'Románticas',
+  'Cumpleaños',
+  'Serenatas',
+  'Dolor',
+  'Rancheras',
+  'Corridos',
+  'Cumbias',
+  'Sones',
+  'Pop en Mariachi',
+  'Infantiles',
+  'Clásicos Mexicanos',
+  'Huapangos'
+];
+
+// --- MOCK DATABASE ---
+
 const clients: ClientData[] = [
     { id: 'cli_1', name: "Familia Pérez", phone: "5551234567", email: "perez@email.com", sector: "Polanco", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     { id: 'cli_2', name: "Empresa Innovatech", phone: "5559876543", email: "contacto@innovatech.com", sector: "Santa Fe", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
@@ -86,11 +112,49 @@ const events: EventData[] = [
     }
 ];
 const rehearsals: RehearsalData[] = [
-    { id: 'reh_1', date: add(new Date(), { days: 3 }).toISOString().split('T')[0], time: '6:00 PM - 8:00 PM', location: 'Estudio de Música A', focus: 'Nuevo Setlist de Boda', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'reh_2', date: add(new Date(), { days: 10 }).toISOString().split('T')[0], time: '7:00 PM - 9:00 PM', location: 'Salón Comunitario', focus: 'Armonías Vocales', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'reh_1', date: add(new Date(), { days: 3 }).toISOString().split('T')[0], time: '6:00 PM', location: 'Estudio de Música A', focus: 'Nuevo Setlist de Boda', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'reh_2', date: add(new Date(), { days: 10 }).toISOString().split('T')[0], time: '7:00 PM', location: 'Salón Comunitario', focus: 'Armonías Vocales', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     { id: 'reh_3', date: sub(new Date(), { days: 4 }).toISOString().split('T')[0], time: '8:00 PM', location: 'Estudio de Música B', focus: 'Repertorio para XV Años', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
 ];
+const songs: SongDetail[] = [
+  // Románticas
+  { id: 'song_1', title: 'Gema', artist: 'Los Dandys', category: 'Románticas', key: 'G', suggestedEvents: ['boda', 'serenata'] },
+  { id: 'song_2', title: 'Hermoso Cariño', artist: 'Vicente Fernández', category: 'Románticas', key: 'A', suggestedEvents: ['boda'] },
+  { id: 'song_3', title: 'Motivos', artist: 'Vicente Fernández', category: 'Románticas', key: 'D', suggestedEvents: ['boda', 'serenata'] },
+  { id: 'song_4', title: 'Contigo Aprendí', artist: 'Armando Manzanero', category: 'Románticas', key: 'C', suggestedEvents: ['boda', 'corporativo'] },
+  { id: 'song_5', title: 'Si Nos Dejan', artist: 'José Alfredo Jiménez', category: 'Románticas', key: 'G', suggestedEvents: ['boda', 'serenata'] },
 
+  // Cumpleaños
+  { id: 'song_6', title: 'Las Mañanitas', artist: 'Tradicional', category: 'Cumpleaños', key: 'G', suggestedEvents: ['cumpleanos'] },
+  { id: 'song_7', title: 'Cielito Lindo', artist: 'Quirino Mendoza y Cortés', category: 'Clásicos Mexicanos', key: 'D', suggestedEvents: ['cumpleanos', 'fiesta'] },
+  { id: 'song_8', title: 'Qué Linda Está La Mañana', artist: 'Tradicional', category: 'Cumpleaños', key: 'A', suggestedEvents: ['cumpleanos'] },
+  { id: 'song_9', title: 'El Rey', artist: 'José Alfredo Jiménez', category: 'Rancheras', key: 'G', suggestedEvents: ['cumpleanos', 'fiesta'] },
+
+  // Dolor
+  { id: 'song_10', title: 'Acá Entre Nos', artist: 'Vicente Fernández', category: 'Dolor', key: 'A', suggestedEvents: ['despecho'] },
+  { id: 'song_11', title: 'Te Solté la Rienda', artist: 'José Alfredo Jiménez', category: 'Dolor', key: 'G', suggestedEvents: ['despecho'] },
+  { id: 'song_12', title: 'Urge', artist: 'Vicente Fernández', category: 'Dolor', key: 'C', suggestedEvents: ['despecho'] },
+  { id: 'song_13', title: 'La Diferencia', artist: 'Juan Gabriel', category: 'Dolor', key: 'Am', suggestedEvents: ['despecho'] },
+
+  // Sones
+  { id: 'song_14', title: 'El Son de la Negra', artist: 'Tradicional', category: 'Sones', key: 'G', suggestedEvents: ['fiesta', 'corporativo'] },
+  { id: 'song_15', title: 'La Bikina', artist: 'Rubén Fuentes', category: 'Sones', key: 'Am', suggestedEvents: ['fiesta', 'corporativo'] },
+  { id: 'song_16', title: 'El Jarabe Tapatío', artist: 'Tradicional', category: 'Sones', key: 'D', suggestedEvents: ['fiesta', 'boda'] },
+
+  // Pop en Mariachi
+  { id: 'song_17', title: 'Amor Eterno', artist: 'Juan Gabriel / Rocío Dúrcal', category: 'Pop en Mariachi', key: 'Dm', suggestedEvents: ['funeral', 'homenaje'] },
+  { id: 'song_18', title: 'Te Amo', artist: 'Franco de Vita', category: 'Pop en Mariachi', key: 'G', suggestedEvents: ['boda', 'romantica'] },
+  { id: 'song_19', title: 'Por Amarte Así', artist: 'Cristian Castro', category: 'Pop en Mariachi', key: 'C', suggestedEvents: ['romantica'] },
+  { id: 'song_20', title: 'Hasta Que Me Olvides', artist: 'Luis Miguel', category: 'Pop en Mariachi', key: 'F', suggestedEvents: ['romantica', 'despecho'] },
+
+  // Clásicos Mexicanos
+  { id: 'song_21', title: 'Guadalajara', artist: 'Pepe Guízar', category: 'Clásicos Mexicanos', key: 'D', suggestedEvents: ['fiesta', 'nacional'] },
+  { id: 'song_22', title: 'México Lindo y Querido', artist: 'Chucho Monge', category: 'Clásicos Mexicanos', key: 'G', suggestedEvents: ['fiesta', 'nacional'] },
+  
+  // Serenatas
+  { id: 'song_23', title: 'Sabes Una Cosa', artist: 'Luis Miguel', category: 'Serenatas', key: 'A', suggestedEvents: ['serenata', 'romantica'] },
+  { id: 'song_24', title: 'Si Quieres', artist: 'Juan Gabriel', category: 'Serenatas', key: 'D', suggestedEvents: ['serenata', 'romantica'] },
+];
 
 // Tipo del schema del formulario para la data de entrada de eventos
 type EventInputData = Omit<EventData, 'id'|'clientId'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'>;
@@ -216,4 +280,43 @@ export async function createRehearsal(data: RehearsalInputData): Promise<{ succe
   rehearsals.push(newRehearsal);
   await new Promise(resolve => setTimeout(resolve, 500));
   return { success: true, rehearsal: newRehearsal };
+}
+
+
+// --- Funciones de Servicio de Repertorio ---
+
+export async function getSongs(): Promise<SongDetail[]> {
+    console.log("Obteniendo todas las canciones");
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return JSON.parse(JSON.stringify(songs));
+}
+
+export async function getSuggestedSongs(eventType: string): Promise<SongDetail[]> {
+    const suggestions: SongDetail[] = [];
+    const eventTypeLower = eventType.toLowerCase();
+
+    songs.forEach(song => {
+        if (song.suggestedEvents?.includes(eventTypeLower)) {
+            suggestions.push(song);
+        }
+    });
+
+    // Add more logic if needed, e.g. based on category
+    const categoryMap: Record<string, string[]> = {
+        'boda': ['Románticas', 'Pop en Mariachi'],
+        'cumpleanos': ['Cumpleaños', 'Infantiles', 'Rancheras'],
+        'serenata': ['Serenatas', 'Románticas'],
+        'funeral': ['Dolor'],
+        'corporativo': ['Clásicos Mexicanos', 'Pop en Mariachi', 'Sones']
+    };
+
+    if (categoryMap[eventTypeLower]) {
+        songs.forEach(song => {
+            if (categoryMap[eventTypeLower].includes(song.category) && !suggestions.find(s => s.id === song.id)) {
+                suggestions.push(song);
+            }
+        });
+    }
+
+    return JSON.parse(JSON.stringify(suggestions));
 }
