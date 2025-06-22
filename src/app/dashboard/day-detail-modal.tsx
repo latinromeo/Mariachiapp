@@ -4,7 +4,7 @@
 import Link from "next/link"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { Calendar, Clock, MapPin, Music, PlusCircle, User } from "lucide-react"
+import { Calendar, Clock, MapPin, Music, PlusCircle, User, ListMusic } from "lucide-react"
 
 import { type EventData, type RehearsalData } from "@/services/eventService"
 import { Button } from "@/components/ui/button"
@@ -78,9 +78,21 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                                 </div>
                             </div>
                              <Separator className="my-2" />
-                             <div className="text-sm text-muted-foreground space-y-1">
-                                <p className="flex items-center gap-2"><Clock className="h-4 w-4"/> {rehearsal.time}</p>
-                                <p className="flex items-center gap-2"><MapPin className="h-4 w-4"/> {rehearsal.location}</p>
+                             <div className="text-sm text-muted-foreground space-y-2">
+                                <div className="space-y-1">
+                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4"/> {rehearsal.time}</p>
+                                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4"/> {rehearsal.location}</p>
+                                </div>
+                                {rehearsal.songs && rehearsal.songs.length > 0 && (
+                                    <div>
+                                        <h4 className="flex items-center gap-2 font-medium text-foreground mb-1"><ListMusic className="h-4 w-4"/>Canciones a Ensayar:</h4>
+                                        <ul className="list-disc list-inside text-xs pl-2 space-y-0.5">
+                                            {rehearsal.songs.map((song, index) => (
+                                                <li key={index}>{song.name}{song.key ? ` (${song.key})` : ''}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}

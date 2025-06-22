@@ -55,12 +55,20 @@ export interface EventData {
   status: 'confirmed' | 'pending' | 'external' | 'cancelled';
 }
 
+export interface SongToRehearse {
+  name: string;
+  artist?: string;
+  key?: string;
+  youtubeUrl?: string;
+}
+
 export interface RehearsalData {
   id: string;
   date: string; // Stored as 'YYYY-MM-DD'
   time: string;
   location: string;
   focus: string;
+  songs?: SongToRehearse[];
   notes?: string;
   createdAt: string;
   updatedAt: string;

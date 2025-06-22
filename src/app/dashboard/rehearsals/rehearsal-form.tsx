@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useForm } from "react-hook-form"
+import { useFieldArray, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
@@ -17,17 +17,27 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { useState, useMemo } from "react"
-import { Loader2, CalendarIcon, Clock, MapPin, Music } from "lucide-react"
+import { Loader2, CalendarIcon, Clock, MapPin, Music, Link as LinkIcon, Trash2, KeyRound, PlusCircle } from "lucide-react"
 import { createRehearsal } from "@/services/eventService"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { MUSICAL_KEYS } from "@/lib/constants"
+
+const songSchema = z.object({
+  name: z.string().min(2, { message: "El nombre es obligatorio." }),
+  artist: z.string().optional(),
+  key: z.string().optional(),
+  youtubeUrl: z.string().url({ message: "URL de YouTube no válida." }).optional().or(z.literal("")),
+});
 
 const formSchema = z.object({
   date: z.string().min(1, { message: "La fecha es obligatoria." }),
   time: z.string().min(1, { message: "La hora es obligatoria." }),
   location: z.string().min(2, { message: "La ubicación es obligatoria." }),
-  focus: z.string().min(3, { message: "El título o enfoque es obligatorio (mín. 3 caracteres)." }),
+  focus: z.string().min(3, { message: "El tema es obligatorio (mín. 3 caracteres)." }),
+  songs: z.array(songSchema).optional(),
   notes: z.string().optional(),
 })
 
@@ -46,9 +56,15 @@ export function RehearsalForm() {
       time: "",
       location: "",
       focus: "",
+      songs: [{ name: "", artist: "", key: "", youtubeUrl: "" }],
       notes: "",
     },
   })
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "songs",
+  });
 
   const timeOptions = useMemo(() => {
     const options = [];
@@ -66,7 +82,6 @@ export function RehearsalForm() {
     }
     return options;
   }, []);
-
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
@@ -101,78 +116,162 @@ export function RehearsalForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Card className="max-w-2xl">
-            <CardHeader>
-                <CardTitle>Detalles del Ensayo</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="date"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4" />Fecha</FormLabel>
-                                <FormControl><Input type="date" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="time"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4"/>Hora</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} defaultValue="">
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar hora..." /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        {timeOptions.map((time) => (<SelectItem key={time} value={time}>{time}</SelectItem>))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-                 <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="flex items-center gap-2"><MapPin className="h-4 w-4" />Lugar del Ensayo</FormLabel>
-                            <FormControl><Input placeholder="Ej: Estudio de Música A" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="focus"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="flex items-center gap-2"><Music className="h-4 w-4" />Título / Enfoque del Ensayo</FormLabel>
-                            <FormControl><Input placeholder="Ej: Preparar setlist para boda" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Notas Adicionales</FormLabel>
-                            <FormControl><Textarea placeholder="Traer partituras nuevas, repasar armonías, etc." {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </CardContent>
-        </Card>
+        <div className="grid lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Detalles Generales del Ensayo</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid sm:grid-cols-3 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="date"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4" />Fecha</FormLabel>
+                                        <FormControl><Input type="date" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="time"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4"/>Hora</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {timeOptions.map((time) => (<SelectItem key={time} value={time}>{time}</SelectItem>))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="location"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><MapPin className="h-4 w-4" />Lugar</FormLabel>
+                                        <FormControl><Input placeholder="Ej: Estudio A" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                         <FormField
+                            control={form.control}
+                            name="focus"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2"><Music className="h-4 w-4" />Tema General del Ensayo</FormLabel>
+                                    <FormControl><Input placeholder="Ej: Repertorio Bodas, Nuevas Canciones Regionales" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Canciones a Ensayar</CardTitle>
+                        <CardDescription>Añade las canciones que se practicarán en esta sesión.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {fields.map((field, index) => (
+                           <div key={field.id} className="p-4 border rounded-lg space-y-4 relative">
+                             <div className="flex justify-between items-center">
+                               <p className="font-semibold">Canción #{index + 1}</p>
+                               <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-destructive hover:bg-destructive/10">
+                                   <Trash2 className="h-4 w-4" />
+                               </Button>
+                             </div>
+                             <Separator/>
+                             <FormField
+                                control={form.control}
+                                name={`songs.${index}.name`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nombre Canción</FormLabel>
+                                        <FormControl><Input placeholder="Ej: El Rey" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name={`songs.${index}.artist`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Artista (Opcional)</FormLabel>
+                                            <FormControl><Input placeholder="Ej: José Alfredo Jiménez" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name={`songs.${index}.key`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="flex items-center gap-2"><KeyRound className="h-4 w-4"/>Tono</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {MUSICAL_KEYS.map((k) => (<SelectItem key={k} value={k}>{k}</SelectItem>))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                             <FormField
+                                control={form.control}
+                                name={`songs.${index}.youtubeUrl`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><LinkIcon className="h-4 w-4" />Enlace YouTube (Opcional)</FormLabel>
+                                        <FormControl><Input type="url" placeholder="https://youtube.com/watch?v=..." {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                           </div>
+                        ))}
+                        <Button type="button" variant="secondary" onClick={() => append({ name: "", artist: "", key: "", youtubeUrl: "" })}>
+                           <PlusCircle className="mr-2 h-4 w-4" /> Agregar Otra Canción
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+            <div className="lg:col-span-1">
+                 <Card>
+                    <CardHeader><CardTitle>Notas Adicionales</CardTitle></CardHeader>
+                    <CardContent>
+                        <FormField
+                            control={form.control}
+                            name="notes"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormControl><Textarea placeholder="Detalles generales, objetivos, etc." {...field} className="min-h-[200px]" /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
         <Button type="submit" size="lg" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? "Guardando..." : "Programar Ensayo"}
+            {isSubmitting ? "Guardando..." : "Guardar Ensayo"}
         </Button>
       </form>
     </Form>

@@ -75,7 +75,7 @@ export default function RehearsalsPage() {
              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
              <Input
                type="search"
-               placeholder="Buscar por título o lugar..."
+               placeholder="Buscar por tema o lugar..."
                className="pl-8"
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
@@ -103,7 +103,8 @@ export default function RehearsalsPage() {
                 <TableHead>Fecha</TableHead>
                 <TableHead>Hora</TableHead>
                 <TableHead>Lugar</TableHead>
-                <TableHead>Título / Enfoque</TableHead>
+                <TableHead>Tema</TableHead>
+                <TableHead className="text-center">Canciones</TableHead>
                 <TableHead>
                   <span className="sr-only">Acciones</span>
                 </TableHead>
@@ -116,7 +117,8 @@ export default function RehearsalsPage() {
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                     </TableRow>
                   ))
@@ -126,8 +128,9 @@ export default function RehearsalsPage() {
                     <TableCell className="font-medium">{format(new Date(rehearsal.date), 'dd/MM/yyyy')}</TableCell>
                     <TableCell>{rehearsal.time}</TableCell>
                     <TableCell>{rehearsal.location}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{rehearsal.focus}</Badge>
+                    <TableCell>{rehearsal.focus}</TableCell>
+                    <TableCell className="text-center">
+                        <Badge variant="secondary">{rehearsal.songs?.length || 0}</Badge>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -148,7 +151,7 @@ export default function RehearsalsPage() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                         {searchTerm ? "No se encontraron ensayos con ese criterio." : "No se encontraron ensayos."}
                     </TableCell>
                 </TableRow>
