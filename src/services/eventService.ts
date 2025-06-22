@@ -74,6 +74,7 @@ export interface SongDetail {
   key?: string;
   suggestedEvents?: string[];
   notes?: string;
+  lyricsUrl?: string;
   createdAt: string;
 }
 
@@ -311,7 +312,7 @@ export async function getSongs(): Promise<SongDetail[]> {
     console.log("Fetching songs from Firestore");
     try {
         const songsCol = collection(db, 'songs');
-        const q = query(songsCol, orderBy("title", "asc"));
+        const q = query(songsCol, orderBy("createdAt", "desc"));
         const snapshot = await getDocs(q);
         if (snapshot.empty) {
           console.log("No songs found in Firestore. The 'songs' collection might be empty.");

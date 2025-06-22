@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
-import { Loader2, Music, User, KeyRound, Star, GripVertical } from "lucide-react"
+import { Loader2, Music, User, KeyRound, Star, GripVertical, Link } from "lucide-react"
 import { createSong } from "@/services/eventService"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SONG_CATEGORIES, EVENT_TYPES } from "@/lib/constants"
@@ -28,6 +28,7 @@ const formSchema = z.object({
   artist: z.string().optional(),
   category: z.string({ required_error: "Debe seleccionar una categoría." }),
   key: z.string().optional(),
+  lyricsUrl: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")),
   suggestedEvents: z.array(z.string()).optional(),
   notes: z.string().optional(),
 })
@@ -47,6 +48,7 @@ export function SongForm({ onSuccess }: SongFormProps) {
       artist: "",
       category: "",
       key: "",
+      lyricsUrl: "",
       suggestedEvents: [],
       notes: "",
     },
@@ -108,6 +110,17 @@ export function SongForm({ onSuccess }: SongFormProps) {
                     </FormItem>
                 )}
             />
+            <FormField
+                control={form.control}
+                name="lyricsUrl"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="flex items-center gap-2"><Link className="h-4 w-4" />Enlace a Partitura/Letra (Opcional)</FormLabel>
+                        <FormControl><Input type="url" placeholder="https://..." {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
             <div className="grid grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
@@ -131,7 +144,7 @@ export function SongForm({ onSuccess }: SongFormProps) {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel className="flex items-center gap-2"><KeyRound className="h-4 w-4" />Tono (Opcional)</FormLabel>
-                            <FormControl><Input placeholder="Ej: G, Am, C#m" {...field} /></FormControl>
+                            <FormControl><Input placeholder="Ej: G, Am, C#m" {...field} value={field.value || ""} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )}

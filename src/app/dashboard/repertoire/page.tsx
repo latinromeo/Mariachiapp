@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Music, KeyRound, Star, PlusCircle } from "lucide-react";
+import { Search, Music, KeyRound, Star, PlusCircle, Link as LinkIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSongs, type SongDetail } from "@/services/eventService";
 import { SONG_CATEGORIES } from "@/lib/constants";
@@ -127,7 +127,17 @@ export default function RepertoirePage() {
                   songsByCategory[category].map((song) => (
                     <Card key={song.id}>
                       <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Music className="h-5 w-5 text-primary" />{song.title}</CardTitle>
+                        <CardTitle className="flex items-center justify-between">
+                            <span className="flex items-center gap-2">
+                                <Music className="h-5 w-5 text-primary" />
+                                {song.title}
+                            </span>
+                            {song.lyricsUrl && (
+                                <a href={song.lyricsUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground transition-colors hover:text-primary" title="Ver partitura/letra">
+                                    <LinkIcon className="h-4 w-4" />
+                                </a>
+                            )}
+                        </CardTitle>
                         {song.artist && <CardDescription>{song.artist}</CardDescription>}
                       </CardHeader>
                       <CardContent className="flex flex-wrap gap-2">
