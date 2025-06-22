@@ -74,6 +74,7 @@ export interface SongDetail {
   key?: string;
   suggestedEvents?: string[];
   notes?: string;
+  createdAt: string;
 }
 
 export interface MediaFile {
@@ -108,7 +109,7 @@ type EventInputData = Omit<EventData, 'id'|'clientId'|'pendingBalance'|'profit'|
 type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;
 type RehearsalInputData = Omit<RehearsalData, 'id'|'createdAt'|'updatedAt'>;
 type ManualFinanceEntryInputData = Omit<ManualFinanceEntry, 'id'|'createdBy'|'createdAt'>;
-type SongInputData = Omit<SongDetail, 'id'>;
+type SongInputData = Omit<SongDetail, 'id' | 'createdAt'>;
 
 
 // --- HELPER FUNCTIONS ---
@@ -316,7 +317,7 @@ export async function getSongs(): Promise<SongDetail[]> {
           console.log("No songs found in Firestore. The 'songs' collection might be empty.");
           return [];
         }
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SongDetail));
+        return snapshot.docs.map(doc => processDocTimestamps(doc) as SongDetail);
     } catch (error) {
         console.error("Error fetching songs:", error);
         return [];
