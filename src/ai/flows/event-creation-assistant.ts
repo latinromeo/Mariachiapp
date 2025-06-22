@@ -23,7 +23,7 @@ export type EventCreationAssistantInput = z.infer<typeof EventCreationAssistantI
 const EventCreationAssistantOutputSchema = z.object({
   suggestedDetails: z.string().describe('AI-suggested event details.'),
   suggestedReminders: z.string().describe('AI-suggested reminders for the event.'),
-  prefilledFields: z.string().describe('AI-prefilled fields based on historical data.'),
+  prefilledFields: z.string().describe('AI-prefilled fields based on historical data, as a JSON string.'),
 });
 export type EventCreationAssistantOutput = z.infer<typeof EventCreationAssistantOutputSchema>;
 
@@ -40,16 +40,12 @@ const prompt = ai.definePrompt({
 User Input: {{{userInput}}}
 Historical Event Data: {{{historicalEventData}}}
 
-Instructions: Provide specific event details, suggest helpful reminders, and pre-fill relevant fields based on historical data to save the user time and effort.
+Instructions: 
+1.  Provide specific event details in 'suggestedDetails'.
+2.  Suggest helpful reminders in 'suggestedReminders'.
+3.  For 'prefilledFields', generate a JSON string that maps form field names (like 'eventName', 'date', 'location', 'clientName', 'notes') to their suggested values. For example: "{\\"eventName\\":\\"Jorge's 50th Birthday Party\\", \\"notes\\":\\"A surprise. He loves classics.\\"}".
 
-Output the result as JSON formatted like this:
-```json
-{
-  "suggestedDetails": "...",
-  "suggestedReminders": "...",
-  "prefilledFields": "..."
-}
-```
+Your entire output must be a single, valid JSON object that conforms to the output schema.
 `,
 });
 
