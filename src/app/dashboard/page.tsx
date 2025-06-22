@@ -169,11 +169,11 @@ export default function DashboardPage() {
                                     {activity.type === 'event' ? (
                                         <>
                                             <div className="font-semibold text-base capitalize">{activity.eventType}</div>
-                                            <div className="text-muted-foreground mb-3 text-sm">Cliente: {activity.clientName}</div>
+                                            <div className="text-muted-foreground mb-3 text-sm">Cliente: <span className="font-semibold text-foreground">{activity.clientName}</span></div>
                                             
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-muted-foreground text-sm">
                                                 <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary"/> {activity.eventTime}</p>
-                                                <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary"/> {activity.location}</p>
+                                                <p className="flex items-center gap-2 text-foreground"><MapPin className="h-4 w-4 text-primary"/> {activity.location}</p>
                                                 <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary"/> <a href={`https://wa.me/${activity.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{activity.clientPhone}</a></p>
                                                 <p className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary"/> Plan: {activity.plan}</p>
                                             </div>
@@ -207,10 +207,10 @@ export default function DashboardPage() {
                                     ) : (
                                         <>
                                             <div className="font-semibold text-base capitalize flex items-center gap-2"><Music className="h-5 w-5 text-primary" /> Ensayo</div>
-                                            <div className="text-muted-foreground mb-3 text-sm">Tema: {activity.focus}</div>
+                                            <div className="text-muted-foreground mb-3 text-sm">Tema: <span className="font-semibold text-foreground">{activity.focus}</span></div>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-muted-foreground text-sm">
                                                 <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary"/> {activity.time}</p>
-                                                <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary"/> {activity.location}</p>
+                                                <p className="flex items-center gap-2 text-foreground"><MapPin className="h-4 w-4 text-primary"/> {activity.location}</p>
                                             </div>
                                             <div className="flex justify-end items-center mt-4">
                                                 <span className="text-sm text-muted-foreground">No requiere acción</span>
