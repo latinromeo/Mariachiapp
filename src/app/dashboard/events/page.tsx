@@ -1,4 +1,8 @@
 
+"use client"
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,34 +28,52 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
-  
+import { type EventData, getEvents } from "@/services/eventService";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
 
-const events = [
-    { name: "Boda en Salón La Candelaria", date: "20 de Julio, 2024", venue: "Salón La Candelaria", status: "Confirmado" },
-    { name: "Celebración de Quinceañera", date: "22 de Julio, 2024", venue: "Salón Imperial", status: "Confirmado" },
-    { name: "Gala Corporativa", date: "1 de Agosto, 2024", venue: "Centro de Convenciones", status: "Pendiente" },
-    { name: "Fiesta Privada de Cumpleaños", date: "5 de Agosto, 2024", venue: "Residencia del Cliente", status: "Confirmado" },
-    { name: "Festival del Sol", date: "15 de Agosto, 2024", venue: "Plaza Mayor", status: "Tentativo" },
-    { name: "Cena de Aniversario", date: "2 de Septiembre, 2024", venue: "Restaurante La Hacienda", status: "Confirmado" },
-];
+const statusVariantMap: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  confirmed: 'default',
+  pending: 'secondary',
+  external: 'outline',
+  cancelled: 'destructive'
+};
 
 export default function EventsPage() {
+  const [events, setEvents] = useState<EventData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getEvents();
+        setEvents(data);
+      } catch (error) {
+        console.error("Failed to fetch events", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
+
   return (
     <div className="flex flex-col gap-6">
        <div className="flex items-center justify-between">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
-            Calendario de Eventos
+            Gestión de Eventos
         </h1>
         <Button asChild>
-            <a href="/dashboard/events/new">
+            <Link href="/dashboard/events/new">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Crear Evento
-            </a>
+            </Link>
         </Button>
        </div>
       <Card>
         <CardHeader>
-          <CardTitle>Próximos Eventos</CardTitle>
+          <CardTitle>Lista de Eventos</CardTitle>
           <CardDescription>
             Una lista de todos tus eventos próximos y pasados.
           </CardDescription>
@@ -60,7 +82,7 @@ export default function EventsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre del Evento</TableHead>
+                <TableHead>Cliente</TableHead>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Lugar</TableHead>
                 <TableHead>Estado</TableHead>
@@ -70,13 +92,24 @@ export default function EventsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events.map((event) => (
-                <TableRow key={event.name}>
-                  <TableCell className="font-medium">{event.name}</TableCell>
-                  <TableCell>{event.date}</TableCell>
-                  <TableCell>{event.venue}</TableCell>
+            {isLoading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+                  </TableRow>
+                ))
+              ) : events.length > 0 ? (
+                events.map((event) => (
+                <TableRow key={event.id}>
+                  <TableCell className="font-medium">{event.clientName}</TableCell>
+                  <TableCell>{format(new Date(event.eventDate), 'dd/MM/yyyy')} a las {event.eventTime}</TableCell>
+                  <TableCell>{event.location}</TableCell>
                   <TableCell>
-                    <Badge variant={event.status === "Confirmado" ? "default" : event.status === "Pendiente" ? "secondary" : "outline"}>
+                    <Badge variant={statusVariantMap[event.status] || 'secondary'} className="capitalize">
                       {event.status}
                     </Badge>
                   </TableCell>
@@ -90,13 +123,21 @@ export default function EventsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuItem>Ver Detalles</DropdownMenuItem>
                         <DropdownMenuItem>Editar</DropdownMenuItem>
                         <DropdownMenuItem>Eliminar</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+              ))
+              ) : (
+                <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                        No se encontraron eventos.
+                    </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

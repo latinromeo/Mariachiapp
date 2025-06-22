@@ -1,79 +1,181 @@
 
 "use client"
 
+import * as React from "react"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Calendar } from "lucide-react"
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameDay,
+  isSameMonth,
+  isToday,
+  startOfMonth,
+  startOfWeek,
+  subMonths,
+} from "date-fns"
+import { es } from 'date-fns/locale'
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
-export default function DashboardPage() {
-  const months = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-  ];
-  const currentMonth = months[new Date().getMonth()].toLowerCase();
-  const currentYear = new Date().getFullYear().toString();
+import { type EventData, type RehearsalData, getEvents, getRehearsals } from "@/services/eventService"
+import { Button } from "@/components/ui/button"
+import { DayDetailModal } from "./day-detail-modal"
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
+
+type EventStatus = 'confirmed' | 'pending' | 'external' | 'cancelled';
+
+const statusColors: Record<EventStatus, string> = {
+  confirmed: 'bg-green-500',
+  pending: 'bg-yellow-500',
+  external: 'bg-blue-500',
+  cancelled: 'bg-red-500',
+};
+
+export default function DashboardCalendarPage() {
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [currentMonth, setCurrentMonth] = React.useState(new Date())
+  const [events, setEvents] = React.useState<EventData[]>([]);
+  const [rehearsals, setRehearsals] = React.useState<RehearsalData[]>([]);
+
+  const [selectedDay, setSelectedDay] = React.useState<Date | null>(null)
+  const [isModalOpen, setIsModalOpen] = React.useState(false)
+
+  const firstDayOfCurrentMonth = startOfMonth(currentMonth)
+
+  const daysInMonth = eachDayOfInterval({
+    start: startOfWeek(firstDayOfCurrentMonth, { weekStartsOn: 1 }),
+    end: endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 }),
+  })
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const [eventsData, rehearsalsData] = await Promise.all([
+                getEvents(),
+                getRehearsals()
+            ]);
+            setEvents(eventsData);
+            setRehearsals(rehearsalsData);
+        } catch (error) {
+            console.error("Failed to fetch calendar data", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchData();
+  }, []);
+
+
+  const getEventsForDay = (day: Date) => {
+    return events.filter(event => isSameDay(new Date(event.eventDate), day));
+  }
+
+  const getRehearsalsForDay = (day: Date) => {
+    return rehearsals.filter(rehearsal => isSameDay(new Date(rehearsal.date), day));
+  }
+
+  const handleDayClick = (day: Date) => {
+    setSelectedDay(day);
+    setIsModalOpen(true);
+  }
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedDay(null);
+  }
+
+  const goToPreviousMonth = () => {
+    setCurrentMonth(subMonths(currentMonth, 1))
+  }
+
+  const goToNextMonth = () => {
+    setCurrentMonth(addMonths(currentMonth, 1))
+  }
+
+  const goToToday = () => {
+    setCurrentMonth(new Date())
+  }
+
+  const selectedDayEvents = selectedDay ? getEventsForDay(selectedDay) : [];
+  const selectedDayRehearsals = selectedDay ? getRehearsalsForDay(selectedDay) : [];
 
   return (
     <div className="flex flex-col gap-6">
-        <div>
+        <div className="flex items-center justify-between">
             <h1 className="font-headline text-3xl font-bold tracking-tight">
-                Panel Principal
+                Calendario de Actividades
             </h1>
-            <p className="text-muted-foreground mt-1">Resumen de tu actividad y accesos directos.</p>
+            <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={goToToday}>Hoy</Button>
+                <Button variant="outline" size="icon" onClick={goToPreviousMonth}><ChevronLeft className="h-4 w-4" /></Button>
+                <span className="font-semibold text-lg w-36 text-center capitalize">{format(currentMonth, "MMMM yyyy", { locale: es })}</span>
+                <Button variant="outline" size="icon" onClick={goToNextMonth}><ChevronRight className="h-4 w-4" /></Button>
+            </div>
         </div>
-        <Card>
-            <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                    <div className="flex-1">
-                      <CardTitle>Actividades Pendientes</CardTitle>
-                       <CardDescription className="mt-1">
-                          Eventos y ensayos para Julio 2024.
-                      </CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                        <Select defaultValue={currentMonth}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Mes" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {months.map(month => (
-                                <SelectItem key={month} value={month.toLowerCase()}>{month}</SelectItem>
-                              ))}
-                            </SelectContent>
-                        </Select>
-                        <Select defaultValue={currentYear}>
-                            <SelectTrigger className="w-full sm:w-[120px]">
-                                <SelectValue placeholder="Año" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="2023">2023</SelectItem>
-                                <SelectItem value="2024">2024</SelectItem>
-                                <SelectItem value="2025">2025</SelectItem>
-                            </SelectContent>
-                        </Select>
+
+        <div className="grid grid-cols-7 text-center font-semibold text-sm text-muted-foreground border-b">
+            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
+                <div key={day} className="py-2">{day}</div>
+            ))}
+        </div>
+
+        {isLoading ? (
+            <div className="grid grid-cols-7 grid-rows-5 gap-1">
+                {Array.from({ length: 35 }).map((_, i) => (
+                    <Skeleton key={i} className="h-28 w-full" />
+                ))}
+            </div>
+        ) : (
+            <div className="grid grid-cols-7 grid-rows-5 gap-px bg-border">
+            {daysInMonth.map((day) => {
+                const dayEvents = getEventsForDay(day);
+                const dayRehearsals = getRehearsalsForDay(day);
+
+                return (
+                <div
+                    key={day.toString()}
+                    onClick={() => handleDayClick(day)}
+                    className={cn(
+                    "bg-card p-2 flex flex-col gap-1 min-h-[7rem] cursor-pointer hover:bg-muted/50 transition-colors",
+                    !isSameMonth(day, currentMonth) && "bg-card/50 text-muted-foreground"
+                    )}
+                >
+                    <time
+                        dateTime={format(day, "yyyy-MM-dd")}
+                        className={cn("font-semibold self-start", isToday(day) && "bg-primary text-primary-foreground rounded-full w-7 h-7 flex items-center justify-center")}
+                    >
+                        {format(day, "d")}
+                    </time>
+                    <div className="flex-1 overflow-y-auto space-y-1">
+                        {dayEvents.map(event => (
+                            <div key={event.id} className="text-xs p-1 rounded-md text-white" style={{ backgroundColor: statusColors[event.status as EventStatus] || '#ccc' }}>
+                                {event.clientName}
+                            </div>
+                        ))}
+                        {dayRehearsals.map(rehearsal => (
+                             <div key={rehearsal.id} className="text-xs p-1 rounded-md bg-secondary text-secondary-foreground">
+                                Ensayo: {rehearsal.focus}
+                            </div>
+                        ))}
                     </div>
                 </div>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center text-center py-20 min-h-[400px]">
-                <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
-                  <Calendar className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold">No hay actividades pendientes para el mes seleccionado.</h3>
-                <p className="text-muted-foreground text-sm">Intenta seleccionar otro mes o año, o agrega nuevas actividades.</p>
-            </CardContent>
-        </Card>
+                );
+            })}
+            </div>
+        )}
+
+        {selectedDay && (
+            <DayDetailModal
+                isOpen={isModalOpen}
+                onClose={handleModalClose}
+                date={selectedDay}
+                events={selectedDayEvents}
+                rehearsals={selectedDayRehearsals}
+            />
+        )}
     </div>
   )
 }

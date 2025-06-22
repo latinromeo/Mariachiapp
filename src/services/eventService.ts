@@ -1,5 +1,8 @@
+
 // src/services/eventService.ts
 'use server';
+
+import { add, sub } from "date-fns";
 
 // Este es un servicio mock. En una aplicación real, esto interactuaría
 // con una API de backend o una base de datos como Firestore.
@@ -18,11 +21,11 @@ export interface ClientData {
 
 export interface EventData {
   id: string;
-  clientId: string; // Link to the client
-  clientName: string; // Denormalized for convenience
-  clientPhone: string; // Denormalized for convenience
+  clientId: string; 
+  clientName: string; 
+  clientPhone: string;
   eventType: string;
-  eventDate: string;
+  eventDate: string; // Stored as 'YYYY-MM-DD'
   eventTime: string;
   plan: string;
   duration: string;
@@ -38,7 +41,18 @@ export interface EventData {
   notes?: string;
   createdAt: string;
   updatedAt: string;
-  status: 'Confirmado' | 'Pendiente' | 'Cancelado';
+  status: 'confirmed' | 'pending' | 'external' | 'cancelled';
+}
+
+export interface RehearsalData {
+  id: string;
+  date: string; // Stored as 'YYYY-MM-DD'
+  time: string;
+  location: string;
+  focus: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Un arreglo en memoria para actuar como base de datos por ahora
@@ -48,41 +62,45 @@ const clients: ClientData[] = [
     { id: 'cli_3', name: "Juanita Ramírez", phone: "5555555555", email: "juanita.r@email.com", sector: "Condesa", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     { id: 'cli_4', name: "Carlos Mendoza", phone: "5551112222", email: "c.mendoza@email.com", sector: "Roma Norte", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
 ];
-const events: EventData[] = [];
+const events: EventData[] = [
+    {
+        id: 'evt_1', clientId: 'cli_1', clientName: 'Familia Pérez', clientPhone: '5551234567', eventType: 'boda', 
+        eventDate: new Date().toISOString().split('T')[0], eventTime: '8:00 PM', plan: 'evento_premium', duration: '2_horas', paymentMethod: 'transfer',
+        location: 'Salón La Candelaria', sector: 'Polanco', contractedAmount: 5000, amountPaid: 2500, pendingBalance: 2500,
+        musiciansPay: 1500, profit: 3500, externalGroup: false, notes: 'Tocar "Si Nos Dejan" al inicio.',
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), status: 'confirmed'
+    },
+    {
+        id: 'evt_2', clientId: 'cli_2', clientName: 'Empresa Innovatech', clientPhone: '5559876543', eventType: 'corporativo', 
+        eventDate: add(new Date(), { days: 5 }).toISOString().split('T')[0], eventTime: '9:00 PM', plan: 'hora_completa', duration: '1_hora', paymentMethod: 'pending',
+        location: 'Oficinas Innovatech', sector: 'Santa Fe', contractedAmount: 3000, amountPaid: 0, pendingBalance: 3000,
+        musiciansPay: 1000, profit: 2000, externalGroup: false, notes: '',
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), status: 'pending'
+    },
+     {
+        id: 'evt_3', clientId: 'cli_4', clientName: 'Carlos Mendoza', clientPhone: '5551112222', eventType: 'serenata', 
+        eventDate: sub(new Date(), { days: 2 }).toISOString().split('T')[0], eventTime: '10:00 PM', plan: 'serenata_basica', duration: '30_min', paymentMethod: 'cash',
+        location: 'Residencia Privada', sector: 'Roma Norte', contractedAmount: 1500, amountPaid: 1500, pendingBalance: 0,
+        musiciansPay: 500, profit: 1000, externalGroup: true, notes: 'Grupo externo: Mariachi Sol de México',
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), status: 'external'
+    }
+];
+const rehearsals: RehearsalData[] = [
+    { id: 'reh_1', date: add(new Date(), { days: 3 }).toISOString().split('T')[0], time: '6:00 PM - 8:00 PM', location: 'Estudio de Música A', focus: 'Nuevo Setlist de Boda', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'reh_2', date: add(new Date(), { days: 10 }).toISOString().split('T')[0], time: '7:00 PM - 9:00 PM', location: 'Salón Comunitario', focus: 'Armonías Vocales', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+];
+
 
 // Tipo del schema del formulario para la data de entrada de eventos
-type EventInputData = {
-    clientName: string;
-    clientPhone: string;
-    eventType: string;
-    eventDate: string;
-    eventTime: string;
-    plan: string;
-    duration: string;
-    paymentMethod: string;
-    location: string;
-    sector: string;
-    contractedAmount: number;
-    amountPaid: number;
-    musiciansPay?: number;
-    externalGroup: boolean;
-    notes?: string;
-}
+type EventInputData = Omit<EventData, 'id'|'clientId'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'>;
+type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;
+type RehearsalInputData = Omit<RehearsalData, 'id'|'createdAt'|'updatedAt'>;
 
-// Tipo del schema del formulario para la data de entrada de clientes
-type ClientInputData = {
-    name: string;
-    phone: string;
-    email?: string;
-    address?: string;
-    sector?: string;
-    notes?: string;
-}
 
 // --- Funciones de Servicio de Clientes ---
 
 export async function getClients(): Promise<ClientData[]> {
-    console.log("Obteniendo todos los clientes:", clients);
+    console.log("Obteniendo todos los clientes");
     await new Promise(resolve => setTimeout(resolve, 300));
     return JSON.parse(JSON.stringify(clients)); // Retorna una copia
 }
@@ -107,7 +125,6 @@ export async function createClient(data: ClientInputData): Promise<{ success: bo
         updatedAt: now,
     };
 
-    console.log("Guardando nuevo cliente:", newClient);
     clients.push(newClient);
     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -139,12 +156,11 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
     clientId: client.id,
     pendingBalance,
     profit,
-    status: 'Pendiente', // Estatus por defecto
+    status: 'pending', // Estatus por defecto
     createdAt: now,
     updatedAt: now,
   };
 
-  console.log("Guardando nuevo evento:", newEvent);
   events.push(newEvent);
 
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -153,7 +169,30 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
 }
 
 export async function getEvents(): Promise<EventData[]> {
-    console.log("Obteniendo todos los eventos:", events);
+    console.log("Obteniendo todos los eventos");
     await new Promise(resolve => setTimeout(resolve, 300));
-    return events;
+    return JSON.parse(JSON.stringify(events));
+}
+
+
+// --- Funciones de Servicio de Ensayos ---
+
+export async function getRehearsals(): Promise<RehearsalData[]> {
+    console.log("Obteniendo todos los ensayos");
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return JSON.parse(JSON.stringify(rehearsals));
+}
+
+export async function createRehearsal(data: RehearsalInputData): Promise<{ success: boolean; rehearsal?: RehearsalData, error?: string }> {
+  const now = new Date().toISOString();
+  const newRehearsal: RehearsalData = {
+    ...data,
+    id: `reh_${new Date().getTime()}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  rehearsals.push(newRehearsal);
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { success: true, rehearsal: newRehearsal };
 }

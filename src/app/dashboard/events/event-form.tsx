@@ -23,6 +23,7 @@ import { useEffect, useState, useMemo, useCallback } from "react"
 import { CalendarIcon, Clock, DollarSign, ExternalLink, Hash, Info, Loader2, MapPin, Mic, Phone, User } from "lucide-react"
 import { EVENT_DURATIONS, EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
 import { createEvent, findClientByPhone } from "@/services/eventService"
+import { useSearchParams } from "next/navigation"
 
 const formSchema = z.object({
   clientName: z.string().min(2, { message: "El nombre del cliente es obligatorio." }),
@@ -48,6 +49,9 @@ const formatCurrency = (value: number) => {
 
 export function EventForm() {
   const { toast } = useToast()
+  const searchParams = useSearchParams();
+  const dateFromQuery = searchParams.get('date');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingClient, setIsCheckingClient] = useState(false);
   
@@ -56,7 +60,7 @@ export function EventForm() {
     defaultValues: {
       clientName: "",
       clientPhone: "",
-      eventDate: "",
+      eventDate: dateFromQuery || "",
       eventTime: "",
       location: "",
       sector: "",
