@@ -12,6 +12,7 @@ import { type EventData, getEvents, completeEvent, type RehearsalData, getRehear
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, PlusCircle, Music, Info, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -117,24 +118,24 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 className="font-headline text-3xl font-bold tracking-tight">
-                Panel Principal
+                Actividades Pendientes ({pendingActivities.length})
             </h1>
-            <p className="text-muted-foreground">Resumen de tu actividad y accesos directos.</p>
+            <p className="text-muted-foreground">Eventos no pagados y ensayos del mes.</p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/events/new">
-              <PlusCircle className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Nuevo Evento</span>
-          </Link>
-        </Button>
       </div>
+
+       <Button asChild size="lg" className="w-full">
+            <Link href="/dashboard/events/new">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Nuevo Evento
+            </Link>
+        </Button>
       
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold">Actividades Pendientes ({pendingActivities.length})</h2>
+         <div className="dark">
             <div className="flex flex-wrap items-center gap-2">
                 <Select value={String(selectedMonth)} onValueChange={(value) => setSelectedMonth(Number(value))}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-full flex-1 md:w-[150px] bg-card text-card-foreground border-border">
                     <SelectValue placeholder="Mes" />
                 </SelectTrigger>
                 <SelectContent>
@@ -144,7 +145,7 @@ export default function DashboardPage() {
                 </SelectContent>
                 </Select>
                 <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
-                <SelectTrigger className="w-[100px]">
+                <SelectTrigger className="w-full flex-1 md:w-[100px] bg-card text-card-foreground border-border">
                     <SelectValue placeholder="Año" />
                 </SelectTrigger>
                 <SelectContent>
@@ -161,66 +162,71 @@ export default function DashboardPage() {
                 <Skeleton className="h-48 w-full" />
             ) : Object.keys(groupedActivities).length > 0 ? (
                 Object.entries(groupedActivities).map(([date, activitiesOnDay]) => (
-                    <Card key={date} className="p-4 sm:p-6">
-                            <h3 className="font-semibold capitalize mb-4 text-lg">{date}</h3>
+                    <div key={date}>
+                            <h3 className="font-semibold capitalize mb-2 text-lg text-primary">{date}</h3>
                             <div className="space-y-4">
                             {activitiesOnDay.map(activity => (
-                                <div key={activity.id} className="p-4 rounded-lg border bg-card/50">
+                                <Card key={activity.id} className="p-4">
                                     {activity.type === 'event' ? (
-                                        <>
-                                            <div className="font-semibold text-base capitalize">{activity.eventType}</div>
-                                            <div className="text-muted-foreground mb-3 text-sm">Cliente: <span className="font-semibold text-foreground">{activity.clientName}</span></div>
-                                            
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-muted-foreground text-sm">
-                                                <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary"/> {activity.eventTime}</p>
-                                                <p className="flex items-center gap-2 text-foreground"><MapPin className="h-4 w-4 text-primary"/> {activity.location}</p>
-                                                <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary"/> <a href={`https://wa.me/${activity.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{activity.clientPhone}</a></p>
-                                                <p className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary"/> Plan: {activity.plan}</p>
-                                            </div>
-
-                                            <div className="mt-3 pt-3 border-t text-sm">
-                                            <p>Total: <span className="font-semibold">{formatCurrency(activity.contractedAmount)}</span></p>
-                                            <p>Pagado: <span className="font-semibold text-green-600">{formatCurrency(activity.amountPaid)}</span> (Resta: <span className="font-semibold text-destructive">{formatCurrency(activity.pendingBalance)}</span>)</p>
-                                            </div>
-
-                                            <div className="flex justify-between items-center mt-4">
-                                                <div className="flex gap-2">
-                                                    <Button variant="ghost" size="sm" asChild>
-                                                        <Link href={`/dashboard/events/${activity.id}`}>
-                                                            <Info className="mr-2 h-4 w-4"/>
-                                                            Ver Detalles
-                                                        </Link>
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" asChild>
-                                                        <Link href={`/dashboard/events/${activity.id}/edit`}>
-                                                            <Edit className="mr-2 h-4 w-4"/>
-                                                            Editar
-                                                        </Link>
-                                                    </Button>
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="flex-1 space-y-3">
+                                                <div className="font-semibold text-base capitalize">{activity.eventType}</div>
+                                                <div className="text-muted-foreground text-sm">Cliente: <span className="font-semibold text-foreground">{activity.clientName}</span></div>
+                                                
+                                                <div className="text-muted-foreground text-sm space-y-1">
+                                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4"/> {activity.eventTime}</p>
+                                                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4"/> {activity.location}</p>
+                                                    <p className="flex items-center gap-2"><Phone className="h-4 w-4"/> <a href={`https://wa.me/${activity.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{activity.clientPhone}</a></p>
                                                 </div>
-                                                <Button size="sm" onClick={() => handleCompleteEvent(activity.id)} disabled={isCompleting === activity.id}>
-                                                    {isCompleting === activity.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4"/>}
-                                                    Marcar Completo
-                                                </Button>
+
+                                                <div className="pt-2 text-sm">
+                                                    {activity.pendingBalance > 0 ? (
+                                                        <p className="font-semibold text-destructive">Pago pendiente: {formatCurrency(activity.pendingBalance)}</p>
+                                                    ) : (
+                                                        <p className="font-semibold text-green-600">Pagado en su totalidad</p>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </>
+
+                                            <div className="flex flex-col items-end gap-2">
+                                                 <div className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={`complete-${activity.id}`}
+                                                        onCheckedChange={(checked) => {
+                                                            if (checked) {
+                                                                handleCompleteEvent(activity.id);
+                                                            }
+                                                        }}
+                                                        disabled={isCompleting === activity.id}
+                                                    />
+                                                    <label
+                                                        htmlFor={`complete-${activity.id}`}
+                                                        className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                    >
+                                                        Marcar <br/>Completo
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
                                     ) : (
-                                        <>
-                                            <div className="font-semibold text-base capitalize flex items-center gap-2"><Music className="h-5 w-5 text-primary" /> Ensayo</div>
-                                            <div className="text-muted-foreground mb-3 text-sm">Tema: <span className="font-semibold text-foreground">{activity.focus}</span></div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-muted-foreground text-sm">
-                                                <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary"/> {activity.time}</p>
-                                                <p className="flex items-center gap-2 text-foreground"><MapPin className="h-4 w-4 text-primary"/> {activity.location}</p>
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="flex-1 space-y-3">
+                                                <div className="font-semibold text-base capitalize flex items-center gap-2"><Music className="h-5 w-5 text-primary" /> Ensayo</div>
+                                                <div className="text-muted-foreground text-sm">Tema: <span className="font-semibold text-foreground">{activity.focus}</span></div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-muted-foreground text-sm">
+                                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4"/> {activity.time}</p>
+                                                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4"/> {activity.location}</p>
+                                                </div>
                                             </div>
-                                            <div className="flex justify-end items-center mt-4">
-                                                <span className="text-sm text-muted-foreground">No requiere acción</span>
-                                            </div>
-                                        </>
+                                             <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
+                                                <span>No requiere acción</span>
+                                             </div>
+                                        </div>
                                     )}
-                                </div>
+                                </Card>
                             ))}
                             </div>
-                    </Card>
+                    </div>
                 ))
             ) : (
                 <div className="text-center text-muted-foreground py-16 border border-dashed rounded-lg">
@@ -233,3 +239,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

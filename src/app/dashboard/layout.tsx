@@ -15,6 +15,7 @@ import {
   UserCircle2,
   LogOut,
   PlusCircle,
+  Moon,
 } from "lucide-react"
 
 import {
@@ -35,6 +36,7 @@ import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 function SidebarUserProfile() {
     return (
@@ -48,6 +50,43 @@ function SidebarUserProfile() {
             </div>
         </div>
     )
+}
+
+function BottomNav() {
+    const pathname = usePathname();
+
+    const navItems = [
+    { href: '/dashboard', icon: LayoutGrid, label: 'Panel' },
+    { href: '/dashboard/clients', icon: Users, label: 'Clientes' },
+    { href: '/dashboard/events', icon: Calendar, label: 'Calendario' },
+    { href: '/dashboard/finance', icon: DollarSign, label: 'Finanzas' },
+    { href: '/dashboard/profile', icon: UserCircle2, label: 'Perfil' },
+    ];
+    
+    const isActive = (path: string) => {
+    if (path === '/dashboard') return pathname === path;
+    return pathname.startsWith(path);
+    }
+
+    return (
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm md:hidden">
+        <div className="flex h-16 items-center justify-around">
+        {navItems.map((item) => (
+            <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+                "flex flex-col items-center justify-center gap-1 w-full text-sm text-muted-foreground transition-colors",
+                isActive(item.href) ? "text-primary font-semibold" : "hover:text-primary"
+            )}
+            >
+            <item.icon className="h-5 w-5" />
+            <span className="text-xs">{item.label}</span>
+            </Link>
+        ))}
+        </div>
+    </nav>
+    );
 }
 
 
@@ -180,19 +219,24 @@ export default function DashboardLayout({
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center justify-between gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
-           <div className="flex items-center gap-4">
-            <SidebarTrigger className="md:hidden" />
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
+           <div className="flex items-center gap-2">
+            <SidebarTrigger />
+            <h1 className="font-semibold text-lg">Mariachi Manager</h1>
           </div>
-          <Button asChild>
-            <Link href="/dashboard/events/new">
-                <PlusCircle className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Nuevo Evento</span>
-            </Link>
-          </Button>
+           <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
+                    <Moon className="h-4 w-4" />
+                    <span className="sr-only">Toggle theme</span>
+                </Button>
+                <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-xs">MA</AvatarFallback>
+                </Avatar>
+            </div>
         </header>
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">{children}</main>
       </SidebarInset>
+       <BottomNav />
     </SidebarProvider>
   )
 }
