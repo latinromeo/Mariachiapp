@@ -22,7 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useEffect, useState, useMemo, useCallback } from "react"
 import { CalendarIcon, Clock, DollarSign, ExternalLink, Hash, Info, Loader2, MapPin, Mic, Phone, User } from "lucide-react"
 import { EVENT_DURATIONS, EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
-import { createEvent, findClientByPhone } from "@/services/eventService"
+import { createEvent, findClientByPhone, updateEvent, type EventData } from "@/services/eventService"
 import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
 
@@ -48,7 +48,12 @@ const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
 };
 
-export function EventForm() {
+interface EventFormProps {
+    initialData?: EventData;
+    eventId?: string;
+}
+
+export function EventForm({ initialData, eventId }: EventFormProps) {
   const { toast } = useToast()
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,9 +62,16 @@ export function EventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingClient, setIsCheckingClient] = useState(false);
   
+  const isEditMode = !!eventId;
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: initialData ? {
+        ...initialData,
+        contractedAmount: initialData.contractedAmount || 0,
+        amountPaid: initialData.amountPaid || 0,
+        musiciansPay: initialData.musiciansPay || 0,
+    } : {
       clientName: "",
       clientPhone: "",
       eventType: "",
@@ -124,12 +136,12 @@ export function EventForm() {
 
   useEffect(() => {
     const handler = setTimeout(() => { 
-        if(clientPhone) {
+        if(clientPhone && !isEditMode) {
             checkClient(clientPhone) 
         }
     }, 500);
     return () => clearTimeout(handler);
-  }, [clientPhone, checkClient]);
+  }, [clientPhone, checkClient, isEditMode]);
 
   useEffect(() => {
     const balance = (Number(contractedAmount) || 0) - (Number(amountPaid) || 0);
@@ -144,18 +156,20 @@ export function EventForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-        const result = await createEvent(values);
+        const result = isEditMode && eventId
+                ? await updateEvent(eventId, values)
+                : await createEvent(values);
+
         if (result.success) {
             toast({
-                title: "¡Evento Creado!",
-                description: "El nuevo evento ha sido guardado exitosamente.",
+                title: isEditMode ? "¡Evento Actualizado!" : "¡Evento Creado!",
+                description: `El evento ha sido ${isEditMode ? 'actualizado' : 'guardado'} exitosamente.`,
             });
-            form.reset();
-            router.push('/dashboard/events');
+            router.push('/dashboard');
         } else {
              toast({
                 variant: "destructive",
-                title: "Error al crear el evento",
+                title: `Error al ${isEditMode ? 'actualizar' : 'crear'} el evento`,
                 description: result.error || "Hubo un problema al guardar. Inténtalo de nuevo.",
             });
         }
@@ -415,7 +429,7 @@ export function EventForm() {
           </div>
         <Button type="submit" size="lg" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? "Guardando..." : "Crear Evento"}
+            {isSubmitting ? "Guardando..." : (isEditMode ? "Guardar Cambios" : "Crear Evento")}
         </Button>
       </form>
     </Form>

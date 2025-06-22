@@ -210,6 +210,24 @@ export async function getEvents(): Promise<EventData[]> {
     }
 }
 
+export async function getEventById(id: string): Promise<EventData | null> {
+    console.log(`Fetching event with ID: ${id}`);
+    try {
+        const eventRef = doc(db, "events", id);
+        const docSnap = await getDoc(eventRef);
+
+        if (!docSnap.exists()) {
+            console.error("No such event!");
+            return null;
+        }
+
+        return processDocTimestamps(docSnap) as EventData;
+    } catch (error) {
+        console.error("Error fetching event by ID:", error);
+        return null;
+    }
+}
+
 export async function createEvent(data: EventInputData): Promise<{ success: boolean; eventId?: string, error?: string }> {
   let client = await findClientByPhone(data.clientPhone);
   let clientId = client?.id;
@@ -243,6 +261,40 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
      return { success: false, error: "Failed to create event in database." };
   }
 }
+
+export async function updateEvent(id: string, data: Partial<EventInputData>): Promise<{ success: boolean; error?: string }> {
+    const eventRef = doc(db, "events", id);
+
+    try {
+        const eventSnap = await getDoc(eventRef);
+        if (!eventSnap.exists()) {
+            return { success: false, error: "Event not found." };
+        }
+        
+        const existingData = eventSnap.data() as EventData;
+        const contractedAmount = data.contractedAmount ?? existingData.contractedAmount;
+        const amountPaid = data.amountPaid ?? existingData.amountPaid;
+        const musiciansPay = data.musiciansPay ?? existingData.musiciansPay;
+        const externalGroup = data.externalGroup ?? existingData.externalGroup;
+
+        const pendingBalance = contractedAmount - amountPaid;
+        const profit = externalGroup ? undefined : contractedAmount - (musiciansPay || 0);
+        
+        const updateData = {
+            ...data,
+            pendingBalance,
+            profit,
+            updatedAt: serverTimestamp(),
+        };
+
+        await updateDoc(eventRef, updateData as { [x: string]: any });
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating event:", error);
+        return { success: false, error: "Failed to update event in database." };
+    }
+}
+
 
 export async function completeEvent(eventId: string): Promise<{ success: boolean; error?: string }> {
   try {

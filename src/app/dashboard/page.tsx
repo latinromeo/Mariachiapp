@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { type EventData, getEvents, completeEvent, type RehearsalData, getRehearsals } from "@/services/eventService";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, PlusCircle, Music } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, PlusCircle, Music, Info, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const formatCurrency = (value: number | undefined) => {
@@ -174,7 +174,7 @@ export default function DashboardPage() {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-muted-foreground text-sm">
                                                 <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary"/> {activity.eventTime}</p>
                                                 <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary"/> {activity.location}</p>
-                                                <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary"/> {activity.clientPhone}</p>
+                                                <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary"/> <a href={`https://wa.me/${activity.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{activity.clientPhone}</a></p>
                                                 <p className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary"/> Plan: {activity.plan}</p>
                                             </div>
 
@@ -184,9 +184,22 @@ export default function DashboardPage() {
                                             </div>
 
                                             <div className="flex justify-between items-center mt-4">
-                                                <span className="text-sm text-muted-foreground">Ver Detalles / Editar</span>
-                                                <Button variant="outline" size="sm" onClick={() => handleCompleteEvent(activity.id)} disabled={isCompleting === activity.id}>
-                                                    {isCompleting === activity.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4 text-green-500"/>}
+                                                <div className="flex gap-2">
+                                                    <Button variant="ghost" size="sm" asChild>
+                                                        <Link href={`/dashboard/events/${activity.id}`}>
+                                                            <Info className="mr-2 h-4 w-4"/>
+                                                            Ver Detalles
+                                                        </Link>
+                                                    </Button>
+                                                    <Button variant="ghost" size="sm" asChild>
+                                                        <Link href={`/dashboard/events/${activity.id}/edit`}>
+                                                            <Edit className="mr-2 h-4 w-4"/>
+                                                            Editar
+                                                        </Link>
+                                                    </Button>
+                                                </div>
+                                                <Button size="sm" onClick={() => handleCompleteEvent(activity.id)} disabled={isCompleting === activity.id}>
+                                                    {isCompleting === activity.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4"/>}
                                                     Marcar Completo
                                                 </Button>
                                             </div>
