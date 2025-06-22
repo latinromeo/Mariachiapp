@@ -27,7 +27,7 @@ const formSchema = z.object({
   date: z.string().min(1, { message: "La fecha es obligatoria." }),
   time: z.string().min(1, { message: "La hora es obligatoria." }),
   location: z.string().min(2, { message: "La ubicación es obligatoria." }),
-  focus: z.string().min(3, { message: "El enfoque es obligatorio." }),
+  focus: z.string().min(3, { message: "El título o enfoque es obligatorio (mín. 3 caracteres)." }),
   notes: z.string().optional(),
 })
 
@@ -149,8 +149,8 @@ export function RehearsalForm() {
                     name="focus"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="flex items-center gap-2"><Music className="h-4 w-4" />Enfoque Principal</FormLabel>
-                            <FormControl><Input placeholder="Ej: Nuevo setlist para bodas" {...field} /></FormControl>
+                            <FormLabel className="flex items-center gap-2"><Music className="h-4 w-4" />Título / Enfoque del Ensayo</FormLabel>
+                            <FormControl><Input placeholder="Ej: Preparar setlist para boda" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )}

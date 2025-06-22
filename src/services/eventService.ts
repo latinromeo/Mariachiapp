@@ -2,7 +2,7 @@
 // src/services/eventService.ts
 'use server';
 
-import { add, sub } from "date-fns";
+import { add, sub, isBefore, startOfToday } from "date-fns";
 
 // Este es un servicio mock. En una aplicación real, esto interactuaría
 // con una API de backend o una base de datos como Firestore.
@@ -88,6 +88,7 @@ const events: EventData[] = [
 const rehearsals: RehearsalData[] = [
     { id: 'reh_1', date: add(new Date(), { days: 3 }).toISOString().split('T')[0], time: '6:00 PM - 8:00 PM', location: 'Estudio de Música A', focus: 'Nuevo Setlist de Boda', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     { id: 'reh_2', date: add(new Date(), { days: 10 }).toISOString().split('T')[0], time: '7:00 PM - 9:00 PM', location: 'Salón Comunitario', focus: 'Armonías Vocales', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'reh_3', date: sub(new Date(), { days: 4 }).toISOString().split('T')[0], time: '8:00 PM', location: 'Estudio de Música B', focus: 'Repertorio para XV Años', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
 ];
 
 
@@ -180,7 +181,27 @@ export async function getEvents(): Promise<EventData[]> {
 export async function getRehearsals(): Promise<RehearsalData[]> {
     console.log("Obteniendo todos los ensayos");
     await new Promise(resolve => setTimeout(resolve, 300));
-    return JSON.parse(JSON.stringify(rehearsals));
+
+    const sortedRehearsals = [...rehearsals].sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        const today = startOfToday();
+
+        const aIsPast = isBefore(dateA, today);
+        const bIsPast = isBefore(dateB, today);
+
+        if (aIsPast && !bIsPast) return 1;
+        if (!aIsPast && bIsPast) return -1;
+
+        if (!aIsPast) { // Both are upcoming or today
+            return dateA.getTime() - dateB.getTime(); // Sort ascending (closest first)
+        }
+        
+        // Both are past
+        return dateB.getTime() - dateA.getTime(); // Sort descending (most recent first)
+    });
+
+    return JSON.parse(JSON.stringify(sortedRehearsals));
 }
 
 export async function createRehearsal(data: RehearsalInputData): Promise<{ success: boolean; rehearsal?: RehearsalData, error?: string }> {

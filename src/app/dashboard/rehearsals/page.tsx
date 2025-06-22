@@ -2,7 +2,7 @@
 "use client"
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, PlusCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Search } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -31,17 +31,19 @@ import {
 import { type RehearsalData, getRehearsals } from "@/services/eventService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
 
 export default function RehearsalsPage() {
-  const [rehearsals, setRehearsals] = useState<RehearsalData[]>([]);
+  const [allRehearsals, setAllRehearsals] = useState<RehearsalData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchRehearsals = async () => {
       setIsLoading(true);
       try {
         const data = await getRehearsals();
-        setRehearsals(data);
+        setAllRehearsals(data);
       } catch (error) {
         console.error("Failed to fetch rehearsals", error);
       } finally {
@@ -51,19 +53,41 @@ export default function RehearsalsPage() {
     fetchRehearsals();
   }, []);
 
+  const filteredRehearsals = useMemo(() => {
+    if (!searchTerm) {
+      return allRehearsals;
+    }
+    return allRehearsals.filter(
+      (rehearsal) =>
+        rehearsal.focus.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        rehearsal.location.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [allRehearsals, searchTerm]);
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
             Ensayos
         </h1>
-        <Button asChild>
-            <Link href="/dashboard/rehearsals/new">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Programar Ensayo
-            </Link>
-        </Button>
+        <div className="flex items-center gap-2 flex-1 min-w-[300px]">
+           <div className="relative w-full max-w-sm">
+             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+             <Input
+               type="search"
+               placeholder="Buscar por título o lugar..."
+               className="pl-8"
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+             />
+           </div>
+            <Button asChild>
+                <Link href="/dashboard/rehearsals/new">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Programar Ensayo
+                </Link>
+            </Button>
+        </div>
        </div>
       <Card>
         <CardHeader>
@@ -79,7 +103,7 @@ export default function RehearsalsPage() {
                 <TableHead>Fecha</TableHead>
                 <TableHead>Hora</TableHead>
                 <TableHead>Lugar</TableHead>
-                <TableHead>Enfoque</TableHead>
+                <TableHead>Título / Enfoque</TableHead>
                 <TableHead>
                   <span className="sr-only">Acciones</span>
                 </TableHead>
@@ -96,8 +120,8 @@ export default function RehearsalsPage() {
                       <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                     </TableRow>
                   ))
-              ) : rehearsals.length > 0 ? (
-                rehearsals.map((rehearsal) => (
+              ) : filteredRehearsals.length > 0 ? (
+                filteredRehearsals.map((rehearsal) => (
                   <TableRow key={rehearsal.id}>
                     <TableCell className="font-medium">{format(new Date(rehearsal.date), 'dd/MM/yyyy')}</TableCell>
                     <TableCell>{rehearsal.time}</TableCell>
@@ -125,7 +149,7 @@ export default function RehearsalsPage() {
               ) : (
                 <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                        No se encontraron ensayos.
+                        {searchTerm ? "No se encontraron ensayos con ese criterio." : "No se encontraron ensayos."}
                     </TableCell>
                 </TableRow>
               )}
