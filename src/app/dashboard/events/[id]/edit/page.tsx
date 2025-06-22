@@ -1,14 +1,15 @@
-
 "use client"
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { getEventById, type EventData } from "@/services/eventService";
 import { EventForm } from "@/app/dashboard/events/event-form";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 export default function EditEventPage() {
     const params = useParams();
+    const router = useRouter();
     const eventId = params.id as string;
     const [event, setEvent] = useState<EventData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -42,6 +43,10 @@ export default function EditEventPage() {
                 <h1 className="font-headline text-3xl font-bold tracking-tight">
                     Editar Evento
                 </h1>
+                 <Button variant="outline" onClick={() => router.back()}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Volver Atrás
+                </Button>
             </div>
 
             {isLoading && (
