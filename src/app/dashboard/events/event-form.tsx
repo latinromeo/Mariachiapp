@@ -68,7 +68,7 @@ export function EventForm() {
     },
   })
 
-  const { control, watch, setValue } = form
+  const { watch, setValue } = form
   const contractedAmount = watch("contractedAmount")
   const amountPaid = watch("amountPaid")
   const musiciansPay = watch("musiciansPay")
@@ -113,7 +113,11 @@ export function EventForm() {
   }, [setValue, toast]);
 
   useEffect(() => {
-    const handler = setTimeout(() => { checkClient(clientPhone) }, 500);
+    const handler = setTimeout(() => { 
+        if(clientPhone) {
+            checkClient(clientPhone) 
+        }
+    }, 500);
     return () => clearTimeout(handler);
   }, [clientPhone, checkClient]);
 
@@ -141,7 +145,7 @@ export function EventForm() {
              toast({
                 variant: "destructive",
                 title: "Error al crear el evento",
-                description: "Hubo un problema al guardar. Inténtalo de nuevo.",
+                description: result.error || "Hubo un problema al guardar. Inténtalo de nuevo.",
             });
         }
     } catch (error) {
@@ -201,7 +205,7 @@ export function EventForm() {
                                   render={({ field }) => (
                                       <FormItem>
                                           <FormLabel className="flex items-center gap-2"><Mic className="h-4 w-4"/>Tipo de Evento</FormLabel>
-                                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                          <Select onValueChange={field.onChange} value={field.value} defaultValue="">
                                               <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger></FormControl>
                                               <SelectContent>
                                                 {EVENT_TYPES.map(type => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
@@ -217,7 +221,7 @@ export function EventForm() {
                                   render={({ field }) => (
                                       <FormItem>
                                           <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4"/>Plan Contratado</FormLabel>
-                                           <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                           <Select onValueChange={field.onChange} value={field.value} defaultValue="">
                                               <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar plan..." /></SelectTrigger></FormControl>
                                               <SelectContent>
                                                   {EVENT_PLANS.map(plan => <SelectItem key={plan.value} value={plan.value}>{plan.label}</SelectItem>)}
@@ -246,7 +250,7 @@ export function EventForm() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4"/>Hora</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value} defaultValue="">
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar hora..." /></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                     {timeOptions.map((time) => (<SelectItem key={time} value={time}>{time}</SelectItem>))}
@@ -262,7 +266,7 @@ export function EventForm() {
                                   render={({ field }) => (
                                       <FormItem>
                                           <FormLabel>Duración</FormLabel>
-                                           <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                           <Select onValueChange={field.onChange} value={field.value} defaultValue="">
                                               <FormControl><SelectTrigger><SelectValue placeholder="Duración..." /></SelectTrigger></FormControl>
                                               <SelectContent>
                                                   {EVENT_DURATIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
@@ -322,7 +326,7 @@ export function EventForm() {
                               render={({ field }) => (
                                   <FormItem>
                                       <FormLabel>Método de Pago</FormLabel>
-                                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                      <Select onValueChange={field.onChange} value={field.value} defaultValue="">
                                           <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar método..." /></SelectTrigger></FormControl>
                                           <SelectContent>
                                              {PAYMENT_METHODS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}

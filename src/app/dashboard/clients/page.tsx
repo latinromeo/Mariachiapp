@@ -1,4 +1,7 @@
 
+"use client"
+
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,31 +26,74 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
-
-const clients = [
-    { name: "Familia Pérez", phone: "555-123-4567", email: "perez@email.com", nextEvent: "Boda - 20 de Julio, 2024" },
-    { name: "Empresa Innovatech", phone: "555-987-6543", email: "contacto@innovatech.com", nextEvent: "Gala Corporativa - 1 de Agosto, 2024" },
-    { name: "Juanita Ramírez", phone: "555-555-5555", email: "juanita.r@email.com", nextEvent: "Quinceañera - 22 de Julio, 2024" },
-    { name: "Carlos Mendoza", phone: "555-111-2222", email: "c.mendoza@email.com", nextEvent: "Fiesta de Cumpleaños - 5 de Agosto, 2024" },
-];
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
+import { type ClientData, getClients } from "@/services/eventService";
+import { ClientForm } from "./client-form";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ClientsPage() {
+  const [clients, setClients] = useState<ClientData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const fetchClients = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getClients();
+      setClients(data);
+    } catch (error) {
+      console.error("Failed to fetch clients", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
+  const handleSuccess = () => {
+    setIsDialogOpen(false); // Close dialog
+    fetchClients(); // Refresh list
+  }
+
   return (
     <div className="flex flex-col gap-6">
        <div className="flex items-center justify-between">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
             Gestión de Clientes
         </h1>
-        <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Agregar Cliente
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Agregar Cliente
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Agregar Nuevo Cliente</DialogTitle>
+                    <DialogDescription>
+                        Completa la información para registrar un nuevo cliente manualmente.
+                    </DialogDescription>
+                </DialogHeader>
+                <ClientForm onSuccess={handleSuccess} />
+            </DialogContent>
+        </Dialog>
+
        </div>
       <Card>
         <CardHeader>
           <CardTitle>Lista de Clientes</CardTitle>
           <CardDescription>
-            Administra la información de tus clientes.
+            Administra la información y el historial de tus clientes.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -57,37 +103,52 @@ export default function ClientsPage() {
                 <TableHead>Nombre</TableHead>
                 <TableHead>Teléfono</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Próximo Evento</TableHead>
                 <TableHead>
                   <span className="sr-only">Acciones</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {clients.map((client) => (
-                <TableRow key={client.name}>
-                  <TableCell className="font-medium">{client.name}</TableCell>
-                  <TableCell>{client.phone}</TableCell>
-                  <TableCell>{client.email}</TableCell>
-                  <TableCell>{client.nextEvent}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                        <DropdownMenuItem>Ver Detalles</DropdownMenuItem>
-                        <DropdownMenuItem>Editar</DropdownMenuItem>
-                        <DropdownMenuItem>Eliminar</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+              {isLoading ? (
+                Array.from({ length: 4 }).map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+                  </TableRow>
+                ))
+              ) : clients.length > 0 ? (
+                clients.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">{client.name}</TableCell>
+                    <TableCell>{client.phone}</TableCell>
+                    <TableCell>{client.email || 'N/A'}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <DropdownMenuItem>Ver Detalles</DropdownMenuItem>
+                          <DropdownMenuItem>Editar</DropdownMenuItem>
+                          <DropdownMenuItem>Eliminar</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                        No se encontraron clientes.
+                    </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>
