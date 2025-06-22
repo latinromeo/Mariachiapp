@@ -44,3 +44,12 @@ export const SONG_CATEGORIES = [
   'Clásicos Mexicanos',
   'Huapangos'
 ];
+
+export const FINANCE_CATEGORIES = [
+  { value: "instrumentos", label: "Instrumentos" },
+  { value: "transporte", label: "Transporte" },
+  { value: "uniformes", label: "Uniformes" },
+  { value: "servicios", label: "Servicios" },
+  { value: "propinas", label: "Propinas" },
+  { value: "otro", label: "Otro" },
+];

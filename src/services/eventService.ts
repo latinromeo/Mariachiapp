@@ -79,6 +79,17 @@ export interface MediaFile {
   hint?: string;
 }
 
+export interface ManualFinanceEntry {
+  id: string;
+  type: "income" | "expense";
+  description: string;
+  amount: number;
+  date: string; // Stored as 'YYYY-MM-DD'
+  category?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
 
 // --- MOCK DATABASE ---
 
@@ -92,7 +103,7 @@ const events: EventData[] = [
     {
         id: 'evt_1', clientId: 'cli_1', clientName: 'Familia Pérez', clientPhone: '5551234567', eventType: 'boda', 
         eventDate: new Date().toISOString().split('T')[0], eventTime: '8:00 PM', plan: 'evento_premium', duration: '2_horas', paymentMethod: 'transfer',
-        location: 'Salón La Candelaria', sector: 'Polanco', contractedAmount: 5000, amountPaid: 2500, pendingBalance: 2500,
+        location: 'Salón La Candelaria', sector: 'Polanco', contractedAmount: 5000, amountPaid: 5000, pendingBalance: 0,
         musiciansPay: 1500, profit: 3500, externalGroup: false, notes: 'Tocar "Si Nos Dejan" al inicio.',
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), status: 'confirmed'
     },
@@ -109,6 +120,13 @@ const events: EventData[] = [
         location: 'Residencia Privada', sector: 'Roma Norte', contractedAmount: 1500, amountPaid: 1500, pendingBalance: 0,
         musiciansPay: 500, profit: 1000, externalGroup: true, notes: 'Grupo externo: Mariachi Sol de México',
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), status: 'external'
+    },
+    {
+        id: 'evt_4', clientId: 'cli_3', clientName: 'Juanita Ramírez', clientPhone: '5555555555', eventType: 'cumpleanos',
+        eventDate: add(new Date(), { days: 12 }).toISOString().split('T')[0], eventTime: '3:00 PM', plan: 'hora_completa', duration: '1_hora', paymentMethod: 'pending',
+        location: 'Casa de la Familia', sector: 'Condesa', contractedAmount: 2800, amountPaid: 1400, pendingBalance: 1400,
+        musiciansPay: 900, profit: 1900, externalGroup: false, notes: 'Quiere Las Mañanitas y Cielito Lindo.',
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), status: 'confirmed'
     }
 ];
 const rehearsals: RehearsalData[] = [
@@ -167,11 +185,19 @@ const media: MediaFile[] = [
     { id: 'med_8', name: 'Fiesta Corporativa Ambiente.jpg', type: 'image', url: 'https://placehold.co/600x400.png', size: 1100000, uploadedBy: 'admin', linkedEventId: 'evt_2', uploadedAt: new Date().toISOString(), tags: ['corporativo'], hint: "corporate party" },
 ];
 
+const manualFinanceEntries: ManualFinanceEntry[] = [
+    { id: 'fin_1', type: 'expense', description: 'Compra de Cuerdas de Guitarra', amount: 45.50, date: sub(new Date(), { days: 1 }).toISOString().split('T')[0], category: 'instrumentos', createdBy: 'admin', createdAt: new Date().toISOString() },
+    { id: 'fin_2', type: 'expense', description: 'Renta de Estudio de Ensayo', amount: 150.00, date: sub(new Date(), { days: 4 }).toISOString().split('T')[0], category: 'servicios', createdBy: 'admin', createdAt: new Date().toISOString() },
+    { id: 'fin_3', type: 'income', description: 'Propina Evento Boda Pérez', amount: 200.00, date: new Date().toISOString().split('T')[0], category: 'propinas', createdBy: 'admin', createdAt: new Date().toISOString() },
+    { id: 'fin_4', type: 'expense', description: 'Reparación de Vihuela', amount: 220.00, date: sub(new Date(), { days: 7 }).toISOString().split('T')[0], category: 'instrumentos', createdBy: 'admin', createdAt: new Date().toISOString() },
+];
+
 
 // Tipo del schema del formulario para la data de entrada de eventos
 type EventInputData = Omit<EventData, 'id'|'clientId'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'>;
 type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;
 type RehearsalInputData = Omit<RehearsalData, 'id'|'createdAt'|'updatedAt'>;
+type ManualFinanceEntryInputData = Omit<ManualFinanceEntry, 'id'|'createdBy'|'createdAt'>;
 
 
 // --- Funciones de Servicio de Clientes ---
@@ -339,4 +365,25 @@ export async function getMedia(): Promise<MediaFile[]> {
     console.log("Obteniendo todos los archivos multimedia");
     await new Promise(resolve => setTimeout(resolve, 500));
     return JSON.parse(JSON.stringify(media));
+}
+
+// --- Funciones de Servicio de Finanzas ---
+
+export async function getManualFinanceEntries(): Promise<ManualFinanceEntry[]> {
+    console.log("Obteniendo asientos manuales");
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return JSON.parse(JSON.stringify(manualFinanceEntries));
+}
+
+export async function createManualFinanceEntry(data: ManualFinanceEntryInputData): Promise<{ success: boolean; entry?: ManualFinanceEntry }> {
+    const now = new Date().toISOString();
+    const newEntry: ManualFinanceEntry = {
+        ...data,
+        id: `fin_${new Date().getTime()}`,
+        createdBy: 'admin', // Hardcoded for now
+        createdAt: now,
+    };
+    manualFinanceEntries.push(newEntry);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { success: true, entry: newEntry };
 }
