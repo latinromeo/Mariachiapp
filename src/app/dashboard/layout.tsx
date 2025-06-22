@@ -1,6 +1,7 @@
 
 "use client"
 
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   Calendar,
@@ -74,15 +75,19 @@ export default function DashboardLayout({
             <SidebarGroup>
                 <SidebarGroupLabel>PRINCIPAL</SidebarGroupLabel>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href="/dashboard" isActive={isActive("/dashboard")}>
-                        <LayoutGrid />
-                        <span>Panel Principal</span>
+                    <SidebarMenuButton asChild isActive={isActive("/dashboard")}>
+                        <Link href="/dashboard">
+                            <LayoutGrid />
+                            <span>Panel Principal</span>
+                        </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href="/dashboard/clients" isActive={isActive("/dashboard/clients")}>
-                        <Users />
-                        <span>Clientes</span>
+                    <SidebarMenuButton asChild isActive={isActive("/dashboard/clients")}>
+                        <Link href="/dashboard/clients">
+                            <Users />
+                            <span>Clientes</span>
+                        </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarGroup>
@@ -90,15 +95,19 @@ export default function DashboardLayout({
             <SidebarGroup>
                 <SidebarGroupLabel>GESTIÓN</SidebarGroupLabel>
                  <SidebarMenuItem>
-                    <SidebarMenuButton href="/dashboard/events" isActive={isActive("/dashboard/events")}>
-                        <Calendar />
-                        <span>Calendario Eventos</span>
+                    <SidebarMenuButton asChild isActive={isActive("/dashboard/events")}>
+                        <Link href="/dashboard/events">
+                            <Calendar />
+                            <span>Calendario Eventos</span>
+                        </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href="/dashboard/rehearsals" isActive={isActive("/dashboard/rehearsals")}>
-                        <Music />
-                        <span>Ensayos</span>
+                    <SidebarMenuButton asChild isActive={isActive("/dashboard/rehearsals")}>
+                        <Link href="/dashboard/rehearsals">
+                            <Music />
+                            <span>Ensayos</span>
+                        </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarGroup>
@@ -106,15 +115,19 @@ export default function DashboardLayout({
             <SidebarGroup>
                 <SidebarGroupLabel>RECURSOS</SidebarGroupLabel>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href="/dashboard/repertoire" isActive={isActive("/dashboard/repertoire")}>
-                        <Library />
-                        <span>Repertorio</span>
+                    <SidebarMenuButton asChild isActive={isActive("/dashboard/repertoire")}>
+                        <Link href="/dashboard/repertoire">
+                            <Library />
+                            <span>Repertorio</span>
+                        </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href="/dashboard/media" isActive={isActive("/dashboard/media")}>
-                        <Image />
-                        <span>Multimedia</span>
+                    <SidebarMenuButton asChild isActive={isActive("/dashboard/media")}>
+                        <Link href="/dashboard/media">
+                            <Image />
+                            <span>Multimedia</span>
+                        </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarGroup>
@@ -122,15 +135,19 @@ export default function DashboardLayout({
              <SidebarGroup>
                 <SidebarGroupLabel>ADMINISTRACIÓN</SidebarGroupLabel>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href="/dashboard/finance" isActive={isActive("/dashboard/finance")}>
-                        <DollarSign />
-                        <span>Finanzas (Admin)</span>
+                    <SidebarMenuButton asChild isActive={isActive("/dashboard/finance")}>
+                        <Link href="/dashboard/finance">
+                            <DollarSign />
+                            <span>Finanzas (Admin)</span>
+                        </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href="/dashboard/users" isActive={isActive("/dashboard/users")}>
-                        <UserCog />
-                        <span>Administrar Usuarios</span>
+                    <SidebarMenuButton asChild isActive={isActive("/dashboard/users")}>
+                        <Link href="/dashboard/users">
+                            <UserCog />
+                            <span>Administrar Usuarios</span>
+                        </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarGroup>
@@ -142,13 +159,15 @@ export default function DashboardLayout({
              <SidebarGroup>
                 <SidebarGroupLabel>CUENTA</SidebarGroupLabel>
                  <SidebarMenuItem>
-                    <SidebarMenuButton href="/dashboard/profile" isActive={isActive("/dashboard/profile")}>
-                        <UserCircle2 />
-                        <span>Mi Perfil</span>
+                    <SidebarMenuButton asChild isActive={isActive("/dashboard/profile")}>
+                        <Link href="/dashboard/profile">
+                            <UserCircle2 />
+                            <span>Mi Perfil</span>
+                        </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                    <SidebarMenuButton href="#">
+                    <SidebarMenuButton>
                         <LogOut />
                         <span>Cerrar Sesión</span>
                     </SidebarMenuButton>
@@ -166,10 +185,10 @@ export default function DashboardLayout({
             <SidebarTrigger className="md:hidden" />
           </div>
           <Button asChild>
-            <a href="/dashboard/events/new">
+            <Link href="/dashboard/events/new">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Nuevo Evento
-            </a>
+            </Link>
           </Button>
         </header>
         <main className="flex-1 p-4 sm:p-6">{children}</main>
