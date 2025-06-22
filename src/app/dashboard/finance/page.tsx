@@ -2,7 +2,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { Bar, BarChart, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, Cell } from "recharts"
+import { Area, AreaChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, Cell } from "recharts"
 import {
   Card,
   CardContent,
@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { DollarSign, TrendingUp, TrendingDown, Equal, PlusCircle, BarChart as BarChartIcon, LineChart as LineChartIcon, PieChart as PieChartIcon } from "lucide-react"
+import { DollarSign, TrendingUp, TrendingDown, Equal, PlusCircle, LineChart as LineChartIcon, PieChart as PieChartIcon } from "lucide-react"
 import { type EventData, type ManualFinanceEntry, getEvents, getManualFinanceEntries } from "@/services/eventService"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -19,12 +19,13 @@ import { ManualEntryForm } from "./manual-entry-form"
 import { endOfMonth, format, startOfMonth, subMonths } from "date-fns"
 import { es } from "date-fns/locale"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
+import { EVENT_TYPES } from "@/lib/constants"
 
 const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number' || isNaN(value)) {
-        return "RD$0.00";
+        return "$0";
     }
-    return `RD$${(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `$${(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
 
 export default function FinancePage() {
@@ -41,12 +42,10 @@ export default function FinancePage() {
     });
 
     const [chartsData, setChartsData] = useState<{
-        incomeBreakdown: any[],
-        incomeVsExpense: any[],
+        incomeHistory: any[],
         eventTypeDistribution: any[]
     }>({
-        incomeBreakdown: [],
-        incomeVsExpense: [],
+        incomeHistory: [],
         eventTypeDistribution: [],
     });
 
@@ -98,8 +97,8 @@ export default function FinancePage() {
 
         // --- Process data for charts ---
         
-        // Income Breakdown (last 6 months)
-        const incomeBreakdownData = Array.from({ length: 6 }).map((_, i) => {
+        // Income History (last 6 months)
+        const incomeHistoryData = Array.from({ length: 6 }).map((_, i) => {
             const monthDate = subMonths(now, 5 - i);
             const monthStart = startOfMonth(monthDate);
             const monthEnd = endOfMonth(monthDate);
@@ -124,21 +123,34 @@ export default function FinancePage() {
         });
 
         // Event Type Distribution
+        const eventTypeLabelMap = EVENT_TYPES.reduce((acc, curr) => {
+            acc[curr.value] = curr.label;
+            return acc;
+        }, {} as Record<string, string>)
+        
+        const eventTypeColorMap: Record<string, string> = {
+            'Boda': 'var(--chart-1)',
+            'Cumpleaños': 'var(--chart-2)',
+            'Serenata': 'var(--chart-3)',
+            'Corporativo': 'var(--chart-4)',
+            'Otro': 'var(--chart-5)',
+        };
+        
         const eventTypeCounts = events.reduce((acc, event) => {
-            acc[event.eventType] = (acc[event.eventType] || 0) + 1;
+            const type = eventTypeLabelMap[event.eventType] || 'Otro';
+            acc[type] = (acc[type] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
 
-        const eventTypeDistributionData = Object.keys(eventTypeCounts).map(type => ({
-            name: type.charAt(0).toUpperCase() + type.slice(1),
-            value: eventTypeCounts[type],
-            fill: `var(--chart-${Object.keys(eventTypeCounts).indexOf(type) + 1})`
+        const eventTypeDistributionData = Object.keys(eventTypeCounts).map(name => ({
+            name: name,
+            value: eventTypeCounts[name],
+            fill: eventTypeColorMap[name] || 'hsl(var(--muted-foreground))'
         }));
 
 
         setChartsData({
-            incomeBreakdown: incomeBreakdownData,
-            incomeVsExpense: [{ name: format(now, 'MMMM yyyy', {locale: es}), Ingresos: income, Egresos: expenses }],
+            incomeHistory: incomeHistoryData,
             eventTypeDistribution: eventTypeDistributionData,
         });
 
@@ -214,8 +226,8 @@ export default function FinancePage() {
         <div className="grid gap-6 lg:grid-cols-5">
             <Card className="lg:col-span-3">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><BarChartIcon className="h-5 w-5" />Resumen Mensual General</CardTitle>
-                    <CardDescription>Comparación de Ingresos vs. Egresos del mes en curso.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><LineChartIcon className="h-5 w-5" />Desglose de Ingresos</CardTitle>
+                    <CardDescription>Evolución de los ingresos en los últimos 6 meses.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={{
@@ -223,41 +235,42 @@ export default function FinancePage() {
                             label: "Ingresos",
                             color: "hsl(var(--chart-1))",
                         },
-                        Egresos: {
-                            label: "Egresos",
-                            color: "hsl(var(--chart-2))",
-                        },
                     }} className="h-[250px] w-full">
-                        <BarChart
-                            data={chartsData.incomeVsExpense}
-                            margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                        <AreaChart
+                            data={chartsData.incomeHistory}
+                            margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
                         >
+                             <defs>
+                                <linearGradient id="fillIngresos" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="var(--color-Ingresos)" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="var(--color-Ingresos)" stopOpacity={0.1}/>
+                                </linearGradient>
+                            </defs>
                             <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
                             <YAxis 
                                 stroke="hsl(var(--muted-foreground))" 
                                 fontSize={12} 
                                 tickLine={false} 
                                 axisLine={false} 
-                                tickFormatter={(value) => formatCurrency(value as number).replace('.00', '')} 
+                                tickFormatter={(value) => formatCurrency(value as number)} 
                             />
                             <ChartTooltip
-                                cursor={false}
+                                cursor={true}
                                 content={<ChartTooltipContent
-                                    formatter={(value) => formatCurrency(value as number)}
+                                    formatter={(value) => formatCurrency(value as number).replace('.00', '')}
                                     indicator="dot"
                                 />}
                             />
                             <Legend content={<ChartLegendContent />} />
-                            <Bar dataKey="Ingresos" fill="var(--color-Ingresos)" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="Egresos" fill="var(--color-Egresos)" radius={[4, 4, 0, 0]} />
-                        </BarChart>
+                            <Area type="monotone" dataKey="Ingresos" strokeWidth={2} stroke="var(--color-Ingresos)" fill="url(#fillIngresos)" />
+                        </AreaChart>
                     </ChartContainer>
                 </CardContent>
             </Card>
              <Card className="lg:col-span-2">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><PieChartIcon className="h-5 w-5"/>Distribución por Tipo de Evento</CardTitle>
-                    <CardDescription>Cantidad de eventos realizados por cada tipo este mes.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><PieChartIcon className="h-5 w-5"/>Tipos de Eventos</CardTitle>
+                    <CardDescription>Distribución de los tipos de evento realizados.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {chartsData.eventTypeDistribution.length > 0 ? (
@@ -266,17 +279,23 @@ export default function FinancePage() {
                                 <Tooltip
                                     cursor={false}
                                     content={<ChartTooltipContent
-                                        formatter={(value, name) => `${name}: ${value} evento(s)`}
+                                        formatter={(value, name) => `${value} evento(s)`}
+                                        nameKey="name"
                                         indicator="dot"
-                                        hideLabel
                                     />}
                                 />
-                                <Pie data={chartsData.eventTypeDistribution} dataKey="value" nameKey="name" innerRadius={60} outerRadius={80} paddingAngle={5}>
+                                <Pie data={chartsData.eventTypeDistribution} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
                                      {chartsData.eventTypeDistribution.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                     ))}
                                 </Pie>
-                                <Legend layout="vertical" align="right" verticalAlign="middle" iconSize={10} />
+                                <Legend 
+                                    iconType="square" 
+                                    layout="horizontal" 
+                                    verticalAlign="bottom" 
+                                    align="center"
+                                    wrapperStyle={{paddingTop: '20px'}} 
+                                />
                             </PieChart>
                         </ChartContainer>
                     ) : (
@@ -300,5 +319,3 @@ export default function FinancePage() {
     </div>
   )
 }
-
-    
