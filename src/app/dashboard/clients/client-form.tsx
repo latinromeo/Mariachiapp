@@ -58,7 +58,14 @@ export function ClientForm({ onSuccess }: ClientFormProps) {
                 title: "¡Cliente Creado!",
                 description: "El nuevo cliente ha sido guardado exitosamente.",
             });
-            form.reset();
+            form.reset({
+              name: "",
+              phone: "",
+              email: "",
+              address: "",
+              sector: "",
+              notes: "",
+            });
             onSuccess?.();
         } else {
              toast({

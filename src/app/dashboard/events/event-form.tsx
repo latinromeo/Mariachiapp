@@ -24,6 +24,7 @@ import { CalendarIcon, Clock, DollarSign, ExternalLink, Hash, Info, Loader2, Map
 import { EVENT_DURATIONS, EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
 import { createEvent, findClientByPhone } from "@/services/eventService"
 import { useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 
 const formSchema = z.object({
   clientName: z.string().min(2, { message: "El nombre del cliente es obligatorio." }),
@@ -49,6 +50,7 @@ const formatCurrency = (value: number) => {
 
 export function EventForm() {
   const { toast } = useToast()
+  const router = useRouter();
   const searchParams = useSearchParams();
   const dateFromQuery = searchParams.get('date');
 
@@ -145,6 +147,7 @@ export function EventForm() {
                 description: "El nuevo evento ha sido guardado exitosamente.",
             });
             form.reset();
+            router.push('/dashboard/events');
         } else {
              toast({
                 variant: "destructive",

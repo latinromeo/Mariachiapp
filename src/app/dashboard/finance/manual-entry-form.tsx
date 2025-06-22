@@ -55,6 +55,10 @@ export function ManualEntryForm({ onSuccess, defaultType = "expense" }: ManualEn
     form.reset({
         ...form.getValues(),
         type: defaultType,
+        description: "",
+        amount: 0,
+        date: new Date().toISOString().split('T')[0],
+        category: "",
     });
   }, [defaultType, form]);
 

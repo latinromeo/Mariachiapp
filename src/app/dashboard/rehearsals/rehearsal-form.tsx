@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useState, useMemo } from "react"
 import { Loader2, CalendarIcon, Clock, MapPin, Music } from "lucide-react"
 import { createRehearsal } from "@/services/eventService"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -33,6 +33,7 @@ const formSchema = z.object({
 
 export function RehearsalForm() {
   const { toast } = useToast()
+  const router = useRouter();
   const searchParams = useSearchParams();
   const dateFromQuery = searchParams.get('date');
   
@@ -77,6 +78,7 @@ export function RehearsalForm() {
                 description: "El nuevo ensayo ha sido guardado exitosamente.",
             });
             form.reset();
+            router.push('/dashboard/rehearsals');
         } else {
              toast({
                 variant: "destructive",
