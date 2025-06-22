@@ -303,73 +303,52 @@ export async function createManualFinanceEntry(data: ManualFinanceEntryInputData
     }
 }
 
-
-// --- MOCK DATA FOR STATIC CONTENT (TO BE MIGRATED) ---
-// NOTE: In a real app, this data would also be fetched from Firestore.
-// It is kept here for now to ensure the UI remains populated during development.
-
-const songs: SongDetail[] = [
-  // Románticas
-  { id: 'song_1', title: 'Gema', artist: 'Los Dandys', category: 'Románticas', key: 'G', suggestedEvents: ['boda', 'serenata'] },
-  { id: 'song_2', title: 'Hermoso Cariño', artist: 'Vicente Fernández', category: 'Románticas', key: 'A', suggestedEvents: ['boda'] },
-  { id: 'song_3', title: 'Motivos', artist: 'Vicente Fernández', category: 'Románticas', key: 'D', suggestedEvents: ['boda', 'serenata'] },
-  { id: 'song_4', title: 'Contigo Aprendí', artist: 'Armando Manzanero', category: 'Románticas', key: 'C', suggestedEvents: ['boda', 'corporativo'] },
-  { id: 'song_5', title: 'Si Nos Dejan', artist: 'José Alfredo Jiménez', category: 'Románticas', key: 'G', suggestedEvents: ['boda', 'serenata'] },
-  // Cumpleaños
-  { id: 'song_6', title: 'Las Mañanitas', artist: 'Tradicional', category: 'Cumpleaños', key: 'G', suggestedEvents: ['cumpleanos'] },
-  { id: 'song_7', title: 'Cielito Lindo', artist: 'Quirino Mendoza y Cortés', category: 'Clásicos Mexicanos', key: 'D', suggestedEvents: ['cumpleanos', 'fiesta'] },
-  { id: 'song_8', title: 'Qué Linda Está La Mañana', artist: 'Tradicional', category: 'Cumpleaños', key: 'A', suggestedEvents: ['cumpleanos'] },
-  { id: 'song_9', title: 'El Rey', artist: 'José Alfredo Jiménez', category: 'Rancheras', key: 'G', suggestedEvents: ['cumpleanos', 'fiesta'] },
-  // Dolor
-  { id: 'song_10', title: 'Acá Entre Nos', artist: 'Vicente Fernández', category: 'Dolor', key: 'A', suggestedEvents: ['despecho'] },
-  { id: 'song_11', title: 'Te Solté la Rienda', artist: 'José Alfredo Jiménez', category: 'Dolor', key: 'G', suggestedEvents: ['despecho'] },
-  { id: 'song_12', title: 'Urge', artist: 'Vicente Fernández', category: 'Dolor', key: 'C', suggestedEvents: ['despecho'] },
-  { id: 'song_13', title: 'La Diferencia', artist: 'Juan Gabriel', category: 'Dolor', key: 'Am', suggestedEvents: ['despecho'] },
-  // Sones
-  { id: 'song_14', title: 'El Son de la Negra', artist: 'Tradicional', category: 'Sones', key: 'G', suggestedEvents: ['fiesta', 'corporativo'] },
-  { id: 'song_15', title: 'La Bikina', artist: 'Rubén Fuentes', category: 'Sones', key: 'Am', suggestedEvents: ['fiesta', 'corporativo'] },
-  { id: 'song_16', title: 'El Jarabe Tapatío', artist: 'Tradicional', category: 'Sones', key: 'D', suggestedEvents: ['fiesta', 'boda'] },
-  // Pop en Mariachi
-  { id: 'song_17', title: 'Amor Eterno', artist: 'Juan Gabriel / Rocío Dúrcal', category: 'Pop en Mariachi', key: 'Dm', suggestedEvents: ['funeral', 'homenaje'] },
-  { id: 'song_18', title: 'Te Amo', artist: 'Franco de Vita', category: 'Pop en Mariachi', key: 'G', suggestedEvents: ['boda', 'romantica'] },
-  { id: 'song_19', title: 'Por Amarte Así', artist: 'Cristian Castro', category: 'Pop en Mariachi', key: 'C', suggestedEvents: ['romantica'] },
-  { id: 'song_20', title: 'Hasta Que Me Olvides', artist: 'Luis Miguel', category: 'Pop en Mariachi', key: 'F', suggestedEvents: ['romantica', 'despecho'] },
-  // Clásicos Mexicanos
-  { id: 'song_21', title: 'Guadalajara', artist: 'Pepe Guízar', category: 'Clásicos Mexicanos', key: 'D', suggestedEvents: ['fiesta', 'nacional'] },
-  { id: 'song_22', title: 'México Lindo y Querido', artist: 'Chucho Monge', category: 'Clásicos Mexicanos', key: 'G', suggestedEvents: ['fiesta', 'nacional'] },
-  // Serenatas
-  { id: 'song_23', title: 'Sabes Una Cosa', artist: 'Luis Miguel', category: 'Serenatas', key: 'A', suggestedEvents: ['serenata', 'romantica'] },
-  { id: 'song_24', title: 'Si Quieres', artist: 'Juan Gabriel', category: 'Serenatas', key: 'D', suggestedEvents: ['serenata', 'romantica'] },
-];
-
-const media: MediaFile[] = [
-    { id: 'med_1', name: 'Boda Pérez - Baile.jpg', type: 'image', url: 'https://placehold.co/600x400.png', size: 1200000, uploadedBy: 'admin', linkedEventId: 'evt_1', uploadedAt: new Date().toISOString(), tags: ['boda', 'fiesta'], hint: "mariachi wedding" },
-    { id: 'med_2', name: 'Innovatech Speech.mp4', type: 'video', url: 'https://placehold.co/600x400.png', size: 25000000, uploadedBy: 'admin', linkedEventId: 'evt_2', uploadedAt: new Date().toISOString(), tags: ['corporativo'], hint: "conference presentation" },
-    { id: 'med_3', name: 'Serenata a Carlos - Las Mañanitas.mp3', type: 'audio', url: 'https://placehold.co/600x400.png', size: 3500000, uploadedBy: 'admin', linkedEventId: 'evt_3', uploadedAt: new Date().toISOString(), tags: ['serenata', 'cumpleaños'], hint: "music notes" },
-    { id: 'med_4', name: 'Ensayo Voces.jpg', type: 'image', url: 'https://placehold.co/400x600.png', size: 950000, uploadedBy: 'admin', uploadedAt: new Date().toISOString(), tags: ['ensayo'], hint: "choir singing" },
-    { id: 'med_5', name: 'Foto de Grupo Promocional.jpg', type: 'image', url: 'https://placehold.co/600x400.png', size: 1500000, uploadedBy: 'admin', uploadedAt: new Date().toISOString(), tags: ['promo'], hint: "mariachi band" },
-    { id: 'med_6', name: 'Video Testimonio Boda Pérez.mp4', type: 'video', url: 'https://placehold.co/600x400.png', size: 45000000, uploadedBy: 'admin', linkedEventId: 'evt_1', uploadedAt: new Date().toISOString(), tags: ['testimonio', 'boda'], hint: "wedding interview" },
-    { id: 'med_7', name: 'Vihuela Solo.mp3', type: 'audio', url: 'https://placehold.co/600x400.png', size: 2100000, uploadedBy: 'admin', uploadedAt: new Date().toISOString(), tags: ['instrumental', 'ensayo'], hint: "guitar closeup" },
-    { id: 'med_8', name: 'Fiesta Corporativa Ambiente.jpg', type: 'image', url: 'https://placehold.co/600x400.png', size: 1100000, uploadedBy: 'admin', linkedEventId: 'evt_2', uploadedAt: new Date().toISOString(), tags: ['corporativo'], hint: "corporate party" },
-];
+// --- REPERTOIRE & MEDIA SERVICE FUNCTIONS ---
 
 export async function getSongs(): Promise<SongDetail[]> {
-    console.log("Obteniendo todas las canciones (mocked)");
-    await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
-    return JSON.parse(JSON.stringify(songs));
+    console.log("Fetching songs from Firestore");
+    try {
+        const songsCol = collection(db, 'songs');
+        const q = query(songsCol, orderBy("title", "asc"));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) {
+          console.log("No songs found in Firestore. The 'songs' collection might be empty.");
+          return [];
+        }
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SongDetail));
+    } catch (error) {
+        console.error("Error fetching songs:", error);
+        return [];
+    }
 }
 
 export async function getMedia(): Promise<MediaFile[]> {
-    console.log("Obteniendo todos los archivos multimedia (mocked)");
-    await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
-    return JSON.parse(JSON.stringify(media));
+    console.log("Fetching media from Firestore");
+    try {
+        const mediaCol = collection(db, 'media');
+        const q = query(mediaCol, orderBy("uploadedAt", "desc"));
+        const snapshot = await getDocs(q);
+         if (snapshot.empty) {
+          console.log("No media found in Firestore. The 'media' collection might be empty.");
+          return [];
+        }
+        return snapshot.docs.map(doc => processDocTimestamps(doc) as MediaFile);
+    } catch (error) {
+        console.error("Error fetching media:", error);
+        return [];
+    }
 }
 
+
 export async function getSuggestedSongs(eventType: string): Promise<SongDetail[]> {
+    console.log(`Getting suggested songs for event type: ${eventType}`);
+    const allSongs = await getSongs();
+    if (allSongs.length === 0) return [];
+
     const suggestions: SongDetail[] = [];
     const eventTypeLower = eventType.toLowerCase();
 
-    songs.forEach(song => {
+    allSongs.forEach(song => {
         if (song.suggestedEvents?.includes(eventTypeLower)) {
             suggestions.push(song);
         }
@@ -384,12 +363,12 @@ export async function getSuggestedSongs(eventType: string): Promise<SongDetail[]
     };
 
     if (categoryMap[eventTypeLower]) {
-        songs.forEach(song => {
+        allSongs.forEach(song => {
             if (categoryMap[eventTypeLower].includes(song.category) && !suggestions.find(s => s.id === song.id)) {
                 suggestions.push(song);
             }
         });
     }
 
-    return JSON.parse(JSON.stringify(suggestions));
+    return suggestions;
 }
