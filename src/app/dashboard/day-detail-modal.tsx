@@ -29,8 +29,13 @@ const statusVariantMap: Record<string, "default" | "secondary" | "outline" | "de
   confirmed: 'default',
   pending: 'secondary',
   external: 'outline',
-  cancelled: 'destructive'
+  cancelled: 'destructive',
+  completed: 'outline',
 };
+
+const statusTextClassMap: Record<string, string> = {
+  completed: 'text-gray-500 border-gray-300'
+}
 
 
 export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: DayDetailModalProps) {
@@ -60,7 +65,7 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                                     <h3 className="font-semibold">{event.clientName}</h3>
                                     <p className="text-sm text-muted-foreground">{event.eventType}</p>
                                 </div>
-                                <Badge variant={statusVariantMap[event.status] || 'secondary'} className="capitalize">{event.status}</Badge>
+                                <Badge variant={statusVariantMap[event.status] || 'secondary'} className={`capitalize ${statusTextClassMap[event.status] || ''}`}>{event.status}</Badge>
                             </div>
                             <Separator className="my-2" />
                             <div className="text-sm text-muted-foreground space-y-1">

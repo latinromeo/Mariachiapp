@@ -12,7 +12,10 @@ import {
     serverTimestamp,
     Timestamp,
     DocumentSnapshot,
-    orderBy
+    orderBy,
+    doc,
+    getDoc,
+    updateDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -52,7 +55,7 @@ export interface EventData {
   notes?: string;
   createdAt: string;
   updatedAt: string;
-  status: 'confirmed' | 'pending' | 'external' | 'cancelled';
+  status: 'confirmed' | 'pending' | 'external' | 'cancelled' | 'completed';
 }
 
 export interface SongToRehearse {
@@ -238,6 +241,32 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
   } catch (error) {
      console.error("Error creating event:", error);
      return { success: false, error: "Failed to create event in database." };
+  }
+}
+
+export async function completeEvent(eventId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const eventRef = doc(db, "events", eventId);
+    const eventSnap = await getDoc(eventRef);
+
+    if (!eventSnap.exists()) {
+      return { success: false, error: "Event not found." };
+    }
+
+    const eventData = eventSnap.data();
+    const contractedAmount = eventData.contractedAmount || 0;
+
+    await updateDoc(eventRef, {
+      status: 'completed',
+      amountPaid: contractedAmount,
+      pendingBalance: 0,
+      updatedAt: serverTimestamp(),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error completing event:", error);
+    return { success: false, error: "Failed to update event in database." };
   }
 }
 
