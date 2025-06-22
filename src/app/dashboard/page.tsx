@@ -1,3 +1,4 @@
+
 "use client"
 
 import {
@@ -25,12 +26,9 @@ export default function DashboardPage() {
   const currentYear = new Date().getFullYear().toString();
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
         <div>
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
-                  <LayoutGridIcon className="h-5 w-5" />
-                </div>
+            <h1 className="font-headline text-3xl font-bold tracking-tight">
                 Panel Principal
             </h1>
             <p className="text-muted-foreground mt-1">Resumen de tu actividad y accesos directos.</p>
@@ -39,13 +37,13 @@ export default function DashboardPage() {
             <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                     <div className="flex-1">
-                      <CardTitle>Actividades Pendientes (0)</CardTitle>
+                      <CardTitle>Actividades Pendientes</CardTitle>
                        <CardDescription className="mt-1">
-                          Eventos y ensayos para Junio 2025.
+                          Eventos y ensayos para Julio 2024.
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                        <Select defaultValue="junio">
+                        <Select defaultValue={currentMonth}>
                             <SelectTrigger className="w-full sm:w-[180px]">
                                 <SelectValue placeholder="Mes" />
                             </SelectTrigger>
@@ -55,14 +53,14 @@ export default function DashboardPage() {
                               ))}
                             </SelectContent>
                         </Select>
-                        <Select defaultValue="2025">
+                        <Select defaultValue={currentYear}>
                             <SelectTrigger className="w-full sm:w-[120px]">
                                 <SelectValue placeholder="Año" />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="2023">2023</SelectItem>
                                 <SelectItem value="2024">2024</SelectItem>
                                 <SelectItem value="2025">2025</SelectItem>
-                                <SelectItem value="2026">2026</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -77,27 +75,5 @@ export default function DashboardPage() {
             </CardContent>
         </Card>
     </div>
-  )
-}
-
-function LayoutGridIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect width="7" height="7" x="3" y="3" rx="1" />
-      <rect width="7" height="7" x="14" y="3" rx="1" />
-      <rect width="7" height="7" x="3" y="14" rx="1" />
-      <rect width="7" height="7" x="14" y="14" rx="1" />
-    </svg>
   )
 }

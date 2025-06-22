@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,10 +26,10 @@ import {
   } from "@/components/ui/dropdown-menu"
 
 const rehearsals = [
-    { date: "July 18, 2024", time: "6:00 PM - 8:00 PM", location: "Community Hall", focus: "New Wedding Setlist" },
-    { date: "July 25, 2024", time: "7:00 PM - 9:00 PM", location: "Music Studio A", focus: "Festival Performance" },
-    { date: "August 2, 2024", time: "6:30 PM - 8:30 PM", location: "Community Hall", focus: "Vocal Harmonies" },
-    { date: "August 9, 2024", time: "7:00 PM - 9:00 PM", location: "Music Studio A", focus: "Instrumental Solos" },
+    { date: "18 de Julio, 2024", time: "6:00 PM - 8:00 PM", location: "Salón Comunitario", focus: "Nuevo Setlist de Boda" },
+    { date: "25 de Julio, 2024", time: "7:00 PM - 9:00 PM", location: "Estudio de Música A", focus: "Actuación en Festival" },
+    { date: "2 de Agosto, 2024", time: "6:30 PM - 8:30 PM", location: "Salón Comunitario", focus: "Armonías Vocales" },
+    { date: "9 de Agosto, 2024", time: "7:00 PM - 9:00 PM", location: "Estudio de Música A", focus: "Solos Instrumentales" },
 ];
 
 export default function RehearsalsPage() {

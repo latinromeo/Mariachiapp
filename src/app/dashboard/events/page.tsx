@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,12 +27,12 @@ import {
   
 
 const events = [
-    { name: "Wedding at The Grand Hall", date: "July 20, 2024", venue: "The Grand Hall", status: "Confirmed" },
-    { name: "Quinceañera Celebration", date: "July 22, 2024", venue: "Salón Imperial", status: "Confirmed" },
-    { name: "Corporate Gala", date: "August 1, 2024", venue: "City Convention Center", status: "Pending" },
-    { name: "Private Birthday Party", date: "August 5, 2024", venue: "Client's Residence", status: "Confirmed" },
-    { name: "Festival del Sol", date: "August 15, 2024", venue: "Plaza Mayor", status: "Tentative" },
-    { name: "Anniversary Dinner", date: "September 2, 2024", venue: "La Hacienda Restaurant", status: "Confirmed" },
+    { name: "Boda en Salón La Candelaria", date: "20 de Julio, 2024", venue: "Salón La Candelaria", status: "Confirmado" },
+    { name: "Celebración de Quinceañera", date: "22 de Julio, 2024", venue: "Salón Imperial", status: "Confirmado" },
+    { name: "Gala Corporativa", date: "1 de Agosto, 2024", venue: "Centro de Convenciones", status: "Pendiente" },
+    { name: "Fiesta Privada de Cumpleaños", date: "5 de Agosto, 2024", venue: "Residencia del Cliente", status: "Confirmado" },
+    { name: "Festival del Sol", date: "15 de Agosto, 2024", venue: "Plaza Mayor", status: "Tentativo" },
+    { name: "Cena de Aniversario", date: "2 de Septiembre, 2024", venue: "Restaurante La Hacienda", status: "Confirmado" },
 ];
 
 export default function EventsPage() {
@@ -75,7 +76,7 @@ export default function EventsPage() {
                   <TableCell>{event.date}</TableCell>
                   <TableCell>{event.venue}</TableCell>
                   <TableCell>
-                    <Badge variant={event.status === "Confirmed" ? "default" : "secondary"}>
+                    <Badge variant={event.status === "Confirmado" ? "default" : event.status === "Pendiente" ? "secondary" : "outline"}>
                       {event.status}
                     </Badge>
                   </TableCell>
