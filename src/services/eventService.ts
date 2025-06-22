@@ -15,7 +15,8 @@ import {
     orderBy,
     doc,
     getDoc,
-    updateDoc
+    updateDoc,
+    deleteDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -320,6 +321,17 @@ export async function completeEvent(eventId: string): Promise<{ success: boolean
     console.error("Error completing event:", error);
     return { success: false, error: "Failed to update event in database." };
   }
+}
+
+export async function deleteEvent(id: string): Promise<{ success: boolean; error?: string }> {
+    const eventRef = doc(db, "events", id);
+    try {
+        await deleteDoc(eventRef);
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting event:", error);
+        return { success: false, error: "Failed to delete event in database." };
+    }
 }
 
 

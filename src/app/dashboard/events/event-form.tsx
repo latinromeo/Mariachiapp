@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Form,
   FormControl,
@@ -20,11 +20,22 @@ import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useEffect, useState, useMemo, useCallback } from "react"
-import { CalendarIcon, Clock, DollarSign, ExternalLink, Hash, Info, Loader2, MapPin, Mic, Phone, User } from "lucide-react"
+import { CalendarIcon, Clock, DollarSign, ExternalLink, Hash, Info, Loader2, MapPin, Mic, Phone, User, Trash2 } from "lucide-react"
 import { EVENT_DURATIONS, EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
-import { createEvent, findClientByPhone, updateEvent, type EventData } from "@/services/eventService"
+import { createEvent, findClientByPhone, updateEvent, type EventData, deleteEvent } from "@/services/eventService"
 import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const formSchema = z.object({
   clientName: z.string().min(2, { message: "El nombre del cliente es obligatorio." }),
@@ -61,6 +72,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingClient, setIsCheckingClient] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const isEditMode = !!eventId;
 
@@ -152,6 +164,36 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
     const calculatedProfit = (Number(contractedAmount) || 0) - (Number(musiciansPay) || 0);
     setProfit(calculatedProfit);
   }, [contractedAmount, musiciansPay])
+
+  async function handleDelete() {
+    if (!eventId) return;
+    setIsDeleting(true);
+    try {
+        const result = await deleteEvent(eventId);
+        if (result.success) {
+            toast({
+                title: "¡Evento Eliminado!",
+                description: "El evento ha sido borrado exitosamente.",
+            });
+            router.push('/dashboard');
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Error al eliminar",
+                description: result.error || "No se pudo eliminar el evento.",
+            });
+            setIsDeleting(false);
+        }
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Error de Red",
+            description: "No se pudo conectar con el servidor.",
+        });
+        console.error(error);
+        setIsDeleting(false);
+    }
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
@@ -427,10 +469,42 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                   </Card>
               </div>
           </div>
-        <Button type="submit" size="lg" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? "Guardando..." : (isEditMode ? "Guardar Cambios" : "Crear Evento")}
-        </Button>
+        <div className="flex items-center gap-4">
+            <Button type="submit" size="lg" disabled={isSubmitting || isDeleting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSubmitting ? "Guardando..." : (isEditMode ? "Guardar Cambios" : "Crear Evento")}
+            </Button>
+             {isEditMode && (
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button type="button" variant="destructive" size="lg" disabled={isSubmitting || isDeleting}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar Evento
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Esto eliminará permanentemente el evento
+                                de tus registros.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className={buttonVariants({ variant: "destructive" })}
+                            >
+                                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Sí, eliminar evento
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
+        </div>
       </form>
     </Form>
   )
