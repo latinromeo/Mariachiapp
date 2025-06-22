@@ -26,15 +26,15 @@ export default function RepertoirePage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
-          Repertoire
+          Repertorio
         </h1>
         <p className="text-muted-foreground">
-          Browse and manage your band's song library.
+          Explora y gestiona el catálogo de canciones de tu banda.
         </p>
       </div>
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input type="search" placeholder="Search songs..." className="pl-8 sm:w-[300px]" />
+        <Input type="search" placeholder="Buscar canciones..." className="pl-8 sm:w-[300px]" />
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {repertoire.map((song) => (

@@ -17,10 +17,10 @@ export default function MediaPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
-          Media Library
+          Multimedia
         </h1>
         <p className="text-muted-foreground">
-          Your collection of photos and videos from events.
+          Tu colección de fotos y videos de eventos.
         </p>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

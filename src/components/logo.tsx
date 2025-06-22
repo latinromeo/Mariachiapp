@@ -1,12 +1,9 @@
-import { GuitarIcon } from "@/components/icons";
-
 export function Logo() {
   return (
-    <div className="flex items-center gap-2">
-      <GuitarIcon className="h-6 w-6 text-primary" />
-      <h1 className="text-lg font-bold text-sidebar-foreground">
-        Mariachi App
-      </h1>
+    <div className="text-center py-2 px-2">
+      <div className="font-bold text-sidebar-foreground text-lg leading-tight tracking-wider">MARIACHI</div>
+      <div className="font-bold text-accent text-lg leading-tight tracking-wider">REYES</div>
+      <div className="text-xs text-sidebar-foreground/70 tracking-wider">DE MÉXICO</div>
     </div>
-  );
+  )
 }

@@ -39,32 +39,32 @@ export default function EventsPage() {
     <div className="flex flex-col gap-6">
        <div className="flex items-center justify-between">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
-            Events
+            Calendario de Eventos
         </h1>
         <Button asChild>
             <a href="/dashboard/events/new">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Create Event
+                Crear Evento
             </a>
         </Button>
        </div>
       <Card>
         <CardHeader>
-          <CardTitle>Event Schedule</CardTitle>
+          <CardTitle>Próximos Eventos</CardTitle>
           <CardDescription>
-            A list of all your upcoming and past events.
+            Una lista de todos tus eventos próximos y pasados.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Event Name</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Venue</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Nombre del Evento</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Lugar</TableHead>
+                <TableHead>Estado</TableHead>
                 <TableHead>
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">Acciones</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -88,9 +88,9 @@ export default function EventsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>Delete</DropdownMenuItem>
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuItem>Editar</DropdownMenuItem>
+                        <DropdownMenuItem>Eliminar</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

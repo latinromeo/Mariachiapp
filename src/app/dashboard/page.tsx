@@ -8,189 +8,96 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart"
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
-import { DollarSign, Calendar, Users } from "lucide-react"
-
-const chartData = [
-  { month: "January", revenue: 1860 },
-  { month: "February", revenue: 3050 },
-  { month: "March", revenue: 2370 },
-  { month: "April", revenue: 730 },
-  { month: "May", revenue: 2090 },
-  { month: "June", revenue: 2140 },
-]
-
-const chartConfig = {
-  revenue: {
-    label: "Revenue",
-    color: "hsl(var(--chart-1))",
-  },
-}
-
-const recentEvents = [
-  {
-    name: "Wedding at The Grand Hall",
-    date: "2024-07-20",
-    status: "Confirmed",
-    amount: "2,500.00",
-  },
-  {
-    name: "Quinceañera Celebration",
-    date: "2024-07-22",
-    status: "Confirmed",
-    amount: "1,800.00",
-  },
-  {
-    name: "Corporate Gala",
-    date: "2024-08-01",
-    status: "Pending",
-    amount: "3,200.00",
-  },
-  {
-    name: "Private Birthday Party",
-    date: "2024-08-05",
-    status: "Confirmed",
-    amount: "1,500.00",
-  },
-  {
-    name: "Festival del Sol",
-    date: "2024-08-15",
-    status: "Tentative",
-    amount: "4,000.00",
-  },
-]
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Calendar } from "lucide-react"
 
 export default function DashboardPage() {
+  const months = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+  const currentMonth = months[new Date().getMonth()].toLowerCase();
+  const currentYear = new Date().getFullYear().toString();
+
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="font-headline text-3xl font-bold tracking-tight">
-        Dashboard
-      </h1>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="flex flex-col gap-4">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+                <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
+                  <LayoutGridIcon className="h-5 w-5" />
+                </div>
+                Panel Principal
+            </h1>
+            <p className="text-muted-foreground mt-1">Resumen de tu actividad y accesos directos.</p>
+        </div>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$45,231.89</div>
-            <p className="text-xs text-muted-foreground">
-              +20.1% from last month
-            </p>
-          </CardContent>
+            <CardHeader>
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div className="flex-1">
+                      <CardTitle>Actividades Pendientes (0)</CardTitle>
+                       <CardDescription className="mt-1">
+                          Eventos y ensayos para Junio 2025.
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                        <Select defaultValue="junio">
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Mes" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {months.map(month => (
+                                <SelectItem key={month} value={month.toLowerCase()}>{month}</SelectItem>
+                              ))}
+                            </SelectContent>
+                        </Select>
+                        <Select defaultValue="2025">
+                            <SelectTrigger className="w-full sm:w-[120px]">
+                                <SelectValue placeholder="Año" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="2024">2024</SelectItem>
+                                <SelectItem value="2025">2025</SelectItem>
+                                <SelectItem value="2026">2026</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center text-center py-20 min-h-[400px]">
+                <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+                  <Calendar className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold">No hay actividades pendientes para el mes seleccionado.</h3>
+                <p className="text-muted-foreground text-sm">Intenta seleccionar otro mes o año, o agrega nuevas actividades.</p>
+            </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Upcoming Shows
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+12</div>
-            <p className="text-xs text-muted-foreground">in the next 30 days</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Events</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+3</div>
-            <p className="text-xs text-muted-foreground">awaiting confirmation</p>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle className="font-headline text-xl">Revenue Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <BarChart accessibilityLayer data={chartData}>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  tickFormatter={(value) => value.slice(0, 3)}
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent />}
-                />
-                <Bar dataKey="revenue" fill="var(--color-revenue)" radius={8} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-        <Card className="col-span-4 lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="font-headline text-xl">Recent Events</CardTitle>
-            <CardDescription>
-              A summary of your most recent bookings.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentEvents.map((event) => (
-                  <TableRow key={event.name}>
-                    <TableCell>
-                      <div className="font-medium">{event.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {event.date}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          event.status === "Confirmed"
-                            ? "default"
-                            : "secondary"
-                        }
-                        className={
-                          event.status === "Pending"
-                            ? "bg-amber-200 text-amber-800"
-                            : event.status === "Tentative"
-                            ? "bg-blue-200 text-blue-800"
-                            : "bg-primary/20 text-primary-foreground"
-                        }
-                      >
-                        {event.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">${event.amount}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
     </div>
+  )
+}
+
+function LayoutGridIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect width="7" height="7" x="3" y="3" rx="1" />
+      <rect width="7" height="7" x="14" y="3" rx="1" />
+      <rect width="7" height="7" x="3" y="14" rx="1" />
+      <rect width="7" height="7" x="14" y="14" rx="1" />
+    </svg>
   )
 }

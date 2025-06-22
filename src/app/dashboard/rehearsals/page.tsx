@@ -36,30 +36,30 @@ export default function RehearsalsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="font-headline text-3xl font-bold tracking-tight">
-            Rehearsals
+            Ensayos
         </h1>
         <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Schedule Rehearsal
+            Programar Ensayo
         </Button>
        </div>
       <Card>
         <CardHeader>
-          <CardTitle>Rehearsal Schedule</CardTitle>
+          <CardTitle>Calendario de Ensayos</CardTitle>
           <CardDescription>
-            Plan and track your band's practice sessions.
+            Planea y sigue las sesiones de práctica de tu banda.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Focus</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Hora</TableHead>
+                <TableHead>Lugar</TableHead>
+                <TableHead>Enfoque</TableHead>
                 <TableHead>
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">Acciones</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -81,9 +81,9 @@ export default function RehearsalsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>Delete</DropdownMenuItem>
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuItem>Editar</DropdownMenuItem>
+                        <DropdownMenuItem>Eliminar</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
