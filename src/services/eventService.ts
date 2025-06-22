@@ -65,6 +65,21 @@ export interface SongDetail {
   notes?: string;
 }
 
+export interface MediaFile {
+  id: string;
+  name: string;
+  type: "image" | "video" | "audio";
+  url: string;
+  size: number; // in bytes
+  uploadedBy: string;
+  linkedEventId?: string;
+  uploadedAt: string;
+  tags?: string[];
+  notes?: string;
+  hint?: string;
+}
+
+
 // --- MOCK DATABASE ---
 
 const clients: ClientData[] = [
@@ -140,6 +155,18 @@ const songs: SongDetail[] = [
   { id: 'song_23', title: 'Sabes Una Cosa', artist: 'Luis Miguel', category: 'Serenatas', key: 'A', suggestedEvents: ['serenata', 'romantica'] },
   { id: 'song_24', title: 'Si Quieres', artist: 'Juan Gabriel', category: 'Serenatas', key: 'D', suggestedEvents: ['serenata', 'romantica'] },
 ];
+
+const media: MediaFile[] = [
+    { id: 'med_1', name: 'Boda Pérez - Baile.jpg', type: 'image', url: 'https://placehold.co/600x400.png', size: 1200000, uploadedBy: 'admin', linkedEventId: 'evt_1', uploadedAt: new Date().toISOString(), tags: ['boda', 'fiesta'], hint: "mariachi wedding" },
+    { id: 'med_2', name: 'Innovatech Speech.mp4', type: 'video', url: 'https://placehold.co/600x400.png', size: 25000000, uploadedBy: 'admin', linkedEventId: 'evt_2', uploadedAt: new Date().toISOString(), tags: ['corporativo'], hint: "conference presentation" },
+    { id: 'med_3', name: 'Serenata a Carlos - Las Mañanitas.mp3', type: 'audio', url: 'https://placehold.co/600x400.png', size: 3500000, uploadedBy: 'admin', linkedEventId: 'evt_3', uploadedAt: new Date().toISOString(), tags: ['serenata', 'cumpleaños'], hint: "music notes" },
+    { id: 'med_4', name: 'Ensayo Voces.jpg', type: 'image', url: 'https://placehold.co/400x600.png', size: 950000, uploadedBy: 'admin', uploadedAt: new Date().toISOString(), tags: ['ensayo'], hint: "choir singing" },
+    { id: 'med_5', name: 'Foto de Grupo Promocional.jpg', type: 'image', url: 'https://placehold.co/600x400.png', size: 1500000, uploadedBy: 'admin', uploadedAt: new Date().toISOString(), tags: ['promo'], hint: "mariachi band" },
+    { id: 'med_6', name: 'Video Testimonio Boda Pérez.mp4', type: 'video', url: 'https://placehold.co/600x400.png', size: 45000000, uploadedBy: 'admin', linkedEventId: 'evt_1', uploadedAt: new Date().toISOString(), tags: ['testimonio', 'boda'], hint: "wedding interview" },
+    { id: 'med_7', name: 'Vihuela Solo.mp3', type: 'audio', url: 'https://placehold.co/600x400.png', size: 2100000, uploadedBy: 'admin', uploadedAt: new Date().toISOString(), tags: ['instrumental', 'ensayo'], hint: "guitar closeup" },
+    { id: 'med_8', name: 'Fiesta Corporativa Ambiente.jpg', type: 'image', url: 'https://placehold.co/600x400.png', size: 1100000, uploadedBy: 'admin', linkedEventId: 'evt_2', uploadedAt: new Date().toISOString(), tags: ['corporativo'], hint: "corporate party" },
+];
+
 
 // Tipo del schema del formulario para la data de entrada de eventos
 type EventInputData = Omit<EventData, 'id'|'clientId'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'>;
@@ -304,4 +331,12 @@ export async function getSuggestedSongs(eventType: string): Promise<SongDetail[]
     }
 
     return JSON.parse(JSON.stringify(suggestions));
+}
+
+// --- Funciones de Servicio de Multimedia ---
+
+export async function getMedia(): Promise<MediaFile[]> {
+    console.log("Obteniendo todos los archivos multimedia");
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return JSON.parse(JSON.stringify(media));
 }
