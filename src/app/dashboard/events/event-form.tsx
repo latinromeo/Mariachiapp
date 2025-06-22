@@ -62,8 +62,12 @@ export function EventForm() {
     defaultValues: {
       clientName: "",
       clientPhone: "",
+      eventType: "",
       eventDate: dateFromQuery || "",
       eventTime: "",
+      plan: "",
+      duration: "",
+      paymentMethod: "",
       location: "",
       sector: "",
       contractedAmount: 0,

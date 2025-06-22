@@ -45,6 +45,8 @@ export function SongForm({ onSuccess }: SongFormProps) {
     defaultValues: {
       title: "",
       artist: "",
+      category: "",
+      key: "",
       suggestedEvents: [],
       notes: "",
     },
