@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Loader2, CalendarIcon, DollarSign, Edit } from "lucide-react"
 import { createManualFinanceEntry } from "@/services/eventService"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -33,22 +33,31 @@ const formSchema = z.object({
 
 interface ManualEntryFormProps {
   onSuccess?: () => void;
+  defaultType?: 'income' | 'expense';
 }
 
-export function ManualEntryForm({ onSuccess }: ManualEntryFormProps) {
+export function ManualEntryForm({ onSuccess, defaultType = "expense" }: ManualEntryFormProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      type: "expense",
+      type: defaultType,
       description: "",
       amount: 0,
       date: new Date().toISOString().split('T')[0],
       category: "",
     },
   })
+  
+  useEffect(() => {
+    form.reset({
+        ...form.getValues(),
+        type: defaultType,
+    });
+  }, [defaultType, form]);
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
@@ -92,7 +101,7 @@ export function ManualEntryForm({ onSuccess }: ManualEntryFormProps) {
                     <FormControl>
                         <RadioGroup
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                         className="flex flex-row space-x-4"
                         >
                         <FormItem className="flex items-center space-x-2 space-y-0">
