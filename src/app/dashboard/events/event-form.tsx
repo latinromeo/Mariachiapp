@@ -120,167 +120,167 @@ export function EventForm() {
 
 
   return (
-    <div className="grid md:grid-cols-3 gap-8">
-      <div className="md:col-span-2">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline text-2xl">Event Details</CardTitle>
-                    <CardDescription>Fill in the information for the new event.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <FormField
-                        control={form.control}
-                        name="eventName"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Event Name</FormLabel>
-                            <FormControl>
-                                <Input placeholder="e.g., Wedding Reception" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <div className="grid sm:grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="date"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Date</FormLabel>
-                                <FormControl>
-                                    <Input type="date" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="location"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Location / Venue</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g., The Grand Hall" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                     <div className="grid sm:grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="clientName"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Client Name</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="John Doe" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="clientContact"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Client Contact</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Phone or Email" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                     <FormField
-                        control={form.control}
-                        name="notes"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Notes</FormLabel>
-                            <FormControl>
-                                <Textarea placeholder="Special song requests, dress code, etc." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </CardContent>
-            </Card>
-          <Button type="submit" className="mt-8">Create Event</Button>
-        </form>
-      </Form>
+    <Form {...form}>
+      <div className="grid md:grid-cols-3 gap-8">
+        <div className="md:col-span-2">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <Card>
+                  <CardHeader>
+                      <CardTitle className="font-headline text-2xl">Event Details</CardTitle>
+                      <CardDescription>Fill in the information for the new event.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                      <FormField
+                          control={form.control}
+                          name="eventName"
+                          render={({ field }) => (
+                              <FormItem>
+                              <FormLabel>Event Name</FormLabel>
+                              <FormControl>
+                                  <Input placeholder="e.g., Wedding Reception" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                      <div className="grid sm:grid-cols-2 gap-4">
+                          <FormField
+                              control={form.control}
+                              name="date"
+                              render={({ field }) => (
+                                  <FormItem>
+                                  <FormLabel>Date</FormLabel>
+                                  <FormControl>
+                                      <Input type="date" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={form.control}
+                              name="location"
+                              render={({ field }) => (
+                                  <FormItem>
+                                  <FormLabel>Location / Venue</FormLabel>
+                                  <FormControl>
+                                      <Input placeholder="e.g., The Grand Hall" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                      </div>
+                       <div className="grid sm:grid-cols-2 gap-4">
+                          <FormField
+                              control={form.control}
+                              name="clientName"
+                              render={({ field }) => (
+                                  <FormItem>
+                                  <FormLabel>Client Name</FormLabel>
+                                  <FormControl>
+                                      <Input placeholder="John Doe" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={form.control}
+                              name="clientContact"
+                              render={({ field }) => (
+                                  <FormItem>
+                                  <FormLabel>Client Contact</FormLabel>
+                                  <FormControl>
+                                      <Input placeholder="Phone or Email" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                      </div>
+                       <FormField
+                          control={form.control}
+                          name="notes"
+                          render={({ field }) => (
+                              <FormItem>
+                              <FormLabel>Notes</FormLabel>
+                              <FormControl>
+                                  <Textarea placeholder="Special song requests, dress code, etc." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                  </CardContent>
+              </Card>
+            <Button type="submit" className="mt-8">Create Event</Button>
+          </form>
+        </div>
+        <div className="space-y-6">
+          <Card className="bg-primary/5">
+              <CardHeader>
+                  <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                      <Wand2 className="text-primary"/>
+                      AI Virtual Assistant
+                  </CardTitle>
+                  <CardDescription>
+                      Describe the event and let AI help you fill out the details. For example: &quot;A 50th birthday party for my uncle Jorge. It&apos;s a surprise. He loves classics.&quot;
+                  </CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <div className="space-y-4">
+                      <FormField
+                          control={form.control}
+                          name="aiPrompt"
+                          render={({ field }) => (
+                              <FormItem>
+                                  <FormControl>
+                                      <Textarea placeholder="Describe the event..." {...field} rows={4}/>
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                          />
+                      <Button onClick={getAISuggestions} disabled={loading} className="w-full">
+                          {loading ? "Thinking..." : "Get AI Suggestions"}
+                          <Sparkles className="ml-2 h-4 w-4"/>
+                      </Button>
+                  </div>
+              </CardContent>
+          </Card>
+          {suggestions && (
+              <div className="space-y-4">
+                  <Card>
+                      <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2"><Lightbulb /> Suggested Details</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                          <p className="text-sm text-muted-foreground">{suggestions.suggestedDetails}</p>
+                      </CardContent>
+                  </Card>
+                   <Card>
+                      <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2"><BellRing /> Suggested Reminders</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                          <p className="text-sm text-muted-foreground">{suggestions.suggestedReminders}</p>
+                          <Button variant="outline" size="sm" onClick={() => applySuggestion('notes', form.getValues('notes') + '\n\nReminders:\n' + suggestions.suggestedReminders)}>Add to Notes</Button>
+                      </CardContent>
+                  </Card>
+                  <Card>
+                      <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2"><ClipboardCheck /> Pre-filled Fields</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                          <p className="text-sm text-muted-foreground">AI detected some details it can pre-fill for you.</p>
+                          <Button variant="outline" size="sm" onClick={parseAndApplyPrefilled}>Apply All</Button>
+                      </CardContent>
+                  </Card>
+              </div>
+          )}
+        </div>
       </div>
-      <div className="space-y-6">
-        <Card className="bg-primary/5">
-            <CardHeader>
-                <CardTitle className="font-headline text-2xl flex items-center gap-2">
-                    <Wand2 className="text-primary"/>
-                    AI Virtual Assistant
-                </CardTitle>
-                <CardDescription>
-                    Describe the event and let AI help you fill out the details. For example: &quot;A 50th birthday party for my uncle Jorge. It&apos;s a surprise. He loves classics.&quot;
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    <FormField
-                        control={form.control}
-                        name="aiPrompt"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormControl>
-                                    <Textarea placeholder="Describe the event..." {...field} rows={4}/>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                    <Button onClick={getAISuggestions} disabled={loading} className="w-full">
-                        {loading ? "Thinking..." : "Get AI Suggestions"}
-                        <Sparkles className="ml-2 h-4 w-4"/>
-                    </Button>
-                </div>
-            </CardContent>
-        </Card>
-        {suggestions && (
-            <div className="space-y-4">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2"><Lightbulb /> Suggested Details</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground">{suggestions.suggestedDetails}</p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2"><BellRing /> Suggested Reminders</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        <p className="text-sm text-muted-foreground">{suggestions.suggestedReminders}</p>
-                        <Button variant="outline" size="sm" onClick={() => applySuggestion('notes', form.getValues('notes') + '\n\nReminders:\n' + suggestions.suggestedReminders)}>Add to Notes</Button>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2"><ClipboardCheck /> Pre-filled Fields</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        <p className="text-sm text-muted-foreground">AI detected some details it can pre-fill for you.</p>
-                        <Button variant="outline" size="sm" onClick={parseAndApplyPrefilled}>Apply All</Button>
-                    </CardContent>
-                </Card>
-            </div>
-        )}
-      </div>
-    </div>
+    </Form>
   )
 }
