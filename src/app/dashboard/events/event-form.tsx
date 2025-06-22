@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useForm, useWatch } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
@@ -19,29 +19,32 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
+import { CalendarIcon, Clock, DollarSign, ExternalLink, Hash, Info, Loader2, MapPin, Mic, Phone, User } from "lucide-react"
+import { EVENT_DURATIONS, EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
+import { createEvent, findClientByPhone } from "@/services/eventService"
 
 const formSchema = z.object({
   clientName: z.string().min(2, { message: "El nombre del cliente es obligatorio." }),
-  clientPhone: z.string().regex(/^\d{10,12}$/, { message: "El teléfono debe tener entre 10 y 12 dígitos." }),
+  clientPhone: z.string().min(10, { message: "El teléfono debe tener al menos 10 dígitos." }),
   eventType: z.string({ required_error: "Debe seleccionar un tipo de evento." }),
   eventDate: z.string().min(1, { message: "La fecha es obligatoria." }),
   eventTime: z.string().min(1, { message: "La hora es obligatoria." }),
-  plan: z.string().optional(),
+  plan: z.string({ required_error: "Debe seleccionar un plan." }),
   duration: z.string({ required_error: "Debe seleccionar una duración." }),
   paymentMethod: z.string({ required_error: "Debe seleccionar un método de pago." }),
   location: z.string().min(2, { message: "La ubicación es obligatoria." }),
   sector: z.string().min(2, { message: "El sector es obligatorio." }),
   contractedAmount: z.preprocess(
-    (a) => parseFloat(String(a).replace(/[^0-9.-]+/g, "")),
+    (a) => parseFloat(String(a).replace(/[^0-9.-]+/g, "") || "0"),
     z.number().min(0, { message: "El monto debe ser positivo." })
   ),
   amountPaid: z.preprocess(
-    (a) => parseFloat(String(a).replace(/[^0-9.-]+/g, "")),
+    (a) => parseFloat(String(a).replace(/[^0-9.-]+/g, "") || "0"),
     z.number().min(0, { message: "El monto debe ser positivo." })
   ),
   musiciansPay: z.preprocess(
-    (a) => parseFloat(String(a).replace(/[^0-9.-]+/g, "")),
+    (a) => parseFloat(String(a).replace(/[^0-9.-]+/g, "") || "0"),
     z.number().min(0, { message: "El monto debe ser positivo." }).optional()
   ),
   externalGroup: z.boolean().default(false),
@@ -54,6 +57,8 @@ const formatCurrency = (value: number) => {
 
 export function EventForm() {
   const { toast } = useToast()
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingClient, setIsCheckingClient] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -72,11 +77,12 @@ export function EventForm() {
     },
   })
 
-  const { control, watch } = form
-  const contractedAmount = useWatch({ control, name: "contractedAmount" })
-  const amountPaid = useWatch({ control, name: "amountPaid" })
-  const musiciansPay = useWatch({ control, name: "musiciansPay" })
-  const externalGroup = useWatch({ control, name: "externalGroup" })
+  const { control, watch, setValue } = form
+  const contractedAmount = watch("contractedAmount")
+  const amountPaid = watch("amountPaid")
+  const musiciansPay = watch("musiciansPay")
+  const externalGroup = watch("externalGroup")
+  const clientPhone = watch("clientPhone")
 
   const [pendingBalance, setPendingBalance] = useState(0)
   const [profit, setProfit] = useState(0)
@@ -98,6 +104,28 @@ export function EventForm() {
     return options;
   }, []);
 
+  const checkClient = useCallback(async (phone: string) => {
+    if (phone.length >= 10) {
+      setIsCheckingClient(true);
+      try {
+        const existingClient = await findClientByPhone(phone);
+        if (existingClient) {
+          setValue("clientName", existingClient.name, { shouldValidate: true });
+          toast({ title: "Cliente Encontrado", description: `Se autocompletó el nombre para ${existingClient.name}.` });
+        }
+      } catch (error) {
+        console.error("Error checking client", error);
+      } finally {
+        setIsCheckingClient(false);
+      }
+    }
+  }, [setValue, toast]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => { checkClient(clientPhone) }, 500);
+    return () => clearTimeout(handler);
+  }, [clientPhone, checkClient]);
+
   useEffect(() => {
     const balance = (contractedAmount || 0) - (amountPaid || 0);
     setPendingBalance(balance);
@@ -108,12 +136,33 @@ export function EventForm() {
     setProfit(calculatedProfit);
   }, [contractedAmount, musiciansPay])
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values)
-    toast({
-        title: "¡Evento Creado!",
-        description: "El nuevo evento ha sido guardado exitosamente.",
-    })
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true);
+    try {
+        const result = await createEvent(values);
+        if (result.success) {
+            toast({
+                title: "¡Evento Creado!",
+                description: "El nuevo evento ha sido guardado exitosamente.",
+            });
+            form.reset();
+        } else {
+             toast({
+                variant: "destructive",
+                title: "Error al crear el evento",
+                description: "Hubo un problema al guardar. Inténtalo de nuevo.",
+            });
+        }
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Error de Red",
+            description: "No se pudo conectar con el servidor.",
+        });
+        console.error(error);
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   return (
@@ -123,47 +172,48 @@ export function EventForm() {
               <div className="lg:col-span-2 space-y-6">
                   <Card>
                       <CardHeader>
-                          <CardTitle className="font-headline text-2xl">Detalles del Evento</CardTitle>
-                          <CardDescription>Complete la información para el nuevo evento.</CardDescription>
+                          <CardTitle className="font-headline text-2xl flex items-center gap-2"><Info className="h-6 w-6" /> Detalles del Evento</CardTitle>
+                          <CardDescription>Complete la información principal del evento y del cliente.</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                          <FormField
-                              control={form.control}
-                              name="clientName"
-                              render={({ field }) => (
-                                  <FormItem>
-                                      <FormLabel>Nombre del Cliente</FormLabel>
-                                      <FormControl><Input placeholder="Ej: Familia Pérez" {...field} /></FormControl>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                          <FormField
-                              control={form.control}
-                              name="clientPhone"
-                              render={({ field }) => (
-                                  <FormItem>
-                                      <FormLabel>Teléfono del Cliente</FormLabel>
-                                      <FormControl><Input type="tel" placeholder="Ej: 5551234567" {...field} /></FormControl>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
+                          <div className="grid sm:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="clientName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><User className="h-4 w-4" />Nombre del Cliente</FormLabel>
+                                        <FormControl><Input placeholder="Ej: Familia Pérez" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="clientPhone"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><Phone className="h-4 w-4" />Teléfono del Cliente</FormLabel>
+                                        <div className="relative">
+                                          <FormControl><Input type="tel" placeholder="Ej: 5551234567" {...field} /></FormControl>
+                                          {isCheckingClient && <Loader2 className="absolute right-2 top-2.5 h-5 w-5 animate-spin text-muted-foreground" />}
+                                        </div>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                          </div>
                           <div className="grid sm:grid-cols-2 gap-4">
                               <FormField
                                   control={form.control}
                                   name="eventType"
                                   render={({ field }) => (
                                       <FormItem>
-                                          <FormLabel>Tipo de Evento</FormLabel>
+                                          <FormLabel className="flex items-center gap-2"><Mic className="h-4 w-4"/>Tipo de Evento</FormLabel>
                                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                                               <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger></FormControl>
                                               <SelectContent>
-                                                  <SelectItem value="boda">Boda</SelectItem>
-                                                  <SelectItem value="cumpleanos">Cumpleaños</SelectItem>
-                                                  <SelectItem value="serenata">Serenata</SelectItem>
-                                                  <SelectItem value="corporativo">Corporativo</SelectItem>
-                                                  <SelectItem value="otro">Otro</SelectItem>
+                                                {EVENT_TYPES.map(type => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
                                               </SelectContent>
                                           </Select>
                                           <FormMessage />
@@ -172,17 +222,14 @@ export function EventForm() {
                               />
                               <FormField
                                   control={form.control}
-                                  name="duration"
+                                  name="plan"
                                   render={({ field }) => (
                                       <FormItem>
-                                          <FormLabel>Duración</FormLabel>
+                                          <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4"/>Plan Contratado</FormLabel>
                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                              <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar duración..." /></SelectTrigger></FormControl>
+                                              <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar plan..." /></SelectTrigger></FormControl>
                                               <SelectContent>
-                                                  <SelectItem value="1_hora">1 Hora</SelectItem>
-                                                  <SelectItem value="2_horas">2 Horas</SelectItem>
-                                                  <SelectItem value="3_horas">3 Horas</SelectItem>
-                                                  <SelectItem value="otro">Personalizada</SelectItem>
+                                                  {EVENT_PLANS.map(plan => <SelectItem key={plan.value} value={plan.value}>{plan.label}</SelectItem>)}
                                               </SelectContent>
                                           </Select>
                                           <FormMessage />
@@ -190,13 +237,13 @@ export function EventForm() {
                                   )}
                               />
                           </div>
-                          <div className="grid sm:grid-cols-2 gap-4">
+                          <div className="grid sm:grid-cols-3 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="eventDate"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Fecha</FormLabel>
+                                            <FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4"/>Fecha</FormLabel>
                                             <FormControl><Input type="date" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -207,25 +254,33 @@ export function EventForm() {
                                     name="eventTime"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Hora</FormLabel>
+                                            <FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4"/>Hora</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Seleccionar hora..." />
-                                                    </SelectTrigger>
-                                                </FormControl>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar hora..." /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                    {timeOptions.map((time) => (
-                                                        <SelectItem key={time} value={time}>
-                                                            {time}
-                                                        </SelectItem>
-                                                    ))}
+                                                    {timeOptions.map((time) => (<SelectItem key={time} value={time}>{time}</SelectItem>))}
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
+                                <FormField
+                                  control={form.control}
+                                  name="duration"
+                                  render={({ field }) => (
+                                      <FormItem>
+                                          <FormLabel>Duración</FormLabel>
+                                           <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                              <FormControl><SelectTrigger><SelectValue placeholder="Duración..." /></SelectTrigger></FormControl>
+                                              <SelectContent>
+                                                  {EVENT_DURATIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
+                                              </SelectContent>
+                                          </Select>
+                                          <FormMessage />
+                                      </FormItem>
+                                  )}
+                              />
                           </div>
                           <div className="grid sm:grid-cols-2 gap-4">
                                 <FormField
@@ -233,7 +288,7 @@ export function EventForm() {
                                     name="location"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Ubicación / Salón</FormLabel>
+                                            <FormLabel className="flex items-center gap-2"><MapPin className="h-4 w-4"/>Ubicación / Salón</FormLabel>
                                             <FormControl><Input placeholder="Ej: Salón La Candelaria" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -268,7 +323,7 @@ export function EventForm() {
 
               <div className="lg:col-span-1 space-y-6">
                   <Card>
-                      <CardHeader><CardTitle className="font-headline text-2xl">Finanzas</CardTitle></CardHeader>
+                      <CardHeader><CardTitle className="font-headline text-2xl flex items-center gap-2"><DollarSign className="h-6 w-6"/>Finanzas</CardTitle></CardHeader>
                       <CardContent className="space-y-4">
                            <FormField
                               control={form.control}
@@ -279,10 +334,7 @@ export function EventForm() {
                                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                                           <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar método..." /></SelectTrigger></FormControl>
                                           <SelectContent>
-                                              <SelectItem value="cash">Efectivo</SelectItem>
-                                              <SelectItem value="transfer">Transferencia</SelectItem>
-                                              <SelectItem value="card">Tarjeta</SelectItem>
-                                              <SelectItem value="pending">Pendiente</SelectItem>
+                                             {PAYMENT_METHODS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                                           </SelectContent>
                                       </Select>
                                       <FormMessage />
@@ -295,7 +347,7 @@ export function EventForm() {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Monto Contratado</FormLabel>
-                                    <FormControl><Input type="number" placeholder="0.00" {...field} /></FormControl>
+                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -306,7 +358,7 @@ export function EventForm() {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Monto Pagado</FormLabel>
-                                    <FormControl><Input type="number" placeholder="0.00" {...field} /></FormControl>
+                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value))}/></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -317,7 +369,7 @@ export function EventForm() {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Pago a Músicos</FormLabel>
-                                    <FormControl><Input type="number" placeholder="0.00" disabled={externalGroup} {...field} /></FormControl>
+                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" disabled={externalGroup} {...field} onChange={e => field.onChange(parseFloat(e.target.value))}/></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -331,27 +383,34 @@ export function EventForm() {
                                     <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                                 </FormControl>
                                 <div className="space-y-1 leading-none">
-                                    <FormLabel>¿Grupo Externo?</FormLabel>
+                                    <FormLabel className="flex items-center gap-2"><ExternalLink className="h-4 w-4"/>¿Grupo Externo?</FormLabel>
                                     <p className="text-sm text-muted-foreground">Marcar si el evento lo realiza otro grupo.</p>
                                 </div>
                                 </FormItem>
                             )}
                           />
                       </CardContent>
-                      <CardFooter className="flex flex-col items-start gap-2 text-sm">
+                      <CardFooter className="flex flex-col items-start gap-2 text-sm bg-muted/50 p-4 rounded-b-lg">
                         <div className="flex justify-between w-full">
                             <span className="text-muted-foreground">Saldo Pendiente:</span>
-                            <span className="font-semibold">{formatCurrency(pendingBalance)}</span>
+                            <span className={`font-semibold ${pendingBalance < 0 ? 'text-destructive' : ''}`}>{formatCurrency(pendingBalance)}</span>
                         </div>
                         <div className="flex justify-between w-full">
                             <span className="text-muted-foreground">Ganancia:</span>
-                            <span className="font-semibold">{formatCurrency(profit)}</span>
+                             {externalGroup ? (
+                                <span className="font-semibold text-muted-foreground">No aplica</span>
+                             ) : (
+                                <span className={`font-semibold ${profit < 0 ? 'text-destructive' : 'text-green-600'}`}>{formatCurrency(profit)}</span>
+                             )}
                         </div>
                       </CardFooter>
                   </Card>
               </div>
           </div>
-        <Button type="submit" size="lg">Crear Evento</Button>
+        <Button type="submit" size="lg" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting ? "Guardando..." : "Crear Evento"}
+        </Button>
       </form>
     </Form>
   )
