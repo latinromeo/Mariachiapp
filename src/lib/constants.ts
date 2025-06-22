@@ -29,3 +29,18 @@ export const PAYMENT_METHODS = [
     { value: "card", label: "Tarjeta" },
     { value: "pending", label: "Pendiente" },
 ];
+
+export const SONG_CATEGORIES = [
+  'Románticas',
+  'Cumpleaños',
+  'Serenatas',
+  'Dolor',
+  'Rancheras',
+  'Corridos',
+  'Cumbias',
+  'Sones',
+  'Pop en Mariachi',
+  'Infantiles',
+  'Clásicos Mexicanos',
+  'Huapangos'
+];

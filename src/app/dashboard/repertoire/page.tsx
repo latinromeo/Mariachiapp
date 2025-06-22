@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, Music, KeyRound, Star } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getSongs, type SongDetail, SONG_CATEGORIES } from "@/services/eventService";
+import { getSongs, type SongDetail } from "@/services/eventService";
+import { SONG_CATEGORIES } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function RepertoirePage() {

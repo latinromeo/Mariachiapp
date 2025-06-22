@@ -65,21 +65,6 @@ export interface SongDetail {
   notes?: string;
 }
 
-export const SONG_CATEGORIES = [
-  'Románticas',
-  'Cumpleaños',
-  'Serenatas',
-  'Dolor',
-  'Rancheras',
-  'Corridos',
-  'Cumbias',
-  'Sones',
-  'Pop en Mariachi',
-  'Infantiles',
-  'Clásicos Mexicanos',
-  'Huapangos'
-];
-
 // --- MOCK DATABASE ---
 
 const clients: ClientData[] = [
