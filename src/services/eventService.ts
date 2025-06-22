@@ -73,8 +73,10 @@ export interface SongDetail {
   category: string;
   key?: string;
   suggestedEvents?: string[];
+  lyrics?: string;
   notes?: string;
-  lyricsUrl?: string;
+  sheetMusicUrl?: string;
+  youtubeUrl?: string;
   createdAt: string;
 }
 
@@ -110,7 +112,7 @@ type EventInputData = Omit<EventData, 'id'|'clientId'|'pendingBalance'|'profit'|
 type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;
 type RehearsalInputData = Omit<RehearsalData, 'id'|'createdAt'|'updatedAt'>;
 type ManualFinanceEntryInputData = Omit<ManualFinanceEntry, 'id'|'createdBy'|'createdAt'>;
-type SongInputData = Omit<SongDetail, 'id' | 'createdAt'>;
+type SongInputData = Omit<SongDetail, 'id' | 'createdAt' | 'suggestedEvents'>;
 
 
 // --- HELPER FUNCTIONS ---

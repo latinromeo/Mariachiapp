@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Music, KeyRound, Star, PlusCircle, Link as LinkIcon } from "lucide-react";
+import { Search, Music, KeyRound, Star, PlusCircle, Link as LinkIcon, FileText, Video } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSongs, type SongDetail } from "@/services/eventService";
 import { SONG_CATEGORIES } from "@/lib/constants";
@@ -83,9 +83,9 @@ export default function RepertoirePage() {
                     Añadir Canción
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                    <DialogTitle>Añadir Nueva Canción al Repertorio</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2"><Music className="h-5 w-5"/>Añadir Nueva Canción al Repertorio</DialogTitle>
                     <DialogDescription>
                         Completa la información para registrar una nueva canción.
                     </DialogDescription>
@@ -132,11 +132,18 @@ export default function RepertoirePage() {
                                 <Music className="h-5 w-5 text-primary" />
                                 {song.title}
                             </span>
-                            {song.lyricsUrl && (
-                                <a href={song.lyricsUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground transition-colors hover:text-primary" title="Ver partitura/letra">
-                                    <LinkIcon className="h-4 w-4" />
-                                </a>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {song.youtubeUrl && (
+                                  <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground transition-colors hover:text-primary" title="Ver en YouTube">
+                                      <Video className="h-4 w-4" />
+                                  </a>
+                              )}
+                              {song.sheetMusicUrl && (
+                                  <a href={song.sheetMusicUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground transition-colors hover:text-primary" title="Ver partitura/letra">
+                                      <FileText className="h-4 w-4" />
+                                  </a>
+                              )}
+                            </div>
                         </CardTitle>
                         {song.artist && <CardDescription>{song.artist}</CardDescription>}
                       </CardHeader>

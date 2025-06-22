@@ -17,45 +17,51 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
-import { Loader2, Music, User, KeyRound, Star, GripVertical, Link } from "lucide-react"
+import { Loader2, Music, User, KeyRound, Link, FileText, Plus, Type, StickyNote } from "lucide-react"
 import { createSong } from "@/services/eventService"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { SONG_CATEGORIES, EVENT_TYPES } from "@/lib/constants"
-import { Checkbox } from "@/components/ui/checkbox"
+import { SONG_CATEGORIES, MUSICAL_KEYS } from "@/lib/constants"
+import { DialogFooter } from "@/components/ui/dialog"
 
 const formSchema = z.object({
   title: z.string().min(2, { message: "El título es obligatorio." }),
   artist: z.string().optional(),
+  youtubeUrl: z.string().url({ message: "Debe ser una URL de YouTube válida." }).optional().or(z.literal("")),
+  sheetMusicUrl: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")),
   category: z.string({ required_error: "Debe seleccionar una categoría." }),
   key: z.string().optional(),
-  lyricsUrl: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")),
-  suggestedEvents: z.array(z.string()).optional(),
+  lyrics: z.string().optional(),
   notes: z.string().optional(),
 })
 
 interface SongFormProps {
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export function SongForm({ onSuccess }: SongFormProps) {
+export function SongForm({ onSuccess, onCancel }: SongFormProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fileName, setFileName] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
       artist: "",
+      youtubeUrl: "",
+      sheetMusicUrl: "",
       category: "",
       key: "",
-      lyricsUrl: "",
-      suggestedEvents: [],
+      lyrics: "",
       notes: "",
     },
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
+    // Note: File upload logic is not implemented here. 
+    // This form currently only saves the URLs and text data.
     try {
         const result = await createSong(values);
         if (result.success) {
@@ -86,14 +92,14 @@ export function SongForm({ onSuccess }: SongFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-4">
             <FormField
                 control={form.control}
                 name="title"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Music className="h-4 w-4" />Título de la Canción</FormLabel>
+                        <FormLabel className="flex items-center gap-2"><Music className="h-4 w-4" />Título de la Canción *</FormLabel>
                         <FormControl><Input placeholder="Ej: El Rey" {...field} /></FormControl>
                         <FormMessage />
                     </FormItem>
@@ -105,29 +111,65 @@ export function SongForm({ onSuccess }: SongFormProps) {
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel className="flex items-center gap-2"><User className="h-4 w-4" />Artista (Opcional)</FormLabel>
-                        <FormControl><Input placeholder="Ej: José Alfredo Jiménez" {...field} /></FormControl>
+                        <FormControl><Input placeholder="Ej: José Alfredo Jiménez" {...field} value={field.value ?? ""} /></FormControl>
                         <FormMessage />
                     </FormItem>
                 )}
             />
-            <FormField
+             <FormField
                 control={form.control}
-                name="lyricsUrl"
+                name="youtubeUrl"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Link className="h-4 w-4" />Enlace a Partitura/Letra (Opcional)</FormLabel>
-                        <FormControl><Input type="url" placeholder="https://..." {...field} /></FormControl>
+                        <FormLabel className="flex items-center gap-2"><Link className="h-4 w-4" />Enlace de YouTube (Opcional)</FormLabel>
+                        <FormControl><Input type="url" placeholder="https://www.youtube.com/watch?v=..." {...field} value={field.value ?? ""} /></FormControl>
                         <FormMessage />
                     </FormItem>
                 )}
             />
+             <FormItem>
+                <FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4" />Partitura (PDF/Imagen, Opcional)</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input 
+                      type="file" 
+                      id="sheet-music-upload" 
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => setFileName(e.target.files?.[0]?.name || "")}
+                    />
+                    <label htmlFor="sheet-music-upload" className="flex items-center justify-between w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      <span className="text-muted-foreground">{fileName || "Ningún archivo seleccionado"}</span>
+                      <div className="px-3 py-1 bg-secondary text-secondary-foreground rounded-sm text-sm font-medium">Seleccionar archivo</div>
+                    </label>
+                  </div>
+                </FormControl>
+                <p className="text-xs text-muted-foreground">La subida de archivos se implementará en un paso futuro.</p>
+                <FormMessage />
+            </FormItem>
+            
             <div className="grid grid-cols-2 gap-4">
-                <FormField
+                 <FormField
+                    control={form.control}
+                    name="key"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center gap-2"><KeyRound className="h-4 w-4" />Tono</FormLabel>
+                             <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {MUSICAL_KEYS.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
                     control={form.control}
                     name="category"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="flex items-center gap-2"><GripVertical className="h-4 w-4" />Categoría</FormLabel>
+                            <FormLabel className="flex items-center gap-2"><Plus className="h-4 w-4" />Categoría *</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value} defaultValue="">
                                 <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
                                 <SelectContent>
@@ -138,61 +180,14 @@ export function SongForm({ onSuccess }: SongFormProps) {
                         </FormItem>
                     )}
                 />
-                 <FormField
-                    control={form.control}
-                    name="key"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="flex items-center gap-2"><KeyRound className="h-4 w-4" />Tono (Opcional)</FormLabel>
-                            <FormControl><Input placeholder="Ej: G, Am, C#m" {...field} value={field.value || ""} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
             </div>
-            <FormField
+             <FormField
                 control={form.control}
-                name="suggestedEvents"
-                render={() => (
+                name="lyrics"
+                render={({ field }) => (
                     <FormItem>
-                         <div className="mb-4">
-                            <FormLabel className="flex items-center gap-2 text-base"><Star className="h-4 w-4" />Eventos Sugeridos (Opcional)</FormLabel>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                        {EVENT_TYPES.map((item) => (
-                            <FormField
-                            key={item.value}
-                            control={form.control}
-                            name="suggestedEvents"
-                            render={({ field }) => {
-                                return (
-                                <FormItem
-                                    key={item.value}
-                                    className="flex flex-row items-start space-x-3 space-y-0"
-                                >
-                                    <FormControl>
-                                    <Checkbox
-                                        checked={field.value?.includes(item.value)}
-                                        onCheckedChange={(checked) => {
-                                        return checked
-                                            ? field.onChange([...(field.value || []), item.value])
-                                            : field.onChange(
-                                                field.value?.filter(
-                                                (value) => value !== item.value
-                                                )
-                                            )
-                                        }}
-                                    />
-                                    </FormControl>
-                                    <FormLabel className="font-normal">
-                                    {item.label}
-                                    </FormLabel>
-                                </FormItem>
-                                )
-                            }}
-                            />
-                        ))}
-                        </div>
+                        <FormLabel className="flex items-center gap-2"><Type className="h-4 w-4" />Letra (Opcional)</FormLabel>
+                        <FormControl><Textarea placeholder="Escriba la letra de la canción aquí..." {...field} value={field.value ?? ""} className="min-h-[100px]" /></FormControl>
                         <FormMessage />
                     </FormItem>
                 )}
@@ -203,17 +198,21 @@ export function SongForm({ onSuccess }: SongFormProps) {
                 name="notes"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Notas Adicionales (Opcional)</FormLabel>
-                        <FormControl><Textarea placeholder="Detalles de arreglos, intros, etc." {...field} /></FormControl>
+                        <FormLabel className="flex items-center gap-2"><StickyNote className="h-4 w-4" />Notas Adicionales (Opcional)</FormLabel>
+                        <FormControl><Textarea placeholder="Tonalidad, arreglos, observaciones..." {...field} value={field.value ?? ""} /></FormControl>
                         <FormMessage />
                     </FormItem>
                 )}
             />
         </div>
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? "Guardando..." : "Guardar Canción"}
-        </Button>
+        <DialogFooter className="pt-4">
+             {onCancel && <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>}
+             <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Music className="mr-2 h-4 w-4" />
+                {isSubmitting ? "Guardando..." : "Guardar Canción"}
+            </Button>
+        </DialogFooter>
       </form>
     </Form>
   )
