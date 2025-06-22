@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ManualEntryForm } from "./manual-entry-form"
 import { endOfMonth, format, startOfMonth, subMonths } from "date-fns"
 import { es } from "date-fns/locale"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
 
 const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -138,7 +138,7 @@ export default function FinancePage() {
 
         setChartsData({
             incomeBreakdown: incomeBreakdownData,
-            incomeVsExpense: [{ name: format(now, 'MMMM', {locale: es}), Ingresos: income, Egresos: expenses }],
+            incomeVsExpense: [{ name: format(now, 'MMMM yyyy', {locale: es}), Ingresos: income, Egresos: expenses }],
             eventTypeDistribution: eventTypeDistributionData,
         });
 
@@ -214,30 +214,50 @@ export default function FinancePage() {
         <div className="grid gap-6 lg:grid-cols-5">
             <Card className="lg:col-span-3">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><LineChartIcon className="h-5 w-5" />Desglose de Ingresos Mensuales</CardTitle>
-                    <CardDescription>Evolución de los ingresos a lo largo de los meses.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><BarChartIcon className="h-5 w-5" />Resumen Mensual General</CardTitle>
+                    <CardDescription>Comparación de Ingresos vs. Egresos del mes en curso.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ChartContainer config={{}} className="h-[250px] w-full">
-                        <LineChart data={chartsData.incomeBreakdown} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                             <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                             <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value/1000}k`} />
-                            <Tooltip
+                    <ChartContainer config={{
+                        Ingresos: {
+                            label: "Ingresos",
+                            color: "hsl(var(--chart-1))",
+                        },
+                        Egresos: {
+                            label: "Egresos",
+                            color: "hsl(var(--chart-2))",
+                        },
+                    }} className="h-[250px] w-full">
+                        <BarChart
+                            data={chartsData.incomeVsExpense}
+                            margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                        >
+                            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
+                            <YAxis 
+                                stroke="hsl(var(--muted-foreground))" 
+                                fontSize={12} 
+                                tickLine={false} 
+                                axisLine={false} 
+                                tickFormatter={(value) => formatCurrency(value as number).replace('.00', '')} 
+                            />
+                            <ChartTooltip
                                 cursor={false}
                                 content={<ChartTooltipContent
                                     formatter={(value) => formatCurrency(value as number)}
                                     indicator="dot"
                                 />}
                             />
-                            <Line type="monotone" dataKey="Ingresos" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: 'hsl(var(--primary))' }} />
-                        </LineChart>
+                            <Legend content={<ChartLegendContent />} />
+                            <Bar dataKey="Ingresos" fill="var(--color-Ingresos)" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Egresos" fill="var(--color-Egresos)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
                     </ChartContainer>
                 </CardContent>
             </Card>
              <Card className="lg:col-span-2">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><PieChartIcon className="h-5 w-5"/>Distribución de Ingresos por Tipo de Evento</CardTitle>
-                    <CardDescription>Cantidad de eventos realizados por cada tipo.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><PieChartIcon className="h-5 w-5"/>Distribución por Tipo de Evento</CardTitle>
+                    <CardDescription>Cantidad de eventos realizados por cada tipo este mes.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {chartsData.eventTypeDistribution.length > 0 ? (
@@ -280,3 +300,5 @@ export default function FinancePage() {
     </div>
   )
 }
+
+    
