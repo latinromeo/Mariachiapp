@@ -54,7 +54,8 @@ const formSchema = z.object({
   notes: z.string().optional(),
 })
 
-const formatCurrency = (value: number) => {
+const formatCurrency = (value: number | undefined) => {
+    if (value === undefined || value === null) return "$0.00";
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
 };
 
@@ -74,6 +75,12 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   
   const isEditMode = !!eventId;
+
+  const [customFields, setCustomFields] = useState({
+    contractedAmount: false,
+    amountPaid: false,
+    musiciansPay: false,
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -100,9 +107,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
     },
   })
 
-  const { watch, setValue, getValues } = form
-  const planValue = watch("plan")
-  const isCustomPlan = planValue === 'personalizado';
+  const { watch, setValue } = form
   const contractedAmount = watch("contractedAmount")
   const amountPaid = watch("amountPaid")
   const musiciansPay = watch("musiciansPay")
@@ -112,14 +117,37 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
   const [pendingBalance, setPendingBalance] = useState(0)
   const [profit, setProfit] = useState(0)
 
-  useEffect(() => {
-    const selectedPlan = EVENT_PLANS.find(p => p.value === planValue);
-    if (selectedPlan && selectedPlan.value !== 'personalizado') {
-        if (getValues('contractedAmount') !== selectedPlan.price) {
-            setValue('contractedAmount', selectedPlan.price, { shouldValidate: true });
-        }
+  const standardAmountOptions = useMemo(() => {
+    const options = new Set<number>();
+    for (let i = 0; i <= 100000; i += 1000) {
+        options.add(i);
     }
-  }, [planValue, setValue, getValues]);
+    [7500, 8500, 15500].forEach(opt => options.add(opt));
+    return Array.from(options).sort((a, b) => a - b);
+  }, []);
+
+  const musicianAmountOptions = useMemo(() => {
+    const options = new Set<number>();
+    for (let i = 0; i <= 100000; i += 1000) {
+        options.add(i);
+    }
+    [3600, 4800, 7500, 8500, 15500].forEach(opt => options.add(opt));
+    return Array.from(options).sort((a, b) => a - b);
+  }, []);
+  
+  useEffect(() => {
+    if (initialData) {
+        const isContractedCustom = initialData.contractedAmount !== undefined && !standardAmountOptions.includes(initialData.contractedAmount);
+        const isPaidCustom = initialData.amountPaid !== undefined && !standardAmountOptions.includes(initialData.amountPaid);
+        const isMusiciansCustom = initialData.musiciansPay !== undefined && !musicianAmountOptions.includes(initialData.musiciansPay);
+
+        setCustomFields({
+            contractedAmount: isContractedCustom,
+            amountPaid: isPaidCustom,
+            musiciansPay: isMusiciansCustom,
+        });
+    }
+  }, [initialData, standardAmountOptions, musicianAmountOptions]);
 
   const timeOptions = useMemo(() => {
     const options = [];
@@ -402,33 +430,137 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Monto Contratado</FormLabel>
-                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} disabled={!isCustomPlan} /></FormControl>
+                                    <Select
+                                        onValueChange={(value) => {
+                                            if (value === 'custom') {
+                                                setCustomFields(prev => ({...prev, contractedAmount: true}));
+                                            } else {
+                                                setCustomFields(prev => ({...prev, contractedAmount: false}));
+                                                field.onChange(Number(value));
+                                            }
+                                        }}
+                                        value={customFields.contractedAmount ? 'custom' : (field.value === undefined ? "" : String(field.value))}
+                                        >
+                                        <FormControl>
+                                            <SelectTrigger><SelectValue placeholder="Seleccionar o escribir monto..." /></SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="custom">Monto Personalizado</SelectItem>
+                                            {standardAmountOptions.map(amount => (
+                                                <SelectItem key={amount} value={String(amount)}>
+                                                {formatCurrency(amount)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {customFields.contractedAmount && (
+                                        <FormControl>
+                                        <Input 
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="0.00"
+                                            value={field.value ?? ""}
+                                            onChange={field.onChange}
+                                            className="mt-2"
+                                        />
+                                        </FormControl>
+                                    )}
                                     <FormMessage />
                                 </FormItem>
                             )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="amountPaid"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Monto Pagado</FormLabel>
-                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="musiciansPay"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Pago a Músicos</FormLabel>
-                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" disabled={externalGroup} {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                          />
+                            />
+                            <FormField
+                                control={form.control}
+                                name="amountPaid"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Monto Pagado</FormLabel>
+                                        <Select
+                                            onValueChange={(value) => {
+                                                if (value === 'custom') {
+                                                    setCustomFields(prev => ({...prev, amountPaid: true}));
+                                                } else {
+                                                    setCustomFields(prev => ({...prev, amountPaid: false}));
+                                                    field.onChange(Number(value));
+                                                }
+                                            }}
+                                            value={customFields.amountPaid ? 'custom' : (field.value === undefined ? "" : String(field.value))}
+                                            >
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue placeholder="Seleccionar o escribir monto..." /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="custom">Monto Personalizado</SelectItem>
+                                                {standardAmountOptions.map(amount => (
+                                                    <SelectItem key={amount} value={String(amount)}>
+                                                    {formatCurrency(amount)}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {customFields.amountPaid && (
+                                            <FormControl>
+                                            <Input 
+                                                type="number"
+                                                step="0.01"
+                                                placeholder="0.00"
+                                                value={field.value ?? ""}
+                                                onChange={field.onChange}
+                                                className="mt-2"
+                                            />
+                                            </FormControl>
+                                        )}
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="musiciansPay"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Pago a Músicos</FormLabel>
+                                         <Select
+                                            onValueChange={(value) => {
+                                                if (value === 'custom') {
+                                                    setCustomFields(prev => ({...prev, musiciansPay: true}));
+                                                } else {
+                                                    setCustomFields(prev => ({...prev, musiciansPay: false}));
+                                                    field.onChange(Number(value));
+                                                }
+                                            }}
+                                            value={customFields.musiciansPay ? 'custom' : (field.value === undefined ? "" : String(field.value))}
+                                            disabled={externalGroup}
+                                            >
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue placeholder="Seleccionar o escribir monto..." /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="custom">Monto Personalizado</SelectItem>
+                                                {musicianAmountOptions.map(amount => (
+                                                    <SelectItem key={amount} value={String(amount)}>
+                                                    {formatCurrency(amount)}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {customFields.musiciansPay && (
+                                            <FormControl>
+                                            <Input 
+                                                type="number"
+                                                step="0.01"
+                                                placeholder="0.00"
+                                                value={field.value ?? ""}
+                                                onChange={field.onChange}
+                                                className="mt-2"
+                                                disabled={externalGroup}
+                                            />
+                                            </FormControl>
+                                        )}
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                           <FormField
                             control={form.control}
                             name="externalGroup"
@@ -502,3 +634,5 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
     </Form>
   )
 }
+
+    
