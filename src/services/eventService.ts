@@ -16,7 +16,8 @@ import {
     doc,
     getDoc,
     updateDoc,
-    deleteDoc
+    deleteDoc,
+    setDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { EVENT_PLANS } from "@/lib/constants";
@@ -123,6 +124,24 @@ export interface ManualFinanceEntry {
   createdAt: string;
 }
 
+export interface MusicianIncome {
+    id: string; // Will be composite key userId_eventId
+    userId: string;
+    eventId: string;
+    amount: number;
+    date: string; // event date
+}
+
+export interface MusicianExpense {
+    id:string;
+    userId: string;
+    description: string;
+    category: string;
+    amount: number;
+    date: string; // 'YYYY-MM-DD'
+    createdAt: string;
+}
+
 
 // --- FORM INPUT TYPES ---
 
@@ -133,6 +152,7 @@ type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;
 type RehearsalInputData = Omit<RehearsalData, 'id'|'createdAt'|'updatedAt'|'status'>;
 type ManualFinanceEntryInputData = Omit<ManualFinanceEntry, 'id'|'createdBy'|'createdAt'>;
 type SongInputData = Omit<SongDetail, 'id' | 'createdAt' | 'updatedAt' | 'suggestedEvents'>;
+type MusicianExpenseInput = Omit<MusicianExpense, 'id' | 'userId' | 'createdAt'>;
 
 
 // --- HELPER FUNCTIONS ---
@@ -544,6 +564,70 @@ export async function createManualFinanceEntry(data: ManualFinanceEntryInputData
     } catch (error) {
         console.error("Error creating manual entry:", error);
         return { success: false };
+    }
+}
+
+// --- MUSICIAN FINANCE FUNCTIONS ---
+
+export async function upsertMusicianIncome(userId: string, eventId: string, amount: number, eventDate: string): Promise<{ success: boolean; error?: string }> {
+    if (!userId || !eventId) {
+        return { success: false, error: "User ID and Event ID are required." };
+    }
+    const incomeRef = doc(db, "musicianIncomes", `${userId}_${eventId}`);
+    try {
+        await setDoc(incomeRef, {
+            userId,
+            eventId,
+            amount,
+            date: eventDate,
+        }, { merge: true });
+        return { success: true };
+    } catch (error) {
+        console.error("Error upserting musician income:", error);
+        return { success: false, error: "Failed to save musician income." };
+    }
+}
+
+export async function getMusicianIncomes(userId: string): Promise<MusicianIncome[]> {
+    if (!userId) return [];
+    try {
+        const incomesCol = collection(db, "musicianIncomes");
+        const q = query(incomesCol, where("userId", "==", userId));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MusicianIncome));
+    } catch (error) {
+        console.error("Error fetching musician incomes:", error);
+        return [];
+    }
+}
+
+export async function createMusicianExpense(userId: string, data: MusicianExpenseInput): Promise<{ success: boolean; expenseId?: string; error?: string }> {
+     if (!userId) {
+        return { success: false, error: "User ID is required." };
+    }
+    try {
+        const docRef = await addDoc(collection(db, "musicianExpenses"), {
+            ...data,
+            userId,
+            createdAt: serverTimestamp()
+        });
+        return { success: true, expenseId: docRef.id };
+    } catch (error) {
+        console.error("Error creating musician expense:", error);
+        return { success: false, error: "Failed to create expense." };
+    }
+}
+
+export async function getMusicianExpenses(userId: string): Promise<MusicianExpense[]> {
+     if (!userId) return [];
+     try {
+        const expensesCol = collection(db, "musicianExpenses");
+        const q = query(expensesCol, where("userId", "==", userId), orderBy("date", "desc"));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as MusicianExpense[];
+    } catch (error) {
+        console.error("Error fetching musician expenses:", error);
+        return [];
     }
 }
 
