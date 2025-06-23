@@ -1,8 +1,9 @@
+
 "use client"
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { format, getYear, getMonth, isSameMonth, parse, startOfToday } from "date-fns";
+import { format, getYear, getMonth, isSameMonth, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,49 +34,53 @@ export default function DashboardPage() {
   const [isCompleting, setIsCompleting] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  // State to handle hydration mismatch
+  const [isClient, setIsClient] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
+  const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
+  const [years, setYears] = useState<number[]>([]);
 
-  const years = useMemo(() => {
-    const currentYear = getYear(new Date());
-    return Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
-  }, []);
-
-  const fetchAllData = async () => {
-    setIsLoading(true);
-    try {
-      const [eventsData, rehearsalsData] = await Promise.all([
-        getEvents(),
-        getRehearsals()
-      ]);
-      setAllEvents(eventsData);
-      setAllRehearsals(rehearsalsData);
-    } catch (error) {
-      console.error("Failed to fetch data", error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las actividades." });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
   useEffect(() => {
+    const fetchAllData = async () => {
+      setIsLoading(true);
+      try {
+        const [eventsData, rehearsalsData] = await Promise.all([
+          getEvents(),
+          getRehearsals()
+        ]);
+        setAllEvents(eventsData);
+        setAllRehearsals(rehearsalsData);
+      } catch (error) {
+        console.error("Failed to fetch data", error);
+        toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las actividades." });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
     fetchAllData();
+
+    // This logic now runs only on the client, preventing hydration errors
     const today = new Date();
     setSelectedMonth(getMonth(today));
     setSelectedYear(getYear(today));
-  }, []);
+    const currentYear = getYear(today);
+    setYears(Array.from({ length: 11 }, (_, i) => currentYear - 5 + i));
+    setIsClient(true);
+  }, [toast]);
 
   const pendingActivities = useMemo(() => {
-    if (selectedYear === null || selectedMonth === null) {
+    if (!isClient || typeof selectedYear === 'undefined' || typeof selectedMonth === 'undefined') {
       return [];
     }
     const targetDate = new Date(selectedYear, selectedMonth);
-    
+    const referenceDate = new Date(0); // A static date for consistent parsing
+
     const events = allEvents
       .filter(event => {
-        if (!event.eventDate) return false;
+        if (!event.eventDate || !/^\d{4}-\d{2}-\d{2}$/.test(event.eventDate)) return false;
         try {
-            const eventDate = parse(event.eventDate, 'yyyy-MM-dd', new Date());
+            const eventDate = parse(event.eventDate, 'yyyy-MM-dd', referenceDate);
             return (event.status === 'pending' || event.status === 'confirmed') && isSameMonth(eventDate, targetDate);
         } catch {
             return false;
@@ -85,9 +90,9 @@ export default function DashboardPage() {
       
     const rehearsals = allRehearsals
       .filter(rehearsal => {
-        if (!rehearsal.date) return false;
+        if (!rehearsal.date || !/^\d{4}-\d{2}-\d{2}$/.test(rehearsal.date)) return false;
         try {
-            const rehearsalDate = parse(rehearsal.date, 'yyyy-MM-dd', new Date());
+            const rehearsalDate = parse(rehearsal.date, 'yyyy-MM-dd', referenceDate);
             return isSameMonth(rehearsalDate, targetDate);
         } catch {
             return false;
@@ -99,20 +104,22 @@ export default function DashboardPage() {
 
     return combined.sort((a, b) => {
         try {
-            const dateA = parse(a.date, 'yyyy-MM-dd', new Date());
-            const dateB = parse(b.date, 'yyyy-MM-dd', new Date());
+            const dateA = parse(a.date, 'yyyy-MM-dd', referenceDate);
+            const dateB = parse(b.date, 'yyyy-MM-dd', referenceDate);
             return dateA.getTime() - dateB.getTime();
         } catch {
             return 0;
         }
     });
-
-  }, [allEvents, allRehearsals, selectedMonth, selectedYear]);
+  }, [allEvents, allRehearsals, selectedMonth, selectedYear, isClient]);
 
   const groupedActivities = useMemo(() => {
+    if (!pendingActivities.length) return {};
+    const referenceDate = new Date(0); // Static reference date
+    
     return pendingActivities.reduce((acc, activity) => {
       try {
-        const dateKey = format(parse(activity.date, 'yyyy-MM-dd', new Date()), "EEEE, dd MMM", { locale: es });
+        const dateKey = format(parse(activity.date, 'yyyy-MM-dd', referenceDate), "EEEE, dd MMM", { locale: es });
         if (!acc[dateKey]) {
           acc[dateKey] = [];
         }
@@ -132,7 +139,10 @@ export default function DashboardPage() {
         title: "¡Evento Completado!",
         description: "El evento se marcó como completado y las finanzas se actualizaron.",
       });
-      fetchAllData();
+      // Refetch data after completion
+      const [eventsData, rehearsalsData] = await Promise.all([getEvents(), getRehearsals()]);
+      setAllEvents(eventsData);
+      setAllRehearsals(rehearsalsData);
     } else {
       toast({
         variant: "destructive",
@@ -142,15 +152,33 @@ export default function DashboardPage() {
     }
     setIsCompleting(null);
   };
+  
+  if (!isClient) {
+      return (
+          <div className="flex flex-col gap-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                  <Skeleton className="h-10 w-64" />
+                  <Skeleton className="h-10 w-40" />
+              </div>
+              <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                      <Skeleton className="h-10 w-[150px]" />
+                      <Skeleton className="h-10 w-[100px]" />
+                  </div>
+                  <Skeleton className="h-48 w-full" />
+              </div>
+          </div>
+      )
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 className="font-headline text-3xl font-bold tracking-tight">
-                Actividades Pendientes ({isLoading || selectedMonth === null ? '...' : pendingActivities.length})
+                Actividades Pendientes ({isLoading || typeof selectedMonth === 'undefined' ? '...' : pendingActivities.length})
             </h1>
-            {selectedMonth !== null && (
+            {typeof selectedMonth !== 'undefined' && (
                <p className="text-muted-foreground">
                 {`Eventos y ensayos para ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}.`}
                </p>
@@ -167,7 +195,7 @@ export default function DashboardPage() {
       <div className="space-y-4">
          <div className="dark">
             <div className="flex flex-wrap items-center gap-2">
-                <Select value={selectedMonth !== null ? String(selectedMonth) : ""} onValueChange={(value) => setSelectedMonth(Number(value))}>
+                <Select value={typeof selectedMonth !== 'undefined' ? String(selectedMonth) : ""} onValueChange={(value) => setSelectedMonth(Number(value))}>
                 <SelectTrigger className="w-full flex-1 md:w-[150px] bg-card text-card-foreground border-border">
                     <SelectValue placeholder="Mes" />
                 </SelectTrigger>
@@ -177,21 +205,23 @@ export default function DashboardPage() {
                     ))}
                 </SelectContent>
                 </Select>
-                <Select value={selectedYear !== null ? String(selectedYear) : ""} onValueChange={(value) => setSelectedYear(Number(value))}>
-                <SelectTrigger className="w-full flex-1 md:w-[100px] bg-card text-card-foreground border-border">
-                    <SelectValue placeholder="Año" />
-                </SelectTrigger>
-                <SelectContent>
-                    {years.map(year => (
-                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                    ))}
-                </SelectContent>
-                </Select>
+                {years.length > 0 && (
+                  <Select value={typeof selectedYear !== 'undefined' ? String(selectedYear) : ""} onValueChange={(value) => setSelectedYear(Number(value))}>
+                  <SelectTrigger className="w-full flex-1 md:w-[100px] bg-card text-card-foreground border-border">
+                      <SelectValue placeholder="Año" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      {years.map(year => (
+                      <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                      ))}
+                  </SelectContent>
+                  </Select>
+                )}
             </div>
         </div>
 
         <div className="space-y-6">
-            {isLoading || selectedMonth === null ? (
+            {isLoading ? (
                 <Skeleton className="h-48 w-full" />
             ) : Object.keys(groupedActivities).length > 0 ? (
                 Object.entries(groupedActivities).map(([date, activitiesOnDay]) => (
@@ -285,7 +315,7 @@ export default function DashboardPage() {
             ) : (
                 <div className="text-center text-muted-foreground py-16 border border-dashed rounded-lg">
                     <p className="font-semibold">¡Todo al día!</p>
-                    <p>No hay actividades pendientes para {selectedMonth !== null ? months.find(m => m.value === selectedMonth)?.label : ''} de {selectedYear}.</p>
+                    <p>No hay actividades pendientes para {typeof selectedMonth !== 'undefined' ? months.find(m => m.value === selectedMonth)?.label : ''} de {selectedYear}.</p>
                 </div>
             )}
         </div>

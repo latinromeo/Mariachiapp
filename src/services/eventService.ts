@@ -361,20 +361,6 @@ export async function getRehearsals(): Promise<RehearsalData[]> {
         const rehearsalsCol = collection(db, "rehearsals");
         const snapshot = await getDocs(query(rehearsalsCol, orderBy("date", "desc")));
         const rehearsals = snapshot.docs.map(processDocTimestamps).filter(Boolean) as RehearsalData[];
-        
-        rehearsals.sort((a, b) => {
-            const dateA = new Date(a.date);
-            const dateB = new Date(b.date);
-            const today = startOfToday();
-            const aIsPast = isBefore(dateA, today);
-            const bIsPast = isBefore(dateB, today);
-
-            if (aIsPast && !bIsPast) return 1;
-            if (!aIsPast && bIsPast) return -1;
-            if (!aIsPast) return dateA.getTime() - dateB.getTime();
-            return dateB.getTime() - dateA.getTime();
-        });
-        
         return rehearsals;
     } catch (error) {
         console.error("Error fetching rehearsals:", error);
@@ -512,5 +498,3 @@ export async function getSuggestedSongs(eventType: string): Promise<SongDetail[]
 
     return suggestions;
 }
-
-    
