@@ -20,6 +20,7 @@ import { Separator } from "@/components/ui/separator"
 import { Printer, MessageSquare, Loader2 } from "lucide-react"
 import { type EventData } from "@/services/eventService"
 import { EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
+import { useToast } from "@/hooks/use-toast"
 
 
 interface EventReceiptModalProps {
@@ -35,6 +36,10 @@ const formatCurrency = (value: number | undefined) => {
     return `RD$${(value).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+// By embedding the logo as a Base64 string, we ensure it's always available when html2canvas runs, avoiding loading issues.
+const LOGO_BASE64 = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCAxNTAgNTAiPgogIDxzdHlsZT4KICAgIC50aXRsZSB7IGZvbnQ6IGJvbGQgMTRweCBzYW5zLXNlcmlmOyBmaWxsOiBibGFjazsgfQogICAgLnN1YnRpdGxlIHsgZm9udDogMTBweCBzYW5zLXNlcmlmOyBmaWxsOiBncmV5OyB9CiAgPC9zdHlsZT4KICA8dGV4dCB4PSI1IiB5PSIyMCIgY2xhc3M9InRpdGxlIj5NYXJpYWNoaSBSZXllczwvdGV4dD4KICA8dGV4dCB4PSI1IiB5PSIzNSIgY2xhc3M9InN1YnRpdGxlIj5kZSBNw6l4aWNvPC90ZXh0Pgo8L3N2Zz4=";
+
+
 interface ReceiptBodyProps {
   eventData: Partial<EventData>;
   eventTypeLabel: string;
@@ -46,7 +51,7 @@ const ReceiptBody = React.forwardRef<HTMLDivElement, ReceiptBodyProps>(({ eventD
   <div ref={ref} className="px-5 py-4 space-y-6 bg-white text-black">
     <div className="text-center space-y-2">
       <img
-        src="/logo.svg"
+        src={LOGO_BASE64}
         alt="Logo Mariachi Reyes de México"
         width={150}
         className="mx-auto"
@@ -149,35 +154,51 @@ ReceiptBody.displayName = "ReceiptBody";
 export function EventReceiptModal({ isOpen, onClose, eventData }: EventReceiptModalProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
 
   const handleSavePdf = () => {
     const input = receiptRef.current;
     if (!input) return;
 
     setIsSaving(true);
-    html2canvas(input, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
-        .then((canvas) => {
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            const ratio = canvasWidth / canvasHeight;
+    html2canvas(input, { 
+        scale: 2, 
+        useCORS: true,
+        backgroundColor: '#ffffff' 
+    })
+    .then((canvas) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
 
-            const imgWidth = pdfWidth - 20; // 10mm margin each side
-            const imgHeight = imgWidth / ratio;
+        let imgWidth = pdfWidth - 20; // 10mm margin each side
+        let imgHeight = imgWidth / ratio;
+        
+        if (imgHeight > pdfHeight - 20) {
+            imgHeight = pdfHeight - 20;
+            imgWidth = imgHeight * ratio;
+        }
 
-            pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
-            pdf.save(`Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}.pdf`);
-        })
-        .catch(err => {
-            console.error("Error generating PDF:", err);
-            alert("Hubo un error al generar el PDF. Por favor, inténtelo de nuevo.");
-        })
-        .finally(() => {
-            setIsSaving(false);
+        const xOffset = (pdfWidth - imgWidth) / 2;
+        pdf.addImage(imgData, 'PNG', xOffset, 10, imgWidth, imgHeight);
+        pdf.save(`Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}.pdf`);
+    })
+    .catch(err => {
+        console.error("Error generating PDF:", err);
+        toast({
+            variant: "destructive",
+            title: "Error al generar PDF",
+            description: "Hubo un problema al crear el archivo. Por favor, inténtelo de nuevo.",
         });
+    })
+    .finally(() => {
+        setIsSaving(false);
+    });
   };
 
   if (!eventData) return null
