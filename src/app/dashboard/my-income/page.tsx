@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { DollarSign, TrendingUp, TrendingDown, Landmark, PlusCircle, Calendar, Edit, Loader2 } from "lucide-react"
+import { DollarSign, TrendingUp, TrendingDown, Landmark, PlusCircle, Calendar, Edit, Loader2, CheckCircle } from "lucide-react"
 import { type EventData, type MusicianIncome, type MusicianExpense, getEvents, getMusicianIncomes, getMusicianExpenses, upsertMusicianIncome } from "@/services/eventService"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -236,7 +236,7 @@ export default function MyIncomePage() {
             <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">Mes:</span>
                 <Select value={String(selectedMonth)} onValueChange={(value) => setSelectedMonth(Number(value))}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-[180px] bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 text-foreground border-neutral-300 dark:border-neutral-600">
                         <SelectValue placeholder="Mes" />
                     </SelectTrigger>
                     <SelectContent>
@@ -249,7 +249,7 @@ export default function MyIncomePage() {
              <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">Año:</span>
                 <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
-                    <SelectTrigger className="w-[120px]">
+                    <SelectTrigger className="w-[120px] bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 text-foreground border-neutral-300 dark:border-neutral-600">
                         <SelectValue placeholder="Año" />
                     </SelectTrigger>
                     <SelectContent>
@@ -362,3 +362,4 @@ export default function MyIncomePage() {
     </div>
   );
 }
+
