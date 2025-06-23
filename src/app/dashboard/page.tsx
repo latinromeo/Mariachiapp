@@ -200,31 +200,29 @@ export default function DashboardPage() {
       </div>
       
       <div className="space-y-4">
-         <div className="dark">
-            <div className="flex flex-wrap items-center gap-2">
-                <Select value={typeof selectedMonth !== 'undefined' ? String(selectedMonth) : ""} onValueChange={(value) => setSelectedMonth(Number(value))}>
-                <SelectTrigger className="w-full flex-1 md:w-[150px] bg-card text-card-foreground border-border">
-                    <SelectValue placeholder="Mes" />
-                </SelectTrigger>
-                <SelectContent>
-                    {months.map(month => (
-                    <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>
-                    ))}
-                </SelectContent>
-                </Select>
-                {years.length > 0 && (
-                  <Select value={typeof selectedYear !== 'undefined' ? String(selectedYear) : ""} onValueChange={(value) => setSelectedYear(Number(value))}>
-                  <SelectTrigger className="w-full flex-1 md:w-[100px] bg-card text-card-foreground border-border">
-                      <SelectValue placeholder="Año" />
-                  </SelectTrigger>
-                  <SelectContent>
-                      {years.map(year => (
-                      <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                      ))}
-                  </SelectContent>
-                  </Select>
-                )}
-            </div>
+        <div className="flex flex-wrap items-center gap-2">
+            <Select value={typeof selectedMonth !== 'undefined' ? String(selectedMonth) : ""} onValueChange={(value) => setSelectedMonth(Number(value))}>
+            <SelectTrigger className="w-full flex-1 md:w-[150px] bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 text-foreground border-neutral-300 dark:border-neutral-600">
+                <SelectValue placeholder="Mes" />
+            </SelectTrigger>
+            <SelectContent>
+                {months.map(month => (
+                <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>
+                ))}
+            </SelectContent>
+            </Select>
+            {years.length > 0 && (
+              <Select value={typeof selectedYear !== 'undefined' ? String(selectedYear) : ""} onValueChange={(value) => setSelectedYear(Number(value))}>
+              <SelectTrigger className="w-full flex-1 md:w-[100px] bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 text-foreground border-neutral-300 dark:border-neutral-600">
+                  <SelectValue placeholder="Año" />
+              </SelectTrigger>
+              <SelectContent>
+                  {years.map(year => (
+                  <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                  ))}
+              </SelectContent>
+              </Select>
+            )}
         </div>
 
         <div className="space-y-6">
@@ -333,3 +331,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
