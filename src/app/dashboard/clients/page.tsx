@@ -117,10 +117,10 @@ export default function ClientsPage() {
           <Users className="h-10 w-10 text-primary" />
           <div>
             <h1 className="font-headline text-3xl font-bold tracking-tight">
-                Gestión de Clientes
+                Lista de Clientes (Prueba de Refresco)
             </h1>
             <p className="text-muted-foreground">
-                Visualiza, busca y administra la información de tus clientes.
+                Verifica si este título cambia. Si lo hace, los cambios se están aplicando.
             </p>
           </div>
         </div>
