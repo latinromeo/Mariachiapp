@@ -2,7 +2,7 @@
 "use client"
 
 import { useEffect, useState, useMemo, useCallback } from "react"
-import { Area, AreaChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, Cell, LineChart, Line, BarChart, Bar } from "recharts"
+import { Area, AreaChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, Cell, LineChart, Line, BarChart, Bar, Label } from "recharts"
 import {
   Card,
   CardContent,
@@ -309,41 +309,69 @@ export default function FinancePage() {
                     <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5"/>Distribución de Ingresos por Tipo de Evento</CardTitle>
                     <CardDescription>Cantidad total de eventos realizados por cada tipo.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col md:flex-row items-center justify-center gap-8 py-6">
-                    {showSkeleton ? <Skeleton className="h-[200px] w-[200px] rounded-full" /> : (
+                <CardContent className="flex items-center justify-center py-6">
+                    {showSkeleton ? <Skeleton className="h-[250px] w-[250px] rounded-full" /> : (
                         eventTypeDistribution.length > 0 ? (
-                             <div className="w-[200px] h-[200px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <ChartTooltip
-                                            cursor={false}
-                                            content={<ChartTooltipContent
-                                                formatter={(value, name) => `${value} evento(s)`}
-                                                nameKey="name"
-                                                indicator="dot"
-                                            />}
+                             <ChartContainer
+                                config={pieChartConfig}
+                                className="mx-auto aspect-square h-[250px]"
+                            >
+                                <PieChart>
+                                    <ChartTooltip
+                                        cursor={false}
+                                        content={<ChartTooltipContent
+                                            formatter={(value) => `${value} evento(s)`}
+                                            nameKey="name"
+                                            indicator="dot"
+                                        />}
+                                    />
+                                    <Pie
+                                        data={eventTypeDistribution}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        innerRadius={60}
+                                        strokeWidth={5}
+                                    >
+                                        <Label
+                                            content={({ viewBox }) => {
+                                                if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                                const totalEvents = eventTypeDistribution.reduce((acc, curr) => acc + curr.value, 0);
+                                                return (
+                                                    <text
+                                                    x={viewBox.cx}
+                                                    y={viewBox.cy}
+                                                    textAnchor="middle"
+                                                    dominantBaseline="middle"
+                                                    >
+                                                    <tspan
+                                                        x={viewBox.cx}
+                                                        y={viewBox.cy}
+                                                        className="fill-foreground text-3xl font-bold"
+                                                    >
+                                                        {totalEvents}
+                                                    </tspan>
+                                                    <tspan
+                                                        x={viewBox.cx}
+                                                        y={(viewBox.cy || 0) + 24}
+                                                        className="fill-muted-foreground"
+                                                    >
+                                                        Eventos
+                                                    </tspan>
+                                                    </text>
+                                                )
+                                                }
+                                            }}
                                         />
-                                        <Pie data={eventTypeDistribution} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} paddingAngle={2}>
-                                           {eventTypeDistribution.map((entry) => (
-                                              <Cell key={`cell-${entry.name}`} fill={entry.fill} />
-                                            ))}
-                                        </Pie>
-                                    </PieChart>
-                                 </ResponsiveContainer>
-                             </div>
+                                    </Pie>
+                                     <ChartLegend
+                                        content={<ChartLegendContent nameKey="name" />}
+                                        className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+                                    />
+                                </PieChart>
+                            </ChartContainer>
                         ) : (
-                            <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">No hay datos de eventos para mostrar.</div>
+                            <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">No hay datos de eventos para mostrar.</div>
                         )
-                    )}
-                     {!showSkeleton && eventTypeDistribution.length > 0 && (
-                        <div className="flex flex-col gap-2 text-sm">
-                            {eventTypeDistribution.map(entry => (
-                                <div key={entry.name} className="flex items-center gap-2">
-                                    <span className="w-3 h-3 rounded-full" style={{backgroundColor: entry.fill}}></span>
-                                    <span>{entry.name} ({entry.value})</span>
-                                </div>
-                            ))}
-                        </div>
                     )}
                 </CardContent>
             </Card>
