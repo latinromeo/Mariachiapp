@@ -2,7 +2,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, PlusCircle, Search, Phone, Edit, Loader2, Trash2 } from "lucide-react";
+import { Users, PlusCircle, Search, Phone, Edit, Loader2, Trash2, MoreHorizontal } from "lucide-react";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -36,7 +36,15 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { type ClientData, getClients, deleteClient } from "@/services/eventService";
 import { ClientForm } from "./client-form";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,6 +59,7 @@ export default function ClientsPage() {
   const [clientToDelete, setClientToDelete] = useState<ClientData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const fetchClients = async () => {
     setIsLoading(true);
@@ -165,7 +174,7 @@ export default function ClientsPage() {
                 <TableHead>Teléfono</TableHead>
                 <TableHead>Motivo (Último)</TableHead>
                 <TableHead>Fecha Evento</TableHead>
-                <TableHead>Acciones</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -176,7 +185,7 @@ export default function ClientsPage() {
                     <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><div className="flex gap-4"><Skeleton className="h-5 w-5" /><Skeleton className="h-5 w-20" /></div></TableCell>
+                    <TableCell><div className="flex justify-end"><Skeleton className="h-8 w-8" /></div></TableCell>
                   </TableRow>
                 ))
               ) : filteredClients.length > 0 ? (
@@ -194,16 +203,32 @@ export default function ClientsPage() {
                     </TableCell>
                     <TableCell>{index % 2 === 0 ? "Cumpleaños" : "Boda"}</TableCell>
                     <TableCell>{index % 2 === 0 ? "2025-01-15" : "2025-02-20"}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-4">
-                        <Link href={`/dashboard/clients/${client.id}/edit`} className="text-primary hover:text-primary/80">
-                          <Edit className="h-4 w-4" />
-                        </Link>
-                         <Button variant="link" className="text-destructive hover:underline p-0 h-auto gap-1" onClick={() => openDeleteDialog(client)}>
-                           <Trash2 className="h-4 w-4" />
-                           Eliminar
-                         </Button>
-                      </div>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Abrir menú</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuItem
+                                onClick={() => router.push(`/dashboard/clients/${client.id}/edit`)}
+                            >
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Editar</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => openDeleteDialog(client)}
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Eliminar</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
