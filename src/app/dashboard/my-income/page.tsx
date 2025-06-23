@@ -36,6 +36,22 @@ const months = Array.from({ length: 12 }, (_, i) => ({
   label: format(new Date(2000, i), "MMMM", { locale: es }),
 }));
 
+/**
+ * Parses a date string ('YYYY-MM-DD' or full ISO) robustly.
+ * Returns a Date object at the start of the day in the local timezone.
+ * @param dateString The date string to parse.
+ * @returns A Date object or null if invalid.
+ */
+const robustParseDate = (dateString: string): Date | null => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    // Handles both 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null;
+    // Normalize to the start of the day to avoid timezone issues with getMonth/getYear
+    date.setUTCHours(0, 0, 0, 0);
+    return date;
+}
+
 function IncomeEntryPopover({ event, onIncomeSet }: { event: EventData, onIncomeSet: () => void }) {
     const { user } = useUser();
     const { toast } = useToast();
@@ -139,28 +155,20 @@ export default function MyIncomePage() {
 
             const years = new Set<number>();
             
-            const getYearFromString = (dateString: string): number | null => {
-                if (!dateString || typeof dateString !== 'string' || !dateString.includes('-')) return null;
-                const year = parseInt(dateString.split('-')[0], 10);
-                return isNaN(year) ? null : year;
-            }
-
-            eventsData.forEach(e => {
-                const year = getYearFromString(e.eventDate);
-                if (year) years.add(year);
-            });
-            expensesData.forEach(e => {
-                const year = getYearFromString(e.date);
-                if (year) years.add(year);
-            });
-             incomesData.forEach(i => {
-                const year = getYearFromString(i.date);
-                if (year) years.add(year);
-            });
+            const addYearFromDateString = (dateString: string) => {
+                const date = robustParseDate(dateString);
+                if (date) {
+                    years.add(getYear(date));
+                }
+            };
+            
+            eventsData.forEach(e => addYearFromDateString(e.eventDate));
+            expensesData.forEach(e => addYearFromDateString(e.date));
+            incomesData.forEach(i => addYearFromDateString(i.date));
 
             const currentYear = getYear(new Date());
             if (!years.has(currentYear)) years.add(currentYear);
-            setAvailableYears(Array.from(years).sort((a,b) => b - a));
+            setAvailableYears(Array.from(years).sort((a, b) => b - a));
 
         } catch (error) {
             console.error("Failed to fetch personal finance data", error);
@@ -182,10 +190,9 @@ export default function MyIncomePage() {
         filteredExpenses
     } = useMemo(() => {
         const filterByMonthAndYear = (dateString: string) => {
-            if (!dateString || typeof dateString !== 'string' || !dateString.includes('-')) return false;
-            const [year, month] = dateString.split('-').map(Number);
-            // month from string is 1-12, selectedMonth state is 0-11
-            return year === selectedYear && (month - 1) === selectedMonth;
+            const date = robustParseDate(dateString);
+            if (!date) return false;
+            return getYear(date) === selectedYear && getMonth(date) === selectedMonth;
         };
 
         const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
@@ -360,7 +367,7 @@ export default function MyIncomePage() {
                             <p className="font-semibold capitalize">{expense.description}</p>
                             <p className="text-sm text-muted-foreground flex items-center gap-2">
                                 <Calendar className="h-3 w-3" />
-                                {format(parseISO(expense.date), 'dd/MM/yyyy')}
+                                {format(robustParseDate(expense.date)!, 'dd/MM/yyyy')}
                             </p>
                         </div>
                         <span className="font-bold text-red-600">{formatCurrency(expense.amount)}</span>
@@ -373,3 +380,5 @@ export default function MyIncomePage() {
     </div>
   );
 }
+
+    
