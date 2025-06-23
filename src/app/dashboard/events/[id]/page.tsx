@@ -109,7 +109,7 @@ export default function EventDetailPage() {
                              <div className="text-sm space-y-1">
                                 <div className="flex justify-between"><span>Monto Total:</span> <span className="font-semibold">{formatCurrency(event.contractedAmount)}</span></div>
                                 <div className="flex justify-between"><span>Monto Pagado:</span> <span className="font-semibold text-green-600">{formatCurrency(event.amountPaid)}</span></div>
-                                <div className="flex justify-between"><span>Monto Restante:</span> <span className={`font-semibold ${event.pendingBalance > 0 ? 'text-yellow-600' : ''}`}>{formatCurrency(event.pendingBalance)} {event.pendingBalance > 0 && "(Pendiente de Pago)"}</span></div>
+                                <div className="flex justify-between"><span>Monto Restante:</span> <span className={`font-semibold ${event.pendingBalance > 0 ? 'text-destructive' : ''}`}>{formatCurrency(event.pendingBalance)} {event.pendingBalance > 0 && "(Pendiente de Pago)"}</span></div>
                              </div>
                              <Separator />
                              <div className="text-sm space-y-1">

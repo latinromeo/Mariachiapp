@@ -265,7 +265,7 @@ export default function DashboardPage() {
                                                     <p>
                                                         <span className="text-green-600 font-medium">Pagado: {formatCurrency(activity.amountPaid)}</span>
                                                         {activity.pendingBalance > 0 && (
-                                                            <span className="text-red-600 font-medium ml-2">(Resta: {formatCurrency(activity.pendingBalance)})</span>
+                                                            <span className="text-destructive font-medium ml-2">(Resta: {formatCurrency(activity.pendingBalance)})</span>
                                                         )}
                                                     </p>
                                                 </div>

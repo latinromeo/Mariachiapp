@@ -1,11 +1,11 @@
 
 "use client"
 
-import React, { useRef, useState } from "react"
-import { format, parse } from "date-fns"
-import { es } from "date-fns/locale"
-import { jsPDF } from "jspdf"
-import html2canvas from "html2canvas"
+import React, { useRef, useState, useEffect } from "react";
+import { format, parse } from "date-fns";
+import { es } from "date-fns/locale";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 
 import {
   Dialog,
@@ -14,19 +14,18 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { MessageSquare, Loader2, Download } from "lucide-react"
-import { type EventData } from "@/services/eventService"
-import { EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
-import { useToast } from "@/hooks/use-toast"
-
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { MessageSquare, Loader2, Download } from "lucide-react";
+import { type EventData } from "@/services/eventService";
+import { EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants";
+import { useToast } from "@/hooks/use-toast";
 
 interface EventReceiptModalProps {
-  isOpen: boolean
-  onClose: () => void
-  eventData: Partial<EventData> | null
+  isOpen: boolean;
+  onClose: () => void;
+  eventData: Partial<EventData> | null;
 }
 
 const formatCurrency = (value: number | undefined) => {
@@ -36,27 +35,24 @@ const formatCurrency = (value: number | undefined) => {
     return `RD$${(value).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-// A self-contained component for the receipt content.
-// This will be rendered invisibly for PDF generation and visibly for the user.
-const ReceiptContent = ({ eventData }: { eventData: Partial<EventData> }) => {
+const ReceiptContent = React.forwardRef<HTMLDivElement, { eventData: Partial<EventData> }>(({ eventData }, ref) => {
     if (!eventData) return null;
 
-    const eventTypeLabel = EVENT_TYPES.find(e => e.value === eventData.eventType)?.label || eventData.eventType
-    const planLabel = EVENT_PLANS.find(p => p.value === eventData.plan)?.label || eventData.plan
-    const paymentMethodLabel = PAYMENT_METHODS.find(p => p.value === eventData.paymentMethod)?.label || eventData.paymentMethod
-    
+    const eventTypeLabel = EVENT_TYPES.find(e => e.value === eventData.eventType)?.label || eventData.eventType;
+    const planLabel = EVENT_PLANS.find(p => p.value === eventData.plan)?.label || eventData.plan;
+    const paymentMethodLabel = PAYMENT_METHODS.find(p => p.value === eventData.paymentMethod)?.label || eventData.paymentMethod;
+
     return (
-        <div className="px-5 py-4 space-y-6 bg-white text-black">
+        <div ref={ref} className="px-5 py-4 space-y-6 bg-white text-black">
             <div className="grid grid-cols-1 gap-6">
                 <div className="flex flex-col items-center space-y-2">
-                  <div style={{ width: '150px', height: 'auto' }}>
                     <img
                         src="/logo.svg"
                         alt="Logo Mariachi Reyes de México"
-                        style={{ width: '100%', height: 'auto' }}
+                        className="w-[150px] h-auto"
+                        crossOrigin="anonymous"
                     />
-                  </div>
-                  <p className="text-gray-500 text-lg font-semibold">Recibo de Confirmación de Evento</p>
+                    <p className="text-gray-500 text-lg font-semibold">Recibo de Confirmación de Evento</p>
                 </div>
                 <Separator />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
@@ -122,7 +118,7 @@ const ReceiptContent = ({ eventData }: { eventData: Partial<EventData> }) => {
                     </div>
                     <div className="grid grid-cols-2 items-start">
                     <span className="text-gray-500">Monto Restante a Pagar:</span>
-                    <span className="font-bold text-base text-right text-red-600">
+                    <span className={`font-bold text-base text-right ${eventData.pendingBalance && eventData.pendingBalance > 0 ? "text-destructive" : "text-black"}`}>
                         {formatCurrency(eventData.pendingBalance)}
                     </span>
                     </div>
@@ -148,8 +144,8 @@ const ReceiptContent = ({ eventData }: { eventData: Partial<EventData> }) => {
             </div>
         </div>
     );
-};
-
+});
+ReceiptContent.displayName = 'ReceiptContent';
 
 export function EventReceiptModal({ isOpen, onClose, eventData }: EventReceiptModalProps) {
   const printableRef = useRef<HTMLDivElement>(null);
@@ -169,51 +165,53 @@ export function EventReceiptModal({ isOpen, onClose, eventData }: EventReceiptMo
 
     setIsSaving(true);
     
-    html2canvas(input, { 
-        scale: 2, 
-        backgroundColor: '#ffffff'
-    })
-    .then((canvas) => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        const ratio = canvasWidth / canvasHeight;
+    setTimeout(() => {
+        html2canvas(input, { 
+            scale: 2, 
+            backgroundColor: '#ffffff',
+            useCORS: true,
+        })
+        .then((canvas) => {
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const ratio = canvasWidth / canvasHeight;
 
-        let imgWidth = pdfWidth - 20; // 10mm margin each side
-        let imgHeight = imgWidth / ratio;
-        
-        // If image is too tall, scale it down to fit the page height
-        if (imgHeight > pdfHeight - 20) {
-            imgHeight = pdfHeight - 20;
-            imgWidth = imgHeight * ratio; // Recalculate width to maintain aspect ratio
-        }
+            let imgWidth = pdfWidth - 20; // 10mm margin each side
+            let imgHeight = imgWidth / ratio;
+            
+            if (imgHeight > pdfHeight - 20) {
+                imgHeight = pdfHeight - 20;
+                imgWidth = imgHeight * ratio;
+            }
 
-        const xOffset = (pdfWidth - imgWidth) / 2;
-        pdf.addImage(imgData, 'PNG', xOffset, 10, imgWidth, imgHeight);
-        pdf.save(`Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}.pdf`);
-    })
-    .catch(err => {
-        console.error("Error generating PDF:", err);
-        toast({
-            variant: "destructive",
-            title: "Error al generar PDF",
-            description: "Hubo un problema al crear el archivo. Por favor, inténtelo de nuevo.",
+            const xOffset = (pdfWidth - imgWidth) / 2;
+            pdf.addImage(imgData, 'PNG', xOffset, 10, imgWidth, imgHeight);
+            pdf.save(`Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}.pdf`);
+        })
+        .catch(err => {
+            console.error("Error generating PDF:", err);
+            toast({
+                variant: "destructive",
+                title: "Error al generar PDF",
+                description: "Hubo un problema al crear el archivo. Por favor, inténtelo de nuevo.",
+            });
+        })
+        .finally(() => {
+            setIsSaving(false);
         });
-    })
-    .finally(() => {
-        setIsSaving(false);
-    });
+    }, 500); // 500ms delay to allow images to render
   };
 
   if (!eventData) return null;
 
-  const eventTypeLabel = EVENT_TYPES.find(e => e.value === eventData.eventType)?.label || eventData.eventType
-  const planLabel = EVENT_PLANS.find(p => p.value === eventData.plan)?.label || eventData.plan
-  const paymentMethodLabel = PAYMENT_METHODS.find(p => p.value === eventData.paymentMethod)?.label || eventData.paymentMethod
+  const eventTypeLabel = EVENT_TYPES.find(e => e.value === eventData.eventType)?.label || eventData.eventType;
+  const planLabel = EVENT_PLANS.find(p => p.value === eventData.plan)?.label || eventData.plan;
+  const paymentMethodLabel = PAYMENT_METHODS.find(p => p.value === eventData.paymentMethod)?.label || eventData.paymentMethod;
 
   const whatsappMessage = `*Recibo de Confirmación de Evento - Mariachi Reyes de México*
 -----------------------------------
@@ -241,33 +239,25 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
     const phone = eventData.clientPhone?.replace(/\D/g, '') || '';
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMessage)}`;
     window.open(url, "_blank");
-  }
+  };
 
   return (
-    <>
-      {/* Hidden, clean component for PDF generation. It's positioned off-screen. */}
-      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-        <div ref={printableRef} style={{ width: '800px' }}>
-          <ReceiptContent eventData={eventData} />
-        </div>
-      </div>
-
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="sm:max-w-2xl p-0">
           <DialogHeader className="p-6 pb-2">
             <DialogTitle>Evento Creado Exitosamente - Recibo</DialogTitle>
           </DialogHeader>
           <div className="max-h-[70vh] overflow-y-auto px-1">
-             <ReceiptContent eventData={eventData} />
+             <ReceiptContent eventData={eventData} ref={printableRef} />
           </div>
-           <DialogFooter className="p-6 border-t bg-background flex-col sm:flex-row justify-between items-center gap-2">
+           <DialogFooter className="p-6 border-t bg-background flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
               <p className="text-xs text-muted-foreground text-center sm:text-left">
                   Para enviar el PDF, guárdelo y luego adjúntelo en WhatsApp.
               </p>
-              <div className="flex flex-col sm:flex-row gap-2 justify-end w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <Button onClick={handleSavePdf} variant="outline" className="w-full sm:w-auto" disabled={isSaving}>
                       {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                      {isSaving ? 'Guardando PDF...' : 'Guardar como PDF'}
+                      {isSaving ? 'Guardando...' : 'Guardar como PDF'}
                   </Button>
                   <Button onClick={handleWhatsAppShare} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
                       <MessageSquare className="mr-2 h-4 w-4" />
@@ -280,6 +270,5 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
-  )
+  );
 }

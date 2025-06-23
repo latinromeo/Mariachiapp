@@ -742,7 +742,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                       <CardFooter className="flex flex-col items-start gap-2 text-sm bg-muted/50 p-4 rounded-b-lg">
                         <div className="flex justify-between w-full">
                             <span className="text-muted-foreground">Saldo Pendiente:</span>
-                            <span className={`font-semibold ${pendingBalance < 0 ? 'text-destructive' : ''}`}>{formatCurrency(pendingBalance)}</span>
+                            <span className={`font-semibold ${pendingBalance > 0 ? 'text-destructive' : ''}`}>{formatCurrency(pendingBalance)}</span>
                         </div>
                         <div className="flex justify-between w-full">
                             <span className="text-muted-foreground">Ganancia:</span>
@@ -798,5 +798,3 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
     </>
   )
 }
-
-    

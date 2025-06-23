@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from "next/link"
@@ -78,7 +79,7 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                                             {event.pendingBalance > 0 && (
                                                 <>
                                                 <br/>
-                                                Resta: <span className="font-semibold text-red-600">{formatCurrency(event.pendingBalance)}</span>
+                                                Resta: <span className="font-semibold text-destructive">{formatCurrency(event.pendingBalance)}</span>
                                                 </>
                                             )}
                                         </div>
