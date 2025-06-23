@@ -21,30 +21,30 @@ export const USERS: Record<string, User> = {
     'tester': { id: 'tester', name: 'Beta Tester', email: 'tester@mariachireyes.com', role: 'Beta Tester', avatar: 'BT' }
 };
 
-export const ROLES_CONFIG: Record<UserRole, { pages: string[], canCreateEvents: boolean, canCreateClients: boolean, canCreateRehearsals: boolean, canCreateSongs: boolean, canManageUsers: boolean, canSeeFinance: boolean }> = {
+export const ROLES_CONFIG: Record<UserRole, { pages: string[], canCreateEvents: boolean, canCreateClients: boolean, canCreateRehearsals: boolean, canCompleteRehearsals: boolean, canCreateSongs: boolean, canManageUsers: boolean, canSeeFinance: boolean }> = {
     'Administrador General': {
         pages: ['/dashboard', '/dashboard/clients', '/dashboard/events', '/dashboard/rehearsals', '/dashboard/repertoire', '/dashboard/media', '/dashboard/finance', '/dashboard/users', '/dashboard/profile'],
-        canCreateEvents: true, canCreateClients: true, canCreateRehearsals: true, canCreateSongs: true, canManageUsers: true, canSeeFinance: true
+        canCreateEvents: true, canCreateClients: true, canCreateRehearsals: true, canCompleteRehearsals: true, canCreateSongs: true, canManageUsers: true, canSeeFinance: true
     },
     'Director Musical': {
         pages: ['/dashboard', '/dashboard/events', '/dashboard/rehearsals', '/dashboard/repertoire', '/dashboard/profile'],
-        canCreateEvents: false, canCreateClients: false, canCreateRehearsals: true, canCreateSongs: true, canManageUsers: false, canSeeFinance: false
+        canCreateEvents: false, canCreateClients: false, canCreateRehearsals: true, canCompleteRehearsals: true, canCreateSongs: true, canManageUsers: false, canSeeFinance: false
     },
     'Coordinador de Eventos': {
         pages: ['/dashboard', '/dashboard/clients', '/dashboard/events', '/dashboard/rehearsals', '/dashboard/profile'],
-        canCreateEvents: true, canCreateClients: true, canCreateRehearsals: false, canCreateSongs: false, canManageUsers: false, canSeeFinance: false
+        canCreateEvents: true, canCreateClients: true, canCreateRehearsals: false, canCompleteRehearsals: false, canCreateSongs: false, canManageUsers: false, canSeeFinance: false
     },
     'Músico': {
         pages: ['/dashboard', '/dashboard/events', '/dashboard/rehearsals', '/dashboard/repertoire', '/dashboard/my-income', '/dashboard/profile'],
-        canCreateEvents: false, canCreateClients: false, canCreateRehearsals: false, canCreateSongs: false, canManageUsers: false, canSeeFinance: false
+        canCreateEvents: false, canCreateClients: false, canCreateRehearsals: false, canCompleteRehearsals: false, canCreateSongs: false, canManageUsers: false, canSeeFinance: false
     },
     'Contador': {
         pages: ['/dashboard/media', '/dashboard/profile'],
-        canCreateEvents: false, canCreateClients: false, canCreateRehearsals: false, canCreateSongs: false, canManageUsers: false, canSeeFinance: false
+        canCreateEvents: false, canCreateClients: false, canCreateRehearsals: false, canCompleteRehearsals: false, canCreateSongs: false, canManageUsers: false, canSeeFinance: false
     },
     'Beta Tester': {
         pages: ['/dashboard', '/dashboard/clients', '/dashboard/events', '/dashboard/rehearsals', '/dashboard/repertoire', '/dashboard/media', '/dashboard/finance', '/dashboard/profile'],
-        canCreateEvents: true, canCreateClients: true, canCreateRehearsals: true, canCreateSongs: true, canManageUsers: false, canSeeFinance: true
+        canCreateEvents: true, canCreateClients: true, canCreateRehearsals: true, canCompleteRehearsals: true, canCreateSongs: true, canManageUsers: false, canSeeFinance: true
     }
 };
 
@@ -56,6 +56,7 @@ export interface UserContextType {
         canCreateEvents: boolean;
         canCreateClients: boolean;
         canCreateRehearsals: boolean;
+        canCompleteRehearsals: boolean;
         canCreateSongs: boolean;
         canManageUsers: boolean;
         canSeeFinance: boolean;

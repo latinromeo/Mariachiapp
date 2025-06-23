@@ -235,7 +235,7 @@ export default function RehearsalsPage() {
                                         <CheckCircle className="h-5 w-5" />
                                         Completado
                                     </div>
-                                ) : (
+                                ) : permissions.canCompleteRehearsals ? (
                                     <div className="flex items-center space-x-2">
                                         <Checkbox
                                             id={`complete-${rehearsal.id}`}
@@ -246,7 +246,7 @@ export default function RehearsalsPage() {
                                             {isCompleting === rehearsal.id ? "Marcando..." : "Marcar Completo"}
                                         </Label>
                                     </div>
-                                )}
+                                ) : <div />}
                                 <div className="flex items-center gap-1">
                                      <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/rehearsals/${rehearsal.id}/edit`)} disabled={rehearsal.status === 'completed'}>
                                         <Edit className="h-4 w-4" />
