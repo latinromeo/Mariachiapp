@@ -14,6 +14,7 @@ import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, Music, PlusCircle
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { EVENT_PLANS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -99,7 +100,7 @@ export default function DashboardPage() {
     const events = allEvents
       .map(event => {
         const parsedDate = safeParseDate(event.eventDate);
-        if (!parsedDate || !(event.status === 'pending' || event.status === 'confirmed') || !isSameMonth(parsedDate, targetDate)) {
+        if (!parsedDate || !(event.status === 'pending' || event.status === 'confirmed' || event.status === 'external') || !isSameMonth(parsedDate, targetDate)) {
           return null;
         }
         return { ...event, type: 'event' as const, parsedDate };
@@ -238,7 +239,7 @@ export default function DashboardPage() {
                                 if (activity.type === 'event') {
                                     const planLabel = EVENT_PLANS.find(p => p.value === activity.plan)?.label || activity.plan;
                                     return (
-                                        <Card key={activity.id}>
+                                        <Card key={activity.id} className={cn(activity.externalGroup && "bg-blue-50 dark:bg-primary/10")}>
                                             <div className="p-4 space-y-3">
                                                 <div className="flex items-start gap-3">
                                                     <Calendar className="h-5 w-5 text-destructive mt-1 flex-shrink-0" />
@@ -272,11 +273,11 @@ export default function DashboardPage() {
                                                 
                                                 {activity.externalGroup && activity.externalContact && (
                                                     <div className="pl-8 pt-2">
-                                                        <div className="bg-amber-50 border border-amber-200 p-3 rounded-md text-sm text-amber-900">
+                                                        <div className="bg-blue-100/50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 p-3 rounded-md text-sm text-blue-900 dark:text-blue-200">
                                                             <p className="font-bold flex items-center gap-2"><ExternalLink className="h-4 w-4" /> Realizado por Grupo Externo</p>
-                                                            <Separator className="my-2 bg-amber-200" />
+                                                            <Separator className="my-2 bg-blue-200 dark:bg-blue-700/50" />
                                                             <p className="font-medium">{activity.externalContact}</p>
-                                                            <a href={`https://wa.me/${activity.externalContact.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs font-semibold">Contactar (WhatsApp)</a>
+                                                            <a href={`https://wa.me/${activity.externalContact.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-semibold">Contactar (WhatsApp)</a>
                                                         </div>
                                                     </div>
                                                 )}
