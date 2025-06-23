@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, PlusCircle, Search, Phone, Edit, Loader2, Trash2, MoreHorizontal } from "lucide-react";
+import { Users, PlusCircle, Search, Phone, Edit, Loader2, Trash2 } from "lucide-react";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -37,14 +37,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { type ClientData, getClients, deleteClient } from "@/services/eventService";
 import { ClientForm } from "./client-form";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -185,7 +177,7 @@ export default function ClientsPage() {
                     <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><div className="flex justify-end"><Skeleton className="h-8 w-8" /></div></TableCell>
+                    <TableCell><div className="flex justify-end gap-2"><Skeleton className="h-8 w-8" /><Skeleton className="h-8 w-8" /></div></TableCell>
                   </TableRow>
                 ))
               ) : filteredClients.length > 0 ? (
@@ -204,31 +196,25 @@ export default function ClientsPage() {
                     <TableCell>{index % 2 === 0 ? "Cumpleaños" : "Boda"}</TableCell>
                     <TableCell>{index % 2 === 0 ? "2025-01-15" : "2025-02-20"}</TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Abrir menú</span>
-                                <MoreHorizontal className="h-4 w-4" />
+                        <div className="flex items-center justify-end gap-2">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => router.push(`/dashboard/clients/${client.id}/edit`)}
+                            >
+                                <Edit className="h-4 w-4" />
+                                <span className="sr-only">Editar Cliente</span>
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuItem
-                                onSelect={() => router.push(`/dashboard/clients/${client.id}/edit`)}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => openDeleteDialog(client)}
                             >
-                                <Edit className="mr-2 h-4 w-4" />
-                                <span>Editar</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onSelect={() => openDeleteDialog(client)}
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Eliminar</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Eliminar Cliente</span>
+                            </Button>
+                        </div>
                     </TableCell>
                   </TableRow>
                 ))
