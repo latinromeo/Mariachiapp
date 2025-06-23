@@ -53,3 +53,10 @@ export const FINANCE_CATEGORIES = [
   { value: "propinas", label: "Propinas" },
   { value: "otro", label: "Otro" },
 ];
+
+export const EXTERNAL_CONTACTS = [
+  { value: "mariachi_sol_quisqueya", label: "Mariachi Sol de Quisqueya (Mariachi Sol) - 809-555-1212" },
+  { value: "mariachi_nuevo_amanecer", label: "Mariachi Nuevo Amanecer (Amanecer) - 829-444-3322" },
+  { value: "juan_valdez", label: "Juan Valdéz (Trompetista) (Solista) - 849-111-0000" },
+  { value: "otro", label: "Otro (especificar abajo)" },
+];

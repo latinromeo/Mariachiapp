@@ -52,6 +52,7 @@ export interface EventData {
   musiciansPay?: number;
   profit?: number;
   externalGroup: boolean;
+  externalContact?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -241,7 +242,7 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
   }
   
   const pendingBalance = data.contractedAmount - data.amountPaid;
-  const profit = data.externalGroup ? undefined : data.contractedAmount - (data.musiciansPay || 0);
+  const profit = data.contractedAmount - (data.musiciansPay || 0);
 
   const newEventData = {
     ...data,
@@ -275,10 +276,9 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
         const contractedAmount = data.contractedAmount ?? existingData.contractedAmount;
         const amountPaid = data.amountPaid ?? existingData.amountPaid;
         const musiciansPay = data.musiciansPay ?? existingData.musiciansPay;
-        const externalGroup = data.externalGroup ?? existingData.externalGroup;
 
         const pendingBalance = contractedAmount - amountPaid;
-        const profit = externalGroup ? undefined : contractedAmount - (musiciansPay || 0);
+        const profit = contractedAmount - (musiciansPay || 0);
         
         const updateData = {
             ...data,

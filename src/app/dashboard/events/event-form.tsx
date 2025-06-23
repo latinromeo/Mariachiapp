@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useEffect, useState, useMemo, useCallback } from "react"
 import { CalendarIcon, Clock, DollarSign, ExternalLink, Hash, Info, Loader2, MapPin, Mic, Phone, User, Trash2 } from "lucide-react"
-import { EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
+import { EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS, EXTERNAL_CONTACTS } from "@/lib/constants"
 import { createEvent, findClientByPhone, updateEvent, type EventData, deleteEvent } from "@/services/eventService"
 import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
@@ -51,8 +51,17 @@ const formSchema = z.object({
   amountPaid: z.coerce.number().min(0, { message: "El monto debe ser positivo." }),
   musiciansPay: z.coerce.number().min(0, { message: "El monto debe ser positivo." }).optional(),
   externalGroup: z.boolean().default(false),
+  externalContact: z.string().optional(),
   notes: z.string().optional(),
-})
+}).refine(data => {
+    if (data.externalGroup) {
+      return !!data.externalContact && data.externalContact !== "";
+    }
+    return true;
+  }, {
+    message: "Debe seleccionar un contacto externo.",
+    path: ["externalContact"],
+});
 
 const formatCurrency = (value: number | undefined) => {
     if (value === undefined || value === null) return "$0.00";
@@ -103,6 +112,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
       amountPaid: 0,
       musiciansPay: 0,
       externalGroup: false,
+      externalContact: "",
       notes: "",
     },
   })
@@ -383,6 +393,45 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                     )}
                                 />
                           </div>
+                          <FormField
+                            control={form.control}
+                            name="externalGroup"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                <FormControl>
+                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                    <FormLabel className="flex items-center gap-2"><ExternalLink className="h-4 w-4 text-muted-foreground"/>Este evento será realizado por otra agrupación (externo).</FormLabel>
+                                </div>
+                                </FormItem>
+                            )}
+                          />
+                          {externalGroup && (
+                            <Card className="bg-amber-50 border-amber-200">
+                                <CardHeader className="pb-4">
+                                    <CardTitle className="text-base text-amber-900">Información del Contacto Externo</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <FormField
+                                        control={form.control}
+                                        name="externalContact"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Seleccionar Contacto Externo</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                                                    <FormControl><SelectTrigger><SelectValue placeholder="-- Seleccione un contacto --" /></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        {EXTERNAL_CONTACTS.map(contact => <SelectItem key={contact.value} value={contact.value}>{contact.label}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </CardContent>
+                            </Card>
+                          )}
                           <div className="grid sm:grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
@@ -537,7 +586,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                 name="musiciansPay"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Pago a Músicos</FormLabel>
+                                        <FormLabel>Pago a Músicos / Grupo Externo</FormLabel>
                                          <Select
                                             onValueChange={(value) => {
                                                 if (value === 'custom') {
@@ -548,7 +597,6 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                                 }
                                             }}
                                             value={customFields.musiciansPay ? 'custom' : (field.value === undefined ? "" : String(field.value))}
-                                            disabled={externalGroup}
                                             >
                                             <FormControl>
                                                 <SelectTrigger><SelectValue placeholder="Seleccionar o escribir monto..." /></SelectTrigger>
@@ -571,7 +619,6 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                                 value={field.value ?? ""}
                                                 onChange={field.onChange}
                                                 className="mt-2"
-                                                disabled={externalGroup}
                                             />
                                             </FormControl>
                                         )}
@@ -579,21 +626,6 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                     </FormItem>
                                 )}
                             />
-                          <FormField
-                            control={form.control}
-                            name="externalGroup"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                                <FormControl>
-                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                    <FormLabel className="flex items-center gap-2"><ExternalLink className="h-4 w-4 text-muted-foreground"/>¿Grupo Externo?</FormLabel>
-                                    <p className="text-sm text-muted-foreground">Marcar si el evento lo realiza otro grupo.</p>
-                                </div>
-                                </FormItem>
-                            )}
-                          />
                       </CardContent>
                       <CardFooter className="flex flex-col items-start gap-2 text-sm bg-muted/50 p-4 rounded-b-lg">
                         <div className="flex justify-between w-full">
@@ -602,11 +634,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                         </div>
                         <div className="flex justify-between w-full">
                             <span className="text-muted-foreground">Ganancia:</span>
-                             {externalGroup ? (
-                                <span className="font-semibold text-muted-foreground">No aplica</span>
-                             ) : (
-                                <span className={`font-semibold ${profit < 0 ? 'text-destructive' : 'text-green-600'}`}>{formatCurrency(profit)}</span>
-                             )}
+                            <span className={`font-semibold ${profit < 0 ? 'text-destructive' : 'text-green-600'}`}>{formatCurrency(profit)}</span>
                         </div>
                       </CardFooter>
                   </Card>
@@ -652,6 +680,3 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
     </Form>
   )
 }
-
-    
-    
