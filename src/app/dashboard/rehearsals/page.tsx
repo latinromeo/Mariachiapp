@@ -135,24 +135,23 @@ export default function RehearsalsPage() {
         <h1 className="font-headline text-3xl font-bold tracking-tight">
             Ensayos
         </h1>
-        <div className="flex flex-wrap items-center gap-2">
-           <div className="relative w-full max-w-xs">
-             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-             <Input
-               type="search"
-               placeholder="Buscar por tema o lugar..."
-               className="pl-8"
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-             />
-           </div>
-            <Button asChild>
-                <Link href="/dashboard/rehearsals/new">
-                    <PlusCircle className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Programar Ensayo</span>
-                </Link>
-            </Button>
-        </div>
+        <Button asChild>
+            <Link href="/dashboard/rehearsals/new">
+                <PlusCircle className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Programar Ensayo</span>
+            </Link>
+        </Button>
+      </div>
+
+      <div className="relative w-full max-w-sm">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Buscar por tema o lugar..."
+          className="pl-8"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
       
       <div className="space-y-4">
