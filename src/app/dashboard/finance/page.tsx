@@ -267,8 +267,8 @@ export default function FinancePage() {
                 <CardContent>
                     {showSkeleton ? <Skeleton className="h-[250px] w-full" /> : (
                         <ChartContainer config={{
-                            Ingresos: { label: 'Ingresos', color: 'hsl(var(--chart-5))' },
-                            Egresos: { label: 'Egresos', color: 'hsl(var(--chart-1))' },
+                            ingresos: { label: 'Ingresos', color: 'hsl(var(--chart-5))' },
+                            egresos: { label: 'Egresos', color: 'hsl(var(--chart-1))' },
                         }} className="h-[250px] w-full">
                             <BarChart data={barChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
@@ -297,7 +297,7 @@ export default function FinancePage() {
                                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
                                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value as number, true)} />
                                 <ChartTooltip cursor={true} content={<ChartTooltipContent formatter={(value) => formatCurrency(value as number)} indicator="dot" />} />
-                                <Line type="monotone" dataKey="Ingresos" strokeWidth={2} stroke="var(--color-ingresos)" dot={true} />
+                                <Line type="monotone" dataKey="Ingresos" strokeWidth={2} stroke="var(--color-Ingresos)" dot={true} />
                             </LineChart>
                         </ChartContainer>
                     )}
