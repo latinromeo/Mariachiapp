@@ -1,4 +1,3 @@
-
 "use client"
 
 import Link from "next/link"
@@ -9,7 +8,7 @@ import {
   Music,
   Image,
   Users,
-  Library,
+  BookOpen,
   DollarSign,
   UserCog,
   UserCircle2,
@@ -17,6 +16,7 @@ import {
   PlusCircle,
   Moon,
   Bot,
+  Menu,
 } from "lucide-react"
 
 import {
@@ -147,7 +147,7 @@ export default function DashboardLayout({
                   <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={isActive("/dashboard/repertoire")}>
                           <Link href="/dashboard/repertoire">
-                              <Library />
+                              <BookOpen />
                               <span>Repertorio</span>
                           </Link>
                       </SidebarMenuButton>
