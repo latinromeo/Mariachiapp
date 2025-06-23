@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Printer, MessageSquare, Loader2 } from "lucide-react"
+import { MessageSquare, Loader2, Download } from "lucide-react"
 import { type EventData } from "@/services/eventService"
 import { EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
 import { useToast } from "@/hooks/use-toast"
@@ -36,120 +36,6 @@ const formatCurrency = (value: number | undefined) => {
     return `RD$${(value).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-// By embedding the logo as a Base64 string, we ensure it's always available when html2canvas runs, avoiding loading issues.
-const LOGO_BASE64 = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCAxNTAgNTAiPgogIDxzdHlsZT4KICAgIC50aXRsZSB7IGZvbnQ6IGJvbGQgMTRweCBzYW5zLXNlcmlmOyBmaWxsOiBibGFjazsgfQogICAgLnN1YnRpdGxlIHsgZm9udDogMTBweCBzYW5zLXNlcmlmOyBmaWxsOiBncmV5OyB9CiAgPC9zdHlsZT4KICA8dGV4dCB4PSI1IiB5PSIyMCIgY2xhc3M9InRpdGxlIj5NYXJpYWNoaSBSZXllczwvdGV4dD4KICA8dGV4dCB4PSI1IiB5PSIzNSIgY2xhc3M9InN1YnRpdGxlIj5kZSBNw6l4aWNvPC90ZXh0Pgo8L3N2Zz4=";
-
-
-interface ReceiptBodyProps {
-  eventData: Partial<EventData>;
-  eventTypeLabel: string;
-  planLabel: string;
-  paymentMethodLabel: string;
-}
-
-const ReceiptBody = React.forwardRef<HTMLDivElement, ReceiptBodyProps>(({ eventData, eventTypeLabel, planLabel, paymentMethodLabel }, ref) => (
-  <div ref={ref} className="px-5 py-4 space-y-6 bg-white text-black">
-    <div className="text-center space-y-2">
-      <img
-        src={LOGO_BASE64}
-        alt="Logo Mariachi Reyes de México"
-        width={150}
-        className="mx-auto"
-      />
-      <h2 className="text-2xl font-bold font-headline">Mariachi Reyes de México</h2>
-      <p className="text-gray-500">Recibo de Confirmación de Evento</p>
-    </div>
-    <Separator />
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
-      <div className="space-y-3">
-        <h3 className="font-semibold text-base border-b pb-1">Datos del Cliente</h3>
-        <div className="space-y-1">
-          <div className="grid grid-cols-2 items-start gap-2">
-            <span className="text-gray-500">Nombre:</span>
-            <span className="font-medium text-right break-words">{eventData.clientName}</span>
-          </div>
-          <div className="grid grid-cols-2 items-start gap-2">
-            <span className="text-gray-500">Teléfono:</span>
-            <span className="font-medium text-right break-words">{eventData.clientPhone}</span>
-          </div>
-        </div>
-      </div>
-      <div className="space-y-3">
-        <h3 className="font-semibold text-base border-b pb-1">Detalles del Evento</h3>
-        <div className="space-y-1">
-          <div className="grid grid-cols-2 items-start gap-2">
-            <span className="text-gray-500">Tipo:</span>
-            <span className="font-medium text-right break-words">{eventTypeLabel}</span>
-          </div>
-          <div className="grid grid-cols-2 items-start gap-2">
-            <span className="text-gray-500">Fecha:</span>
-            <span className="font-medium text-right break-words">
-              {eventData.eventDate
-                ? format(parse(eventData.eventDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy", { locale: es })
-                : "N/A"}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 items-start gap-2">
-            <span className="text-gray-500">Hora:</span>
-            <span className="font-medium text-right break-words">{eventData.eventTime}</span>
-          </div>
-          <div className="grid grid-cols-2 items-start gap-2">
-            <span className="text-gray-500">Dirección:</span>
-            <span className="font-medium text-right break-words">
-              {eventData.location}, {eventData.sector}
-            </span>
-          </div>
-           <div className="grid grid-cols-2 items-start gap-2">
-            <span className="text-gray-500">Duración:</span>
-            <span className="font-medium text-right break-words">{planLabel}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div className="space-y-3">
-      <h3 className="font-semibold text-base border-b pb-1">Información del Pago</h3>
-      <div className="space-y-1.5">
-        <div className="grid grid-cols-2 items-start">
-          <span className="text-gray-500">Costo Total del Servicio:</span>
-          <span className="font-bold text-base text-right">
-            {formatCurrency(eventData.contractedAmount)}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 items-start">
-          <span className="text-gray-500">Abono Realizado:</span>
-          <span className="font-medium text-green-600 text-right">
-            {formatCurrency(eventData.amountPaid)}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 items-start">
-          <span className="text-gray-500">Monto Restante a Pagar:</span>
-          <span className="font-bold text-base text-right text-red-600">
-            {formatCurrency(eventData.pendingBalance)}
-          </span>
-        </div>
-        <Separator className="!my-3" />
-        <div className="grid grid-cols-2 items-start">
-          <span className="text-gray-500">Fecha de Pago del Abono:</span>
-          <span className="font-medium text-right">
-            {format(new Date(), "dd/MM/yyyy", { locale: es })}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 items-start">
-          <span className="text-gray-500">Método de Pago del Abono:</span>
-          <span className="font-medium text-right">{paymentMethodLabel}</span>
-        </div>
-      </div>
-    </div>
-    <div className="mt-6 p-4 bg-gray-100 rounded-lg text-center text-sm text-gray-500">
-      <p>
-        Este recibo confirma la contratación de nuestros servicios para la fecha indicada. Gracias por
-        confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos en su celebración!
-      </p>
-    </div>
-  </div>
-));
-ReceiptBody.displayName = "ReceiptBody";
-
 
 export function EventReceiptModal({ isOpen, onClose, eventData }: EventReceiptModalProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
@@ -161,44 +47,47 @@ export function EventReceiptModal({ isOpen, onClose, eventData }: EventReceiptMo
     if (!input) return;
 
     setIsSaving(true);
-    html2canvas(input, { 
-        scale: 2, 
-        useCORS: true,
-        backgroundColor: '#ffffff' 
-    })
-    .then((canvas) => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        const ratio = canvasWidth / canvasHeight;
+    
+    // Give the browser a moment to render the modal content, including the image
+    setTimeout(() => {
+        html2canvas(input, { 
+            scale: 2, 
+            backgroundColor: '#ffffff' 
+        })
+        .then((canvas) => {
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const ratio = canvasWidth / canvasHeight;
 
-        let imgWidth = pdfWidth - 20; // 10mm margin each side
-        let imgHeight = imgWidth / ratio;
-        
-        if (imgHeight > pdfHeight - 20) {
-            imgHeight = pdfHeight - 20;
-            imgWidth = imgHeight * ratio;
-        }
+            let imgWidth = pdfWidth - 20; // 10mm margin each side
+            let imgHeight = imgWidth / ratio;
+            
+            if (imgHeight > pdfHeight - 20) {
+                imgHeight = pdfHeight - 20;
+                imgWidth = imgHeight * ratio;
+            }
 
-        const xOffset = (pdfWidth - imgWidth) / 2;
-        pdf.addImage(imgData, 'PNG', xOffset, 10, imgWidth, imgHeight);
-        pdf.save(`Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}.pdf`);
-    })
-    .catch(err => {
-        console.error("Error generating PDF:", err);
-        toast({
-            variant: "destructive",
-            title: "Error al generar PDF",
-            description: "Hubo un problema al crear el archivo. Por favor, inténtelo de nuevo.",
+            const xOffset = (pdfWidth - imgWidth) / 2;
+            pdf.addImage(imgData, 'PNG', xOffset, 10, imgWidth, imgHeight);
+            pdf.save(`Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}.pdf`);
+        })
+        .catch(err => {
+            console.error("Error generating PDF:", err);
+            toast({
+                variant: "destructive",
+                title: "Error al generar PDF",
+                description: "Hubo un problema al crear el archivo. Por favor, inténtelo de nuevo.",
+            });
+        })
+        .finally(() => {
+            setIsSaving(false);
         });
-    })
-    .finally(() => {
-        setIsSaving(false);
-    });
+    }, 500); // 500ms delay to allow image rendering
   };
 
   if (!eventData) return null
@@ -235,8 +124,6 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
     window.open(url, "_blank");
   }
 
-  const receiptContentProps = { eventData, eventTypeLabel, planLabel, paymentMethodLabel };
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-2xl p-0">
@@ -244,12 +131,115 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
           <DialogTitle>Evento Creado Exitosamente - Recibo</DialogTitle>
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto px-1">
-           <ReceiptBody ref={receiptRef} {...receiptContentProps} />
+           <div ref={receiptRef} className="px-5 py-4 space-y-6 bg-white text-black">
+            <div className="grid grid-cols-1 gap-6">
+                <div className="text-center space-y-2">
+                <img
+                    src="/logo.svg"
+                    alt="Logo Mariachi Reyes de México"
+                    width={150}
+                    className="mx-auto"
+                />
+                <h2 className="text-2xl font-bold font-headline">Mariachi Reyes de México</h2>
+                <p className="text-gray-500">Recibo de Confirmación de Evento</p>
+                </div>
+                <Separator />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
+                <div className="space-y-3">
+                    <h3 className="font-semibold text-base border-b pb-1">Datos del Cliente</h3>
+                    <div className="space-y-1">
+                    <div className="grid grid-cols-2 items-start gap-2">
+                        <span className="text-gray-500">Nombre:</span>
+                        <span className="font-medium text-right break-words">{eventData.clientName}</span>
+                    </div>
+                    <div className="grid grid-cols-2 items-start gap-2">
+                        <span className="text-gray-500">Teléfono:</span>
+                        <span className="font-medium text-right break-words">{eventData.clientPhone}</span>
+                    </div>
+                    </div>
+                </div>
+                <div className="space-y-3">
+                    <h3 className="font-semibold text-base border-b pb-1">Detalles del Evento</h3>
+                    <div className="space-y-1">
+                    <div className="grid grid-cols-2 items-start gap-2">
+                        <span className="text-gray-500">Tipo:</span>
+                        <span className="font-medium text-right break-words">{eventTypeLabel}</span>
+                    </div>
+                    <div className="grid grid-cols-2 items-start gap-2">
+                        <span className="text-gray-500">Fecha:</span>
+                        <span className="font-medium text-right break-words">
+                        {eventData.eventDate
+                            ? format(parse(eventData.eventDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy", { locale: es })
+                            : "N/A"}
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-2 items-start gap-2">
+                        <span className="text-gray-500">Hora:</span>
+                        <span className="font-medium text-right break-words">{eventData.eventTime}</span>
+                    </div>
+                    <div className="grid grid-cols-2 items-start gap-2">
+                        <span className="text-gray-500">Dirección:</span>
+                        <span className="font-medium text-right break-words">
+                        {eventData.location}, {eventData.sector}
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-2 items-start gap-2">
+                        <span className="text-gray-500">Duración:</span>
+                        <span className="font-medium text-right break-words">{planLabel}</span>
+                    </div>
+                    </div>
+                </div>
+                </div>
+                <div className="space-y-3">
+                <h3 className="font-semibold text-base border-b pb-1">Información del Pago</h3>
+                <div className="space-y-1.5">
+                    <div className="grid grid-cols-2 items-start">
+                    <span className="text-gray-500">Costo Total del Servicio:</span>
+                    <span className="font-bold text-base text-right">
+                        {formatCurrency(eventData.contractedAmount)}
+                    </span>
+                    </div>
+                    <div className="grid grid-cols-2 items-start">
+                    <span className="text-gray-500">Abono Realizado:</span>
+                    <span className="font-medium text-green-600 text-right">
+                        {formatCurrency(eventData.amountPaid)}
+                    </span>
+                    </div>
+                    <div className="grid grid-cols-2 items-start">
+                    <span className="text-gray-500">Monto Restante a Pagar:</span>
+                    <span className="font-bold text-base text-right text-red-600">
+                        {formatCurrency(eventData.pendingBalance)}
+                    </span>
+                    </div>
+                    <Separator className="!my-3" />
+                    <div className="grid grid-cols-2 items-start">
+                    <span className="text-gray-500">Fecha de Pago del Abono:</span>
+                    <span className="font-medium text-right">
+                        {format(new Date(), "dd/MM/yyyy", { locale: es })}
+                    </span>
+                    </div>
+                    <div className="grid grid-cols-2 items-start">
+                    <span className="text-gray-500">Método de Pago del Abono:</span>
+                    <span className="font-medium text-right">{paymentMethodLabel}</span>
+                    </div>
+                </div>
+                </div>
+                <div className="mt-6 p-4 bg-gray-100 rounded-lg text-center text-sm text-gray-500">
+                <p>
+                    Este recibo confirma la contratación de nuestros servicios para la fecha indicada. Gracias por
+                    confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos en su celebración!
+                </p>
+                </div>
+            </div>
+           </div>
         </div>
-         <DialogFooter className="p-6 border-t bg-background flex-col gap-2">
-            <div className="flex flex-col sm:flex-row gap-2 justify-end">
+         <DialogFooter className="p-6 border-t bg-background flex-col sm:flex-row justify-between items-center gap-2">
+            <p className="text-xs text-muted-foreground text-center sm:text-left">
+                Para enviar el PDF, guárdelo y luego adjúntelo en WhatsApp.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 justify-end w-full sm:w-auto">
                 <Button onClick={handleSavePdf} variant="outline" className="w-full sm:w-auto" disabled={isSaving}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                     {isSaving ? 'Guardando PDF...' : 'Guardar como PDF'}
                 </Button>
                 <Button onClick={handleWhatsAppShare} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
@@ -260,9 +250,6 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
                     <Button variant="secondary" className="w-full sm:w-auto">Cerrar</Button>
                 </DialogClose>
             </div>
-            <p className="text-xs text-muted-foreground text-center sm:text-right mt-2">
-                Para compartir el recibo por WhatsApp, guárdelo como PDF y luego adjúntelo en la conversación.
-            </p>
         </DialogFooter>
       </DialogContent>
     </Dialog>
