@@ -48,7 +48,7 @@ const ReceiptContent = ({ eventData }: { eventData: Partial<EventData> }) => {
     return (
         <div className="px-5 py-4 space-y-6 bg-white text-black">
             <div className="grid grid-cols-1 gap-6">
-                <div className="space-y-2">
+                <div className="flex flex-col items-center space-y-2">
                   <div style={{ width: '150px', height: 'auto' }}>
                     <img
                         src="/logo.svg"
