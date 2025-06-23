@@ -48,46 +48,43 @@ export function EventReceiptModal({ isOpen, onClose, eventData }: EventReceiptMo
 
     setIsSaving(true);
     
-    // Give the browser a moment to render the modal content, including the image
-    setTimeout(() => {
-        html2canvas(input, { 
-            scale: 2, 
-            backgroundColor: '#ffffff' 
-        })
-        .then((canvas) => {
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            const ratio = canvasWidth / canvasHeight;
+    html2canvas(input, { 
+        scale: 2, 
+        backgroundColor: '#ffffff' 
+    })
+    .then((canvas) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
 
-            let imgWidth = pdfWidth - 20; // 10mm margin each side
-            let imgHeight = imgWidth / ratio;
-            
-            if (imgHeight > pdfHeight - 20) {
-                imgHeight = pdfHeight - 20;
-                imgWidth = imgHeight * ratio;
-            }
+        let imgWidth = pdfWidth - 20; // 10mm margin each side
+        let imgHeight = imgWidth / ratio;
+        
+        if (imgHeight > pdfHeight - 20) {
+            imgHeight = pdfHeight - 20;
+            imgWidth = imgHeight * ratio;
+        }
 
-            const xOffset = (pdfWidth - imgWidth) / 2;
-            pdf.addImage(imgData, 'PNG', xOffset, 10, imgWidth, imgHeight);
-            pdf.save(`Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}.pdf`);
-        })
-        .catch(err => {
-            console.error("Error generating PDF:", err);
-            toast({
-                variant: "destructive",
-                title: "Error al generar PDF",
-                description: "Hubo un problema al crear el archivo. Por favor, inténtelo de nuevo.",
-            });
-        })
-        .finally(() => {
-            setIsSaving(false);
+        const xOffset = (pdfWidth - imgWidth) / 2;
+        pdf.addImage(imgData, 'PNG', xOffset, 10, imgWidth, imgHeight);
+        pdf.save(`Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}.pdf`);
+    })
+    .catch(err => {
+        console.error("Error generating PDF:", err);
+        toast({
+            variant: "destructive",
+            title: "Error al generar PDF",
+            description: "Hubo un problema al crear el archivo. Por favor, inténtelo de nuevo.",
         });
-    }, 500); // 500ms delay to allow image rendering
+    })
+    .finally(() => {
+        setIsSaving(false);
+    });
   };
 
   if (!eventData) return null
@@ -134,14 +131,15 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
            <div ref={receiptRef} className="px-5 py-4 space-y-6 bg-white text-black">
             <div className="grid grid-cols-1 gap-6">
                 <div className="text-center space-y-2">
-                <img
-                    src="/logo.svg"
-                    alt="Logo Mariachi Reyes de México"
-                    width={150}
-                    className="mx-auto"
-                />
-                <h2 className="text-2xl font-bold font-headline">Mariachi Reyes de México</h2>
-                <p className="text-gray-500">Recibo de Confirmación de Evento</p>
+                  <div style={{ width: '150px', height: 'auto', margin: '0 auto' }}>
+                    <img
+                        src="/logo.svg"
+                        alt="Logo Mariachi Reyes de México"
+                        style={{ width: '100%', height: 'auto' }}
+                    />
+                  </div>
+                  <h2 className="text-2xl font-bold font-headline">Mariachi Reyes de México</h2>
+                  <p className="text-gray-500">Recibo de Confirmación de Evento</p>
                 </div>
                 <Separator />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
