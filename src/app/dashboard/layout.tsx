@@ -47,20 +47,6 @@ const currentUser = {
     avatarFallback: "AD"
 };
 
-function SidebarUserProfile() {
-    return (
-        <div className="flex flex-col items-center text-center p-4 gap-2">
-            <Avatar className="h-16 w-16 border">
-                <AvatarFallback className="text-3xl font-bold bg-muted text-muted-foreground">{currentUser.avatarFallback}</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col gap-1">
-                <p className="font-semibold text-sm capitalize">{currentUser.name}</p>
-                <Badge variant="outline" className="border-primary/50 text-primary font-medium">{currentUser.role}</Badge>
-            </div>
-        </div>
-    )
-}
-
 function BottomNav() {
     const pathname = usePathname();
 
@@ -113,118 +99,123 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarContent className="p-0">
-          <SidebarHeader className="p-2 pt-4">
-            <Logo />
-          </SidebarHeader>
-          <SidebarUserProfile />
-          <SidebarSeparator className="mx-4 my-2" />
-          <SidebarMenu className="flex-1 px-4">
-            <SidebarGroup>
-                <SidebarGroupLabel>PRINCIPAL</SidebarGroupLabel>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/dashboard")}>
-                        <Link href="/dashboard">
-                            <LayoutGrid />
-                            <span>Panel Principal</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/dashboard/clients")}>
-                        <Link href="/dashboard/clients">
-                            <Users />
-                            <span>Clientes</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarGroup>
+        <SidebarContent className="p-0 flex flex-col">
+          <div>
+            <SidebarHeader className="p-2 pt-4">
+              <Logo />
+            </SidebarHeader>
+            <SidebarSeparator className="mx-4 my-2" />
+            <SidebarMenu className="px-4">
+              <SidebarGroup>
+                  <SidebarGroupLabel>PRINCIPAL</SidebarGroupLabel>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive("/dashboard")}>
+                          <Link href="/dashboard">
+                              <LayoutGrid />
+                              <span>Panel Principal</span>
+                          </Link>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive("/dashboard/clients")}>
+                          <Link href="/dashboard/clients">
+                              <Users />
+                              <span>Clientes</span>
+                          </Link>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+              </SidebarGroup>
 
-            <SidebarGroup>
-                <SidebarGroupLabel>GESTIÓN</SidebarGroupLabel>
-                 <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/dashboard/events")}>
-                        <Link href="/dashboard/events">
-                            <Calendar />
-                            <span>Calendario Eventos</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/dashboard/rehearsals")}>
-                        <Link href="/dashboard/rehearsals">
-                            <Music />
-                            <span>Ensayos</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarGroup>
-            
-            <SidebarGroup>
-                <SidebarGroupLabel>RECURSOS</SidebarGroupLabel>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/dashboard/repertoire")}>
-                        <Link href="/dashboard/repertoire">
-                            <Library />
-                            <span>Repertorio</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/dashboard/media")}>
-                        <Link href="/dashboard/media">
-                            <Image />
-                            <span>Multimedia</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarGroup>
-            
-             <SidebarGroup>
-                <SidebarGroupLabel>ADMINISTRACIÓN</SidebarGroupLabel>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/dashboard/finance")}>
-                        <Link href="/dashboard/finance">
-                            <DollarSign />
-                            <span>Finanzas (Admin)</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/dashboard/users")}>
-                        <Link href="/dashboard/users">
-                            <UserCog />
-                            <span>Administrar Usuarios</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarGroup>
-          </SidebarMenu>
+              <SidebarGroup>
+                  <SidebarGroupLabel>GESTIÓN</SidebarGroupLabel>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive("/dashboard/events")}>
+                          <Link href="/dashboard/events">
+                              <Calendar />
+                              <span>Calendario Eventos</span>
+                          </Link>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive("/dashboard/rehearsals")}>
+                          <Link href="/dashboard/rehearsals">
+                              <Music />
+                              <span>Ensayos</span>
+                          </Link>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+              </SidebarGroup>
+              
+              <SidebarGroup>
+                  <SidebarGroupLabel>RECURSOS</SidebarGroupLabel>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive("/dashboard/repertoire")}>
+                          <Link href="/dashboard/repertoire">
+                              <Library />
+                              <span>Repertorio</span>
+                          </Link>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive("/dashboard/media")}>
+                          <Link href="/dashboard/media">
+                              <Image />
+                              <span>Multimedia</span>
+                          </Link>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+              </SidebarGroup>
+              
+                <SidebarGroup>
+                  <SidebarGroupLabel>ADMINISTRACIÓN</SidebarGroupLabel>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive("/dashboard/finance")}>
+                          <Link href="/dashboard/finance">
+                              <DollarSign />
+                              <span>Finanzas (Admin)</span>
+                          </Link>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive("/dashboard/users")}>
+                          <Link href="/dashboard/users">
+                              <UserCog />
+                              <span>Administrar Usuarios</span>
+                          </Link>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+              </SidebarGroup>
+            </SidebarMenu>
+          </div>
           
-          <SidebarSeparator className="mx-4 my-2" />
-
-          <SidebarMenu className="px-4">
-             <SidebarGroup>
-                <SidebarGroupLabel>CUENTA</SidebarGroupLabel>
-                 <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/dashboard/profile")}>
-                        <Link href="/dashboard/profile">
-                            <UserCircle2 />
-                            <span>Mi Perfil</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton>
-                        <LogOut />
-                        <span>Cerrar Sesión</span>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarGroup>
-          </SidebarMenu>
-           <div className="text-center text-xs text-muted-foreground p-4 mt-4">
-                © 2025 Mariachi Reyes
+          <div className="mt-auto">
+            <SidebarSeparator className="mx-4 my-2" />
+            <SidebarMenu className="px-4">
+              <SidebarGroup>
+                  <SidebarGroupLabel>CUENTA</SidebarGroupLabel>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive("/dashboard/profile")}>
+                          <Link href="/dashboard/profile">
+                              <UserCircle2 />
+                              <span>Mi Perfil</span>
+                          </Link>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton>
+                          <LogOut />
+                          <span>Cerrar Sesión</span>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+              </SidebarGroup>
+            </SidebarMenu>
+            <div className="text-center text-sm font-semibold p-4 pt-2">
+              <p>{currentUser.name}</p>
             </div>
+             <div className="text-center text-xs text-muted-foreground p-4 pt-0">
+                  © 2025 Mariachi Reyes
+              </div>
+          </div>
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
