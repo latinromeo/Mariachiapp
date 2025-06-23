@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { type EventData, getEvents, completeEvent, type RehearsalData, getRehearsals } from "@/services/eventService";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, Music, PlusCircle, ExternalLink } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, Music, PlusCircle, ExternalLink, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { EVENT_PLANS } from "@/lib/constants";
@@ -68,7 +68,7 @@ export default function DashboardPage() {
     const currentYear = getYear(today);
     setYears(Array.from({ length: 11 }, (_, i) => currentYear - 5 + i));
     setIsClient(true);
-  }, []);
+  }, [toast]);
 
   const pendingActivities = useMemo((): Activity[] => {
     if (!isClient || typeof selectedYear === 'undefined' || typeof selectedMonth === 'undefined') {
@@ -79,7 +79,16 @@ export default function DashboardPage() {
     const safeParseDate = (dateInput: unknown): Date | null => {
       if (typeof dateInput !== 'string' || !dateInput) return null;
       const dateString = dateInput.split('T')[0];
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return null;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+         try {
+            // Attempt to parse ISO string like '2024-07-28T04:00:00.000Z'
+            const d = new Date(dateInput);
+            if (!isNaN(d.getTime())) return d;
+        } catch {
+            return null;
+        }
+        return null;
+      }
       try {
         return parse(dateString, 'yyyy-MM-dd', new Date());
       } catch {
@@ -235,7 +244,10 @@ export default function DashboardPage() {
                                                     <Calendar className="h-5 w-5 text-destructive mt-1 flex-shrink-0" />
                                                     <div>
                                                         <p className="font-bold lowercase">{activity.eventType}</p>
-                                                        <p className="text-sm text-muted-foreground">Cliente: {activity.clientName}</p>
+                                                        <p className="mt-1 flex items-center gap-1.5 text-base font-semibold">
+                                                            <User className="h-4 w-4 text-muted-foreground" />
+                                                            {activity.clientName}
+                                                        </p>
                                                     </div>
                                                 </div>
                                                 
