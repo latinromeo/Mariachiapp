@@ -16,9 +16,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Loader2, CalendarIcon, Clock, MapPin, Music, Link as LinkIcon, Trash2, KeyRound, PlusCircle, FileText } from "lucide-react"
-import { createRehearsal } from "@/services/eventService"
+import { createRehearsal, updateRehearsal, type RehearsalData } from "@/services/eventService"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -42,17 +42,25 @@ const formSchema = z.object({
   notes: z.string().optional(),
 })
 
-export function RehearsalForm() {
+type RehearsalInput = z.infer<typeof formSchema>;
+
+interface RehearsalFormProps {
+  initialData?: RehearsalData;
+  rehearsalId?: string;
+}
+
+export function RehearsalForm({ initialData, rehearsalId }: RehearsalFormProps) {
   const { toast } = useToast()
   const router = useRouter();
   const searchParams = useSearchParams();
   const dateFromQuery = searchParams.get('date');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditMode = !!rehearsalId;
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<RehearsalInput>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: initialData || {
       date: dateFromQuery || "",
       time: "",
       location: "",
@@ -61,6 +69,15 @@ export function RehearsalForm() {
       notes: "",
     },
   })
+
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        ...initialData,
+        songs: initialData.songs && initialData.songs.length > 0 ? initialData.songs : [{ name: "", artist: "", key: "", youtubeUrl: "", sheetMusicUrl: "" }]
+      });
+    }
+  }, [initialData, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -84,21 +101,34 @@ export function RehearsalForm() {
     return options;
   }, []);
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: RehearsalInput) {
     setIsSubmitting(true);
     try {
-        const result = await createRehearsal(values);
-        if (result.success) {
-            toast({
-                title: "¡Ensayo Programado!",
-                description: "El nuevo ensayo ha sido guardado exitosamente.",
-            });
-            form.reset();
-            router.push('/dashboard/rehearsals');
+        let result;
+        if (isEditMode && rehearsalId) {
+            result = await updateRehearsal(rehearsalId, values);
+            if (result.success) {
+                toast({
+                    title: "¡Ensayo Actualizado!",
+                    description: "El ensayo ha sido actualizado exitosamente.",
+                });
+                router.push('/dashboard/rehearsals');
+            }
         } else {
-             toast({
+            result = await createRehearsal(values);
+            if (result.success) {
+                toast({
+                    title: "¡Ensayo Programado!",
+                    description: "El nuevo ensayo ha sido guardado exitosamente.",
+                });
+                router.push('/dashboard/rehearsals');
+            }
+        }
+
+        if(!result.success) {
+            toast({
                 variant: "destructive",
-                title: "Error al programar ensayo",
+                title: isEditMode ? "Error al actualizar" : "Error al programar ensayo",
                 description: result.error || "Hubo un problema al guardar. Inténtalo de nuevo.",
             });
         }
@@ -188,9 +218,11 @@ export function RehearsalForm() {
                            <div key={field.id} className="p-4 border rounded-lg space-y-4 relative">
                              <div className="flex justify-between items-center">
                                <p className="font-semibold">Canción #{index + 1}</p>
-                               <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-destructive hover:bg-destructive/10">
-                                   <Trash2 className="h-4 w-4" />
-                               </Button>
+                               {fields.length > 1 && (
+                                   <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-destructive hover:bg-destructive/10">
+                                       <Trash2 className="h-4 w-4" />
+                                   </Button>
+                               )}
                              </div>
                              <Separator/>
                              <FormField
@@ -283,7 +315,7 @@ export function RehearsalForm() {
         </div>
         <Button type="submit" size="lg" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? "Guardando..." : "Guardar Ensayo"}
+            {isSubmitting ? "Guardando..." : (isEditMode ? "Guardar Cambios" : "Guardar Ensayo")}
         </Button>
       </form>
     </Form>

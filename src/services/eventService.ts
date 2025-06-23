@@ -403,7 +403,7 @@ export async function deleteEvent(id: string): Promise<{ success: boolean; error
         return { success: true };
     } catch (error) {
         console.error("Error deleting event:", error);
-        return { success: false, error: "Failed to delete event in database." };
+        return { success: false, error: "Failed to delete event from database." };
     }
 }
 
@@ -435,6 +435,49 @@ export async function createRehearsal(data: RehearsalInputData): Promise<{ succe
      console.error("Error creating rehearsal:", error);
      return { success: false, error: "Failed to create rehearsal in database." };
   }
+}
+
+export async function getRehearsalById(id: string): Promise<RehearsalData | null> {
+    console.log(`Fetching rehearsal with ID: ${id}`);
+    try {
+        const rehearsalRef = doc(db, "rehearsals", id);
+        const docSnap = await getDoc(rehearsalRef);
+
+        if (!docSnap.exists()) {
+            console.error("No such rehearsal!");
+            return null;
+        }
+
+        return processDocTimestamps(docSnap) as RehearsalData;
+    } catch (error) {
+        console.error("Error fetching rehearsal by ID:", error);
+        return null;
+    }
+}
+
+export async function updateRehearsal(id: string, data: Partial<RehearsalInputData>): Promise<{ success: boolean; error?: string }> {
+    const rehearsalRef = doc(db, "rehearsals", id);
+    try {
+        await updateDoc(rehearsalRef, {
+            ...data,
+            updatedAt: serverTimestamp(),
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating rehearsal:", error);
+        return { success: false, error: "Failed to update rehearsal in database." };
+    }
+}
+
+export async function deleteRehearsal(id: string): Promise<{ success: boolean; error?: string }> {
+    const rehearsalRef = doc(db, "rehearsals", id);
+    try {
+        await deleteDoc(rehearsalRef);
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting rehearsal:", error);
+        return { success: false, error: "Failed to delete rehearsal from database." };
+    }
 }
 
 

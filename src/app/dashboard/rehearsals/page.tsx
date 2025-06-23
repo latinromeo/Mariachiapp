@@ -3,7 +3,8 @@
 
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
-import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -20,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, PlusCircle, Search } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Search, Loader2, Trash2 } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -28,28 +29,44 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
-import { type RehearsalData, getRehearsals } from "@/services/eventService";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { type RehearsalData, getRehearsals, deleteRehearsal } from "@/services/eventService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 export default function RehearsalsPage() {
   const [allRehearsals, setAllRehearsals] = useState<RehearsalData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [rehearsalToDelete, setRehearsalToDelete] = useState<RehearsalData | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const fetchRehearsals = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getRehearsals();
+      setAllRehearsals(data);
+    } catch (error) {
+      console.error("Failed to fetch rehearsals", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchRehearsals = async () => {
-      setIsLoading(true);
-      try {
-        const data = await getRehearsals();
-        setAllRehearsals(data);
-      } catch (error) {
-        console.error("Failed to fetch rehearsals", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchRehearsals();
   }, []);
 
@@ -63,6 +80,28 @@ export default function RehearsalsPage() {
         rehearsal.location.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [allRehearsals, searchTerm]);
+
+  const handleDeleteRehearsal = async () => {
+    if (!rehearsalToDelete) return;
+
+    setIsDeleting(true);
+    const result = await deleteRehearsal(rehearsalToDelete.id);
+    if (result.success) {
+      toast({
+        title: "Ensayo Eliminado",
+        description: `El ensayo ha sido eliminado correctamente.`,
+      });
+      fetchRehearsals();
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error al eliminar",
+        description: result.error || "No se pudo eliminar el ensayo.",
+      });
+    }
+    setIsDeleting(false);
+    setRehearsalToDelete(null);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -142,8 +181,8 @@ export default function RehearsalsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem>Editar</DropdownMenuItem>
-                          <DropdownMenuItem>Eliminar</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => router.push(`/dashboard/rehearsals/${rehearsal.id}/edit`)}>Editar</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setRehearsalToDelete(rehearsal)} className="text-destructive focus:text-destructive">Eliminar</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -160,6 +199,27 @@ export default function RehearsalsPage() {
           </Table>
         </CardContent>
       </Card>
+      <AlertDialog open={!!rehearsalToDelete} onOpenChange={(isOpen) => !isOpen && setRehearsalToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Estás seguro de que quieres eliminar este ensayo?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta acción no se puede deshacer. Se eliminará permanentemente el ensayo programado.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setRehearsalToDelete(null)}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleDeleteRehearsal}
+                        disabled={isDeleting}
+                        className={buttonVariants({ variant: "destructive" })}
+                    >
+                        {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Sí, eliminar ensayo
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
