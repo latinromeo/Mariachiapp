@@ -36,99 +36,17 @@ const formatCurrency = (value: number | undefined) => {
     return `RD$${(value).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+// A self-contained component for the receipt content.
+// This will be rendered invisibly for PDF generation and visibly for the user.
+const ReceiptContent = ({ eventData }: { eventData: Partial<EventData> }) => {
+    if (!eventData) return null;
 
-export function EventReceiptModal({ isOpen, onClose, eventData }: EventReceiptModalProps) {
-  const receiptRef = useRef<HTMLDivElement>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
-
-  const handleSavePdf = () => {
-    const input = receiptRef.current;
-    if (!input) return;
-
-    setIsSaving(true);
+    const eventTypeLabel = EVENT_TYPES.find(e => e.value === eventData.eventType)?.label || eventData.eventType
+    const planLabel = EVENT_PLANS.find(p => p.value === eventData.plan)?.label || eventData.plan
+    const paymentMethodLabel = PAYMENT_METHODS.find(p => p.value === eventData.paymentMethod)?.label || eventData.paymentMethod
     
-    html2canvas(input, { 
-        scale: 2, 
-        backgroundColor: '#ffffff' 
-    })
-    .then((canvas) => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        const ratio = canvasWidth / canvasHeight;
-
-        let imgWidth = pdfWidth - 20; // 10mm margin each side
-        let imgHeight = imgWidth / ratio;
-        
-        if (imgHeight > pdfHeight - 20) {
-            imgHeight = pdfHeight - 20;
-            imgWidth = imgHeight * ratio;
-        }
-
-        const xOffset = (pdfWidth - imgWidth) / 2;
-        pdf.addImage(imgData, 'PNG', xOffset, 10, imgWidth, imgHeight);
-        pdf.save(`Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}.pdf`);
-    })
-    .catch(err => {
-        console.error("Error generating PDF:", err);
-        toast({
-            variant: "destructive",
-            title: "Error al generar PDF",
-            description: "Hubo un problema al crear el archivo. Por favor, inténtelo de nuevo.",
-        });
-    })
-    .finally(() => {
-        setIsSaving(false);
-    });
-  };
-
-  if (!eventData) return null
-
-  const eventTypeLabel = EVENT_TYPES.find(e => e.value === eventData.eventType)?.label || eventData.eventType
-  const planLabel = EVENT_PLANS.find(p => p.value === eventData.plan)?.label || eventData.plan
-  const paymentMethodLabel = PAYMENT_METHODS.find(p => p.value === eventData.paymentMethod)?.label || eventData.paymentMethod
-
-  const whatsappMessage = `*Recibo de Confirmación de Evento - Mariachi Reyes de México*
------------------------------------
-*Datos del Cliente:*
-- Nombre: ${eventData.clientName}
-- Teléfono: ${eventData.clientPhone}
-
-*Detalles del Evento:*
-- Tipo: ${eventTypeLabel}
-- Fecha: ${eventData.eventDate ? format(parse(eventData.eventDate, 'yyyy-MM-dd', new Date()), "dd/MM/yyyy", { locale: es }) : 'N/A'}
-- Hora: ${eventData.eventTime}
-- Dirección: ${eventData.location}, ${eventData.sector}
-- Duración: ${planLabel}
-
-*Información del Pago:*
-- Costo Total: ${formatCurrency(eventData.contractedAmount)}
-- Abono Realizado: ${formatCurrency(eventData.amountPaid)}
-- Monto Restante: ${formatCurrency(eventData.pendingBalance)}
-- Fecha de Pago: ${format(new Date(), "dd/MM/yyyy", { locale: es })}
-- Método de Pago: ${paymentMethodLabel}
-
-Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos en su celebración!`;
-
-  const handleWhatsAppShare = () => {
-    const phone = eventData.clientPhone?.replace(/\D/g, '') || '';
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMessage)}`;
-    window.open(url, "_blank");
-  }
-
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl p-0">
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle>Evento Creado Exitosamente - Recibo</DialogTitle>
-        </DialogHeader>
-        <div className="max-h-[70vh] overflow-y-auto px-1">
-           <div ref={receiptRef} className="px-5 py-4 space-y-6 bg-white text-black">
+    return (
+        <div className="px-5 py-4 space-y-6 bg-white text-black">
             <div className="grid grid-cols-1 gap-6">
                 <div className="text-center space-y-2">
                   <div style={{ width: '150px', height: 'auto', margin: '0 auto' }}>
@@ -229,27 +147,140 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
                 </p>
                 </div>
             </div>
-           </div>
         </div>
-         <DialogFooter className="p-6 border-t bg-background flex-col sm:flex-row justify-between items-center gap-2">
-            <p className="text-xs text-muted-foreground text-center sm:text-left">
-                Para enviar el PDF, guárdelo y luego adjúntelo en WhatsApp.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2 justify-end w-full sm:w-auto">
-                <Button onClick={handleSavePdf} variant="outline" className="w-full sm:w-auto" disabled={isSaving}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                    {isSaving ? 'Guardando PDF...' : 'Guardar como PDF'}
-                </Button>
-                <Button onClick={handleWhatsAppShare} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Enviar Resumen por WhatsApp
-                </Button>
-                <DialogClose asChild>
-                    <Button variant="secondary" className="w-full sm:w-auto">Cerrar</Button>
-                </DialogClose>
-            </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    );
+};
+
+
+export function EventReceiptModal({ isOpen, onClose, eventData }: EventReceiptModalProps) {
+  const printableRef = useRef<HTMLDivElement>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+
+  const handleSavePdf = () => {
+    const input = printableRef.current;
+    if (!input) {
+        toast({
+            variant: "destructive",
+            title: "Error de Renderizado",
+            description: "No se pudo encontrar el contenido para generar el PDF. Intente de nuevo.",
+        });
+        return;
+    }
+
+    setIsSaving(true);
+    
+    html2canvas(input, { 
+        scale: 2, 
+        backgroundColor: '#ffffff'
+    })
+    .then((canvas) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+
+        let imgWidth = pdfWidth - 20; // 10mm margin each side
+        let imgHeight = imgWidth / ratio;
+        
+        // If image is too tall, scale it down to fit the page height
+        if (imgHeight > pdfHeight - 20) {
+            imgHeight = pdfHeight - 20;
+            imgWidth = imgHeight * ratio; // Recalculate width to maintain aspect ratio
+        }
+
+        const xOffset = (pdfWidth - imgWidth) / 2;
+        pdf.addImage(imgData, 'PNG', xOffset, 10, imgWidth, imgHeight);
+        pdf.save(`Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}.pdf`);
+    })
+    .catch(err => {
+        console.error("Error generating PDF:", err);
+        toast({
+            variant: "destructive",
+            title: "Error al generar PDF",
+            description: "Hubo un problema al crear el archivo. Por favor, inténtelo de nuevo.",
+        });
+    })
+    .finally(() => {
+        setIsSaving(false);
+    });
+  };
+
+  if (!eventData) return null;
+
+  const eventTypeLabel = EVENT_TYPES.find(e => e.value === eventData.eventType)?.label || eventData.eventType
+  const planLabel = EVENT_PLANS.find(p => p.value === eventData.plan)?.label || eventData.plan
+  const paymentMethodLabel = PAYMENT_METHODS.find(p => p.value === eventData.paymentMethod)?.label || eventData.paymentMethod
+
+  const whatsappMessage = `*Recibo de Confirmación de Evento - Mariachi Reyes de México*
+-----------------------------------
+*Datos del Cliente:*
+- Nombre: ${eventData.clientName}
+- Teléfono: ${eventData.clientPhone}
+
+*Detalles del Evento:*
+- Tipo: ${eventTypeLabel}
+- Fecha: ${eventData.eventDate ? format(parse(eventData.eventDate, 'yyyy-MM-dd', new Date()), "dd/MM/yyyy", { locale: es }) : 'N/A'}
+- Hora: ${eventData.eventTime}
+- Dirección: ${eventData.location}, ${eventData.sector}
+- Duración: ${planLabel}
+
+*Información del Pago:*
+- Costo Total: ${formatCurrency(eventData.contractedAmount)}
+- Abono Realizado: ${formatCurrency(eventData.amountPaid)}
+- Monto Restante: ${formatCurrency(eventData.pendingBalance)}
+- Fecha de Pago: ${format(new Date(), "dd/MM/yyyy", { locale: es })}
+- Método de Pago: ${paymentMethodLabel}
+
+Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos en su celebración!`;
+
+  const handleWhatsAppShare = () => {
+    const phone = eventData.clientPhone?.replace(/\D/g, '') || '';
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMessage)}`;
+    window.open(url, "_blank");
+  }
+
+  return (
+    <>
+      {/* Hidden, clean component for PDF generation. It's positioned off-screen. */}
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+        <div ref={printableRef} style={{ width: '800px' }}>
+          <ReceiptContent eventData={eventData} />
+        </div>
+      </div>
+
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-2xl p-0">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle>Evento Creado Exitosamente - Recibo</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[70vh] overflow-y-auto px-1">
+             <ReceiptContent eventData={eventData} />
+          </div>
+           <DialogFooter className="p-6 border-t bg-background flex-col sm:flex-row justify-between items-center gap-2">
+              <p className="text-xs text-muted-foreground text-center sm:text-left">
+                  Para enviar el PDF, guárdelo y luego adjúntelo en WhatsApp.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-end w-full sm:w-auto">
+                  <Button onClick={handleSavePdf} variant="outline" className="w-full sm:w-auto" disabled={isSaving}>
+                      {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                      {isSaving ? 'Guardando PDF...' : 'Guardar como PDF'}
+                  </Button>
+                  <Button onClick={handleWhatsAppShare} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Enviar Resumen por WhatsApp
+                  </Button>
+                  <DialogClose asChild>
+                      <Button variant="secondary" className="w-full sm:w-auto">Cerrar</Button>
+                  </DialogClose>
+              </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
