@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { type EventData, getEvents, completeEvent, type RehearsalData, getRehearsals } from "@/services/eventService";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, Music } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, Music, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { EVENT_PLANS } from "@/lib/constants";
@@ -125,6 +125,12 @@ export default function DashboardPage() {
               {`Eventos y ensayos para ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}.`}
             </p>
         </div>
+        <Button asChild>
+            <Link href="/dashboard/events/new">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Crear Nuevo Evento
+            </Link>
+        </Button>
       </div>
       
       <div className="space-y-4">
