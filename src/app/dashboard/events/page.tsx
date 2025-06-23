@@ -32,7 +32,7 @@ const statusColors: Record<EventStatus, string> = {
   pending: 'bg-yellow-500',
   external: 'bg-blue-500',
   cancelled: 'bg-red-500',
-  completed: 'bg-gray-400',
+  completed: 'bg-green-600',
 };
 
 export default function EventsCalendarPage() {

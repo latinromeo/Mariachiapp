@@ -34,7 +34,7 @@ const statusVariantMap: Record<string, "default" | "secondary" | "outline" | "de
 };
 
 const statusTextClassMap: Record<string, string> = {
-  completed: 'text-gray-500 border-gray-300'
+  completed: 'text-green-700 bg-green-100 border-green-200 dark:text-green-300 dark:bg-green-950 dark:border-green-800'
 }
 
 
