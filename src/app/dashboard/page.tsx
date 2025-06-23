@@ -27,6 +27,9 @@ const months = Array.from({ length: 12 }, (_, i) => ({
   label: format(new Date(2000, i), "MMMM", { locale: es }),
 }));
 
+type Activity = ((EventData & {type: 'event'}) | (RehearsalData & {type: 'rehearsal'})) & { parsedDate: Date };
+
+
 export default function DashboardPage() {
   const [allEvents, setAllEvents] = useState<EventData[]>([]);
   const [allRehearsals, setAllRehearsals] = useState<RehearsalData[]>([]);
@@ -34,7 +37,6 @@ export default function DashboardPage() {
   const [isCompleting, setIsCompleting] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // State to handle hydration mismatch
   const [isClient, setIsClient] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
@@ -60,75 +62,71 @@ export default function DashboardPage() {
     
     fetchAllData();
 
-    // This logic now runs only on the client, preventing hydration errors
     const today = new Date();
     setSelectedMonth(getMonth(today));
     setSelectedYear(getYear(today));
     const currentYear = getYear(today);
     setYears(Array.from({ length: 11 }, (_, i) => currentYear - 5 + i));
     setIsClient(true);
-  }, [toast]);
+  }, []);
 
-  const pendingActivities = useMemo(() => {
+  const pendingActivities = useMemo((): Activity[] => {
     if (!isClient || typeof selectedYear === 'undefined' || typeof selectedMonth === 'undefined') {
       return [];
     }
     const targetDate = new Date(selectedYear, selectedMonth);
-    const referenceDate = new Date(0); // A static date for consistent parsing
+
+    const safeParseDate = (dateInput: unknown): Date | null => {
+      if (typeof dateInput !== 'string' || !dateInput) return null;
+      const dateString = dateInput.split('T')[0];
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return null;
+      try {
+        return parse(dateString, 'yyyy-MM-dd', new Date());
+      } catch {
+        return null;
+      }
+    };
 
     const events = allEvents
-      .filter(event => {
-        if (!event.eventDate || !/^\d{4}-\d{2}-\d{2}$/.test(event.eventDate)) return false;
-        try {
-            const eventDate = parse(event.eventDate, 'yyyy-MM-dd', referenceDate);
-            return (event.status === 'pending' || event.status === 'confirmed') && isSameMonth(eventDate, targetDate);
-        } catch {
-            return false;
+      .map(event => {
+        const parsedDate = safeParseDate(event.eventDate);
+        if (!parsedDate || !(event.status === 'pending' || event.status === 'confirmed') || !isSameMonth(parsedDate, targetDate)) {
+          return null;
         }
+        return { ...event, type: 'event' as const, parsedDate };
       })
-      .map(event => ({ ...event, type: 'event' as const, date: event.eventDate }));
+      .filter((e): e is Activity => !!e);
       
     const rehearsals = allRehearsals
-      .filter(rehearsal => {
-        if (!rehearsal.date || !/^\d{4}-\d{2}-\d{2}$/.test(rehearsal.date)) return false;
-        try {
-            const rehearsalDate = parse(rehearsal.date, 'yyyy-MM-dd', referenceDate);
-            return isSameMonth(rehearsalDate, targetDate);
-        } catch {
-            return false;
+      .map(rehearsal => {
+        const parsedDate = safeParseDate(rehearsal.date);
+        if (!parsedDate || !isSameMonth(parsedDate, targetDate)) {
+          return null;
         }
+        return { ...rehearsal, type: 'rehearsal' as const, parsedDate };
       })
-      .map(rehearsal => ({ ...rehearsal, type: 'rehearsal' as const }));
+      .filter((r): r is Activity => !!r);
 
     const combined = [...events, ...rehearsals];
 
-    return combined.sort((a, b) => {
-        try {
-            const dateA = parse(a.date, 'yyyy-MM-dd', referenceDate);
-            const dateB = parse(b.date, 'yyyy-MM-dd', referenceDate);
-            return dateA.getTime() - dateB.getTime();
-        } catch {
-            return 0;
-        }
-    });
+    return combined.sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime());
   }, [allEvents, allRehearsals, selectedMonth, selectedYear, isClient]);
 
   const groupedActivities = useMemo(() => {
     if (!pendingActivities.length) return {};
-    const referenceDate = new Date(0); // Static reference date
     
     return pendingActivities.reduce((acc, activity) => {
       try {
-        const dateKey = format(parse(activity.date, 'yyyy-MM-dd', referenceDate), "EEEE, dd MMM", { locale: es });
+        const dateKey = format(activity.parsedDate, "EEEE, dd MMM", { locale: es });
         if (!acc[dateKey]) {
           acc[dateKey] = [];
         }
         acc[dateKey].push(activity);
       } catch (e) {
-        // Ignore activities with invalid dates
+        console.error("Error formatting date key for activity:", activity, e);
       }
       return acc;
-    }, {} as Record<string, (EventData & {type: 'event'} | RehearsalData & {type: 'rehearsal'})[]>);
+    }, {} as Record<string, Activity[]>);
   }, [pendingActivities]);
 
   const handleCompleteEvent = async (eventId: string) => {
@@ -139,7 +137,6 @@ export default function DashboardPage() {
         title: "¡Evento Completado!",
         description: "El evento se marcó como completado y las finanzas se actualizaron.",
       });
-      // Refetch data after completion
       const [eventsData, rehearsalsData] = await Promise.all([getEvents(), getRehearsals()]);
       setAllEvents(eventsData);
       setAllRehearsals(rehearsalsData);
