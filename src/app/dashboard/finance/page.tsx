@@ -10,13 +10,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { DollarSign, TrendingUp, TrendingDown, Clock, PlusCircle } from "lucide-react"
+import { DollarSign, TrendingUp, TrendingDown, Clock, PlusCircle, Landmark } from "lucide-react"
 import { type EventData, type ManualFinanceEntry, getEvents, getManualFinanceEntries } from "@/services/eventService"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ManualEntryForm } from "./manual-entry-form"
-import { endOfMonth, format, startOfMonth, subMonths, parseISO } from "date-fns"
+import { endOfMonth, format, startOfMonth, subMonths, parseISO, isWithinInterval, startOfToday, endOfToday, newDate } from "date-fns"
 import { es } from "date-fns/locale"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart"
 import { EVENT_TYPES } from "@/lib/constants"
@@ -25,12 +25,12 @@ import { Badge } from "@/components/ui/badge"
 
 const formatCurrency = (value: number | undefined, compact = false) => {
     if (typeof value !== 'number' || isNaN(value)) {
-        return "$0";
+        return "RD$0.00";
     }
-    if (compact && value >= 1000) {
-      return `$${(value / 1000).toLocaleString('en-US', {maximumFractionDigits: 0})}k`
+    if (compact && Math.abs(value) >= 1000) {
+      return `RD$${(value / 1000).toLocaleString('es-DO', {maximumFractionDigits: 0})}k`
     }
-    return `$${(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return `RD$${(value).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const slugify = (str: string) =>
@@ -92,38 +92,30 @@ export default function FinancePage() {
         eventTypeDistribution, 
         pieChartConfig,
         barChartData,
-        transactionHistory
+        transactionHistory,
+        currentMonthIncome,
+        currentMonthExpenses,
+        netBalance,
     } = useMemo(() => {
-        if (isLoading || !isClient) {
-            return {
-                incomeHistory: [],
-                eventTypeDistribution: [],
-                pieChartConfig: {} as ChartConfig,
-                barChartData: [],
-                transactionHistory: []
-            };
-        }
+        const defaultResult = {
+            incomeHistory: [], eventTypeDistribution: [], pieChartConfig: {} as ChartConfig, 
+            barChartData: [], transactionHistory: [], currentMonthIncome: 0, 
+            currentMonthExpenses: 0, netBalance: 0
+        };
+
+        if (isLoading || !isClient) return defaultResult;
 
         const now = new Date();
-        
-        // Bar Chart Data (Current Month)
         const firstDayCurrentMonth = startOfMonth(now);
         const lastDayCurrentMonth = endOfMonth(now);
+        const currentMonthInterval = { start: firstDayCurrentMonth, end: lastDayCurrentMonth };
         const currentMonthName = format(now, 'MMM', { locale: es });
+        
+        const safeParseDate = (dateStr: string) => dateStr.includes('T') ? parseISO(dateStr) : newDate(dateStr.replace(/-/g, '/'));
 
-        const currentMonthEvents = events.filter(e => {
-            try {
-                const eventDate = new Date(e.eventDate);
-                return eventDate >= firstDayCurrentMonth && eventDate <= lastDayCurrentMonth;
-            } catch { return false; }
-        });
-
-        const currentMonthManualEntries = manualEntries.filter(m => {
-            try {
-                const entryDate = new Date(m.date);
-                return entryDate >= firstDayCurrentMonth && entryDate <= lastDayCurrentMonth;
-            } catch { return false; }
-        });
+        // Current Month Totals
+        const currentMonthEvents = events.filter(e => isWithinInterval(safeParseDate(e.eventDate), currentMonthInterval));
+        const currentMonthManualEntries = manualEntries.filter(m => isWithinInterval(safeParseDate(m.date), currentMonthInterval));
 
         const currentMonthIncome = currentMonthEvents.reduce((acc, e) => acc + (e.externalGroup ? 0 : e.contractedAmount), 0) +
                        currentMonthManualEntries.filter(m => m.type === 'income').reduce((acc, m) => acc + m.amount, 0);
@@ -131,10 +123,12 @@ export default function FinancePage() {
         const currentMonthExpenses = currentMonthEvents.reduce((acc, e) => acc + (e.externalGroup ? 0 : (e.musiciansPay || 0)), 0) +
                          currentMonthManualEntries.filter(m => m.type === 'expense').reduce((acc, m) => acc + m.amount, 0);
         
+        const netBalance = currentMonthIncome - currentMonthExpenses;
+
         const barChartData = [{
             name: currentMonthName,
-            Ingresos: currentMonthIncome,
-            Egresos: currentMonthExpenses
+            ingresos: currentMonthIncome,
+            egresos: currentMonthExpenses
         }];
         
         // Income History (last 6 months)
@@ -142,22 +136,13 @@ export default function FinancePage() {
             const monthDate = subMonths(now, 5 - i);
             const monthStart = startOfMonth(monthDate);
             const monthEnd = endOfMonth(monthDate);
+            const monthInterval = { start: monthStart, end: monthEnd };
 
             const monthIncome = events
-                .filter(e => {
-                    try {
-                        const eventDate = new Date(e.eventDate);
-                        return !e.externalGroup && eventDate >= monthStart && eventDate <= monthEnd;
-                    } catch { return false; }
-                })
+                .filter(e => !e.externalGroup && isWithinInterval(safeParseDate(e.eventDate), monthInterval))
                 .reduce((sum, e) => sum + e.contractedAmount, 0) +
                 manualEntries
-                .filter(m => {
-                    try {
-                        const entryDate = new Date(m.date);
-                        return m.type === 'income' && entryDate >= monthStart && entryDate <= monthEnd
-                    } catch { return false; }
-                })
+                .filter(m => m.type === 'income' && isWithinInterval(safeParseDate(m.date), monthInterval))
                 .reduce((sum, m) => sum + m.amount, 0);
 
             return {
@@ -193,14 +178,27 @@ export default function FinancePage() {
         }, {} as ChartConfig);
 
         // Transaction History
-        const eventTransactions: Transaction[] = events.map(event => ({
-            date: event.eventDate,
-            description: `Evento: ${event.eventType} - ${event.clientName}`,
-            category: event.externalGroup ? 'Referido Externo' : 'Presentación Mariachi',
-            type: 'Ingreso',
-            amount: event.contractedAmount,
-            id: `evt-${event.id}`
-        }));
+        const eventIncomeTransactions: Transaction[] = events
+            .filter(event => event.contractedAmount > 0)
+            .map(event => ({
+                date: event.eventDate,
+                description: `Ingreso Evento: ${event.eventType} - ${event.clientName}`,
+                category: event.externalGroup ? 'Referido Externo' : 'Presentación Mariachi',
+                type: 'Ingreso',
+                amount: event.contractedAmount,
+                id: `evt-in-${event.id}`
+            }));
+
+        const eventExpenseTransactions: Transaction[] = events
+            .filter(event => !event.externalGroup && event.musiciansPay && event.musiciansPay > 0)
+            .map(event => ({
+                date: event.eventDate,
+                description: `Pago Músicos: ${event.eventType} - ${event.clientName}`,
+                category: 'Pago a Músicos',
+                type: 'Gasto',
+                amount: event.musiciansPay!,
+                id: `evt-out-${event.id}`
+            }));
 
         const manualTransactions: Transaction[] = manualEntries.map(entry => ({
             date: entry.date,
@@ -211,14 +209,10 @@ export default function FinancePage() {
             id: `man-${entry.id}`
         }));
         
-        const transactionHistory = [...eventTransactions, ...manualTransactions];
-        transactionHistory.sort((a, b) => {
-            const dateA = a.date.includes('T') ? parseISO(a.date) : new Date(a.date.replace(/-/g, '/'));
-            const dateB = b.date.includes('T') ? parseISO(b.date) : new Date(b.date.replace(/-/g, '/'));
-            return dateB.getTime() - dateA.getTime();
-        });
+        const transactionHistory = [...eventIncomeTransactions, ...eventExpenseTransactions, ...manualTransactions];
+        transactionHistory.sort((a, b) => safeParseDate(b.date).getTime() - safeParseDate(a.date).getTime());
         
-        return { incomeHistory, eventTypeDistribution, pieChartConfig, barChartData, transactionHistory };
+        return { incomeHistory, eventTypeDistribution, pieChartConfig, barChartData, transactionHistory, currentMonthIncome, currentMonthExpenses, netBalance };
 
     }, [events, manualEntries, isLoading, isClient]);
 
@@ -258,6 +252,40 @@ export default function FinancePage() {
             </div>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Ingresos Generales (Mes)</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-green-500" />
+                </CardHeader>
+                <CardContent>
+                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold">{formatCurrency(currentMonthIncome)}</div>}
+                    <p className="text-xs text-muted-foreground">Total de ingresos este mes</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Egresos Generales (Mes)</CardTitle>
+                    <TrendingDown className="h-4 w-4 text-destructive" />
+                </CardHeader>
+                <CardContent>
+                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold">{formatCurrency(currentMonthExpenses)}</div>}
+                    <p className="text-xs text-muted-foreground">Total de egresos este mes</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Balance Neto (Mes)</CardTitle>
+                    <Landmark className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold">{formatCurrency(netBalance)}</div>}
+                    <p className="text-xs text-muted-foreground">Ingresos - Egresos</p>
+                </CardContent>
+            </Card>
+        </div>
+
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
                 <CardHeader>
@@ -273,10 +301,10 @@ export default function FinancePage() {
                             <BarChart data={barChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
                                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value as number, true)} />
-                                <ChartTooltip cursor={true} content={<ChartTooltipContent formatter={(value) => formatCurrency(value as number)} />} />
+                                <ChartTooltip cursor={true} content={<ChartTooltipContent formatter={(value, name) => `${formatCurrency(value as number)}`} />} />
                                 <Legend content={<ChartLegendContent />} />
-                                <Bar dataKey="Ingresos" fill="var(--color-ingresos)" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="Egresos" fill="var(--color-egresos)" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="ingresos" fill="var(--color-ingresos)" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="egresos" fill="var(--color-egresos)" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ChartContainer>
                     )}
@@ -404,13 +432,13 @@ export default function FinancePage() {
                                 transactionHistory.map(t => (
                                     <TableRow key={t.id}>
                                         <TableCell className="font-medium">
-                                            {format(t.date.includes('T') ? parseISO(t.date) : new Date(t.date.replace(/-/g, '/')), 'dd/MM/yyyy')}
+                                            {format(safeParseDate(t.date), 'dd/MM/yyyy')}
                                         </TableCell>
                                         <TableCell>{t.description}</TableCell>
                                         <TableCell>
                                             <Badge variant={t.type === 'Ingreso' ? 'secondary' : 'destructive'} className={t.type === 'Ingreso' ? 'text-green-600 border-green-300 bg-green-50' : ''}>{t.type}</Badge>
                                         </TableCell>
-                                        <TableCell className="text-right font-semibold">{formatCurrency(t.amount)}</TableCell>
+                                        <TableCell className={`text-right font-semibold ${t.type === 'Gasto' ? 'text-destructive' : 'text-green-600'}`}>{formatCurrency(t.amount, false)}</TableCell>
                                     </TableRow>
                                 ))
                             ) : (
