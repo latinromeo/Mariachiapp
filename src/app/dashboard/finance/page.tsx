@@ -211,8 +211,8 @@ export default function FinancePage() {
             id: `man-${entry.id}`
         }));
         
-        const allTransactions = [...eventTransactions, ...manualTransactions];
-        allTransactions.sort((a, b) => {
+        const transactionHistory = [...eventTransactions, ...manualTransactions];
+        transactionHistory.sort((a, b) => {
             const dateA = a.date.includes('T') ? parseISO(a.date) : new Date(a.date.replace(/-/g, '/'));
             const dateB = b.date.includes('T') ? parseISO(b.date) : new Date(b.date.replace(/-/g, '/'));
             return dateB.getTime() - dateA.getTime();
