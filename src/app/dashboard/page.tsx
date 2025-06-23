@@ -183,7 +183,7 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 className="font-headline text-3xl font-bold tracking-tight">
-                Actividades Pendientes ({isLoading || typeof selectedMonth === 'undefined' ? '...' : pendingActivities.length})
+                Panel Principal de Actividades
             </h1>
             {typeof selectedMonth !== 'undefined' && (
                <p className="text-muted-foreground">
@@ -331,5 +331,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

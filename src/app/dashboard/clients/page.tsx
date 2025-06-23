@@ -117,10 +117,10 @@ export default function ClientsPage() {
           <Users className="h-10 w-10 text-primary" />
           <div>
             <h1 className="font-headline text-3xl font-bold tracking-tight">
-                Lista de Clientes (Prueba de Refresco)
+                Lista de Clientes
             </h1>
             <p className="text-muted-foreground">
-                Verifica si este título cambia. Si lo hace, los cambios se están aplicando.
+                Gestiona la información de todos tus clientes.
             </p>
           </div>
         </div>
@@ -146,12 +146,12 @@ export default function ClientsPage() {
        </div>
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Clientes ({filteredClients.length})</CardTitle>
+          <CardTitle>Clientes Registrados ({filteredClients.length})</CardTitle>
             <div className="relative mt-4">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                 type="search"
-                placeholder="Buscar por nombre, teléfono o evento..."
+                placeholder="Buscar por nombre, teléfono o email..."
                 className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px]"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
