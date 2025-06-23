@@ -48,16 +48,15 @@ const ReceiptContent = ({ eventData }: { eventData: Partial<EventData> }) => {
     return (
         <div className="px-5 py-4 space-y-6 bg-white text-black">
             <div className="grid grid-cols-1 gap-6">
-                <div className="text-center space-y-2">
-                  <div style={{ width: '150px', height: 'auto', margin: '0 auto' }}>
+                <div className="space-y-2">
+                  <div style={{ width: '150px', height: 'auto' }}>
                     <img
                         src="/logo.svg"
                         alt="Logo Mariachi Reyes de México"
                         style={{ width: '100%', height: 'auto' }}
                     />
                   </div>
-                  <h2 className="text-2xl font-bold font-headline">Mariachi Reyes de México</h2>
-                  <p className="text-gray-500">Recibo de Confirmación de Evento</p>
+                  <p className="text-gray-500 text-lg font-semibold">Recibo de Confirmación de Evento</p>
                 </div>
                 <Separator />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
