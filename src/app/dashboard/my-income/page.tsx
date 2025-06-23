@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExpenseForm } from "./expense-form"
-import { format, getYear, getMonth } from "date-fns"
+import { format, getYear, getMonth, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 import { useUser } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -35,37 +35,6 @@ const months = Array.from({ length: 12 }, (_, i) => ({
   value: i,
   label: format(new Date(2000, i), "MMMM", { locale: es }),
 }));
-
-/**
- * Parses a date string ('YYYY-MM-DD' or full ISO) robustly into a local Date object.
- * This function is timezone-safe for date-only comparisons.
- * @param dateString The date string to parse.
- * @returns A Date object or null if invalid.
- */
-const robustParseDate = (dateString: string): Date | null => {
-    if (!dateString || typeof dateString !== 'string') return null;
-    
-    // Handles 'YYYY-MM-DDTHH:mm:ss.sssZ' by default correctly
-    const isoDate = new Date(dateString);
-    if (!isNaN(isoDate.getTime()) && dateString.includes('T')) {
-        return isoDate;
-    }
-    
-    // Handles 'YYYY-MM-DD' by ensuring it's treated as local time, not UTC midnight
-    const parts = dateString.split('T')[0].split('-');
-    if (parts.length === 3) {
-        const year = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
-        const day = parseInt(parts[2], 10);
-        
-        if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
-            return new Date(year, month, day);
-        }
-    }
-    
-    return null; // Return null if parsing fails
-}
-
 
 function IncomeEntryPopover({ event, onIncomeSet }: { event: EventData, onIncomeSet: () => void }) {
     const { user } = useUser();
@@ -171,9 +140,11 @@ export default function MyIncomePage() {
             const years = new Set<number>();
             
             const addYearFromDateString = (dateString: string) => {
-                const date = robustParseDate(dateString);
-                if (date) {
-                    years.add(getYear(date));
+                 if (typeof dateString === 'string' && /^\d{4}/.test(dateString)) {
+                    const year = parseInt(dateString.substring(0, 4), 10);
+                    if (!isNaN(year)) {
+                        years.add(year);
+                    }
                 }
             };
             
@@ -204,10 +175,14 @@ export default function MyIncomePage() {
         netBalance,
         filteredExpenses
     } = useMemo(() => {
-        const filterByMonthAndYear = (dateString: string) => {
-            const date = robustParseDate(dateString);
-            if (!date) return false;
-            return getYear(date) === selectedYear && getMonth(date) === selectedMonth;
+         const filterByMonthAndYear = (dateString: string) => {
+            if (typeof dateString !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+                return false;
+            }
+            const year = parseInt(dateString.substring(0, 4), 10);
+            const month = parseInt(dateString.substring(5, 7), 10) - 1;
+            
+            return year === selectedYear && month === selectedMonth;
         };
 
         const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
@@ -337,7 +312,7 @@ export default function MyIncomePage() {
                                 <p className="font-semibold capitalize">{event.eventType} - {event.clientName}</p>
                                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                                     <Calendar className="h-3 w-3" />
-                                    {robustParseDate(event.eventDate) ? format(robustParseDate(event.eventDate)!, 'dd/MM/yyyy') : 'Fecha inválida'} @ {event.sector}
+                                    {format(parseISO(event.eventDate), 'dd/MM/yyyy')} @ {event.sector}
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -382,7 +357,7 @@ export default function MyIncomePage() {
                             <p className="font-semibold capitalize">{expense.description}</p>
                             <p className="text-sm text-muted-foreground flex items-center gap-2">
                                 <Calendar className="h-3 w-3" />
-                                {robustParseDate(expense.date) ? format(robustParseDate(expense.date)!, 'dd/MM/yyyy') : 'Fecha inválida'}
+                                {format(parseISO(expense.date), 'dd/MM/yyyy')}
                             </p>
                         </div>
                         <span className="font-bold text-red-600">{formatCurrency(expense.amount)}</span>
@@ -395,3 +370,6 @@ export default function MyIncomePage() {
     </div>
   );
 }
+
+
+    
