@@ -239,7 +239,7 @@ export default function DashboardPage() {
                                 if (activity.type === 'event') {
                                     const planLabel = EVENT_PLANS.find(p => p.value === activity.plan)?.label || activity.plan;
                                     return (
-                                        <Card key={activity.id} className={cn(activity.externalGroup && "bg-blue-50 dark:bg-primary/10")}>
+                                        <Card key={activity.id} className={cn(activity.externalGroup && "bg-amber-50 dark:bg-amber-950/30")}>
                                             <div className="p-4 space-y-3">
                                                 <div className="flex items-start gap-3">
                                                     <Calendar className="h-5 w-5 text-destructive mt-1 flex-shrink-0" />
@@ -273,11 +273,11 @@ export default function DashboardPage() {
                                                 
                                                 {activity.externalGroup && activity.externalContact && (
                                                     <div className="pl-8 pt-2">
-                                                        <div className="bg-blue-100/50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 p-3 rounded-md text-sm text-blue-900 dark:text-blue-200">
+                                                        <div className="bg-amber-100/50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/50 p-3 rounded-md text-sm text-amber-900 dark:text-amber-200">
                                                             <p className="font-bold flex items-center gap-2"><ExternalLink className="h-4 w-4" /> Realizado por Grupo Externo</p>
-                                                            <Separator className="my-2 bg-blue-200 dark:bg-blue-700/50" />
+                                                            <Separator className="my-2 bg-amber-200 dark:bg-amber-700/50" />
                                                             <p className="font-medium">{activity.externalContact}</p>
-                                                            <a href={`https://wa.me/${activity.externalContact.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-semibold">Contactar (WhatsApp)</a>
+                                                            <a href={`https://wa.me/${activity.externalContact.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-amber-600 dark:text-amber-400 hover:underline text-xs font-semibold">Contactar (WhatsApp)</a>
                                                         </div>
                                                     </div>
                                                 )}
