@@ -56,22 +56,35 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                     {events.map(event => (
                         <div key={event.id} className="relative p-4 rounded-lg bg-destructive/10 border border-destructive/20 border-l-4 border-l-destructive">
                             <Badge variant="destructive" className="absolute top-4 right-4 bg-red-100 text-red-800 border-red-200">Evento</Badge>
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 <p className="flex items-center gap-2 text-destructive font-semibold text-base pr-20">
                                     <Calendar className="h-5 w-5"/> {event.eventTime} - {event.eventType} {event.clientName}
                                 </p>
-                                <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <MapPin className="h-4 w-4"/> @{event.location}, {event.sector}
-                                </p>
-                                <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Phone className="h-4 w-4"/> Tel Cliente: 
-                                    <a href={`https://wa.me/${event.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
-                                        {event.clientPhone}
-                                    </a>
-                                </p>
-                                <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <DollarSign className="h-4 w-4"/> Monto: {formatCurrency(event.contractedAmount)} / Pagado: {formatCurrency(event.amountPaid)}
-                                </p>
+                                <div className="text-sm space-y-2">
+                                    <p className="flex items-center gap-2 text-muted-foreground">
+                                        <MapPin className="h-4 w-4 text-primary/80"/> @{event.location}, {event.sector}
+                                    </p>
+                                    <p className="flex items-center gap-2 text-muted-foreground">
+                                        <Phone className="h-4 w-4 text-primary/80"/> Tel Cliente: 
+                                        <a href={`https://wa.me/${event.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
+                                            {event.clientPhone}
+                                        </a>
+                                    </p>
+                                    <div className="flex items-start gap-2 text-muted-foreground">
+                                        <DollarSign className="h-4 w-4 text-primary/80 mt-0.5"/> 
+                                        <div>
+                                            Total: <span className="font-semibold text-foreground">{formatCurrency(event.contractedAmount)}</span>
+                                            <br/>
+                                            Pagado: <span className="font-semibold text-green-600">{formatCurrency(event.amountPaid)}</span>
+                                            {event.pendingBalance > 0 && (
+                                                <>
+                                                <br/>
+                                                Resta: <span className="font-semibold text-red-600">{formatCurrency(event.pendingBalance)}</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
 
                                 {event.status === 'completed' && (
                                      <p className="flex items-center gap-2 text-sm font-medium text-green-600 pt-2">
