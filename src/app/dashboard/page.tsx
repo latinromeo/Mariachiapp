@@ -38,7 +38,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCompleting, setIsCompleting] = useState<string | null>(null);
   const { toast } = useToast();
-  const { permissions } = useUser();
+  const { user, permissions } = useUser();
 
   const [isClient, setIsClient] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
@@ -112,7 +112,7 @@ export default function DashboardPage() {
     const rehearsals = allRehearsals
       .map(rehearsal => {
         const parsedDate = safeParseDate(rehearsal.date);
-        if (!parsedDate || !isSameMonth(parsedDate, targetDate)) {
+        if (!parsedDate || rehearsal.status !== 'pending' || !isSameMonth(parsedDate, targetDate)) {
           return null;
         }
         return { ...rehearsal, type: 'rehearsal' as const, parsedDate };
@@ -292,8 +292,8 @@ export default function DashboardPage() {
                                                 <Separator className="my-2" />
                                 
                                                 <div className="flex justify-between items-center text-sm pt-1">
-                                                    {permissions.canCreateEvents ? (
-                                                      <>
+                                                    {permissions.canCreateEvents && (
+                                                      <div className="flex justify-between w-full">
                                                         <Link href={`/dashboard/events/${activity.id}/edit`} className="text-primary hover:underline font-medium">Ver Detalles / Editar</Link>
                                                         <Button 
                                                             size="sm" 
@@ -305,9 +305,7 @@ export default function DashboardPage() {
                                                             {isCompleting === activity.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
                                                             Marcar Completo
                                                         </Button>
-                                                      </>
-                                                    ) : (
-                                                        null
+                                                      </div>
                                                     )}
                                                 </div>
                                             </div>
@@ -330,12 +328,12 @@ export default function DashboardPage() {
                                             <Separator className="my-2" />
                                         
                                             <div className="flex justify-start items-center text-sm pt-1">
-                                                {permissions.canCreateRehearsals ? (
+                                                {permissions.canCreateRehearsals && (
                                                     <Link href={`/dashboard/rehearsals/${activity.id}/edit`} className="text-primary hover:underline font-medium flex items-center gap-1">
                                                         Ver Detalles / Editar
                                                         <Edit className="h-3 w-3" />
                                                     </Link>
-                                                ) : null}
+                                                )}
                                             </div>
                                         </div>
                                     </Card>
