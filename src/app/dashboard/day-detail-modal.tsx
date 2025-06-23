@@ -4,7 +4,7 @@
 import Link from "next/link"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { Calendar, Clock, MapPin, Music, PlusCircle, ListMusic, FileText, Video, Phone, DollarSign, CheckCircle, Edit, XCircle, Loader2 } from "lucide-react"
+import { Calendar, Clock, MapPin, Music, PlusCircle, ListMusic, FileText, Video, Phone, DollarSign, CheckCircle, Edit, XCircle, Loader2, ExternalLink } from "lucide-react"
 
 import { type EventData, type RehearsalData, completeEvent } from "@/services/eventService"
 import { Button } from "@/components/ui/button"
@@ -153,6 +153,17 @@ export function DayDetailModal({ isOpen, onClose, onRefresh, date, events, rehea
                                         </div>
                                     </div>
                                 </div>
+
+                                {event.externalGroup && event.externalContact && (
+                                    <div className="pt-2">
+                                        <div className="bg-amber-100/50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/50 p-3 rounded-md text-sm text-amber-900 dark:text-amber-200">
+                                            <p className="font-bold flex items-center gap-2"><ExternalLink className="h-4 w-4" /> Realizado por Grupo Externo</p>
+                                            <Separator className="my-2 bg-amber-200 dark:bg-amber-700/50" />
+                                            <p className="font-medium">{event.externalContact}</p>
+                                            <a href={`https://wa.me/${event.externalContact.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-amber-600 dark:text-amber-400 hover:underline text-xs font-semibold">Contactar (WhatsApp)</a>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {(event.status === 'completed' || event.status === 'cancelled') && (
                                      <p className={cn("flex items-center gap-2 text-sm font-medium pt-2", config.iconColor)}>
