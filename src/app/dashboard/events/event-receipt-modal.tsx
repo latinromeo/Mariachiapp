@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useRef, useState, useEffect } from "react"
+import React, { useRef, useState } from "react"
 import { format, parse } from "date-fns"
 import { es } from "date-fns/locale"
 import { jsPDF } from "jspdf"
@@ -40,10 +40,9 @@ interface ReceiptBodyProps {
   eventTypeLabel: string;
   planLabel: string;
   paymentMethodLabel: string;
-  onLogoLoad: () => void;
 }
 
-const ReceiptBody = React.forwardRef<HTMLDivElement, ReceiptBodyProps>(({ eventData, eventTypeLabel, planLabel, paymentMethodLabel, onLogoLoad }, ref) => (
+const ReceiptBody = React.forwardRef<HTMLDivElement, ReceiptBodyProps>(({ eventData, eventTypeLabel, planLabel, paymentMethodLabel }, ref) => (
   <div ref={ref} className="px-5 py-4 space-y-6 bg-white text-black">
     <div className="text-center space-y-2">
       <img
@@ -51,8 +50,6 @@ const ReceiptBody = React.forwardRef<HTMLDivElement, ReceiptBodyProps>(({ eventD
         alt="Logo Mariachi Reyes de México"
         width={150}
         className="mx-auto"
-        onLoad={onLogoLoad}
-        crossOrigin="anonymous"
       />
       <h2 className="text-2xl font-bold font-headline">Mariachi Reyes de México</h2>
       <p className="text-gray-500">Recibo de Confirmación de Evento</p>
@@ -152,13 +149,6 @@ ReceiptBody.displayName = "ReceiptBody";
 export function EventReceiptModal({ isOpen, onClose, eventData }: EventReceiptModalProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isLogoLoaded, setIsLogoLoaded] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsLogoLoaded(false);
-    }
-  }, [isOpen]);
 
   const handleSavePdf = () => {
     const input = receiptRef.current;
@@ -233,11 +223,11 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
           <DialogTitle>Evento Creado Exitosamente - Recibo</DialogTitle>
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto px-1">
-           <ReceiptBody ref={receiptRef} {...receiptContentProps} onLogoLoad={() => setIsLogoLoaded(true)} />
+           <ReceiptBody ref={receiptRef} {...receiptContentProps} />
         </div>
          <DialogFooter className="p-6 border-t bg-background flex-col gap-2">
             <div className="flex flex-col sm:flex-row gap-2 justify-end">
-                <Button onClick={handleSavePdf} variant="outline" className="w-full sm:w-auto" disabled={isSaving || !isLogoLoaded}>
+                <Button onClick={handleSavePdf} variant="outline" className="w-full sm:w-auto" disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
                     {isSaving ? 'Guardando PDF...' : 'Guardar como PDF'}
                 </Button>
