@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { EventReceiptModal } from "./event-receipt-modal"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
 
 const formSchema = z.object({
   clientId: z.string().optional(),
@@ -797,3 +798,5 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
     </>
   )
 }
+
+    
