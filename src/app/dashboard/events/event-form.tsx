@@ -474,7 +474,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                     name="sector"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Sector</FormLabel>
+                                            <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground"/>Sector</FormLabel>
                                             <FormControl><Input placeholder="Ej: Polanco" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
