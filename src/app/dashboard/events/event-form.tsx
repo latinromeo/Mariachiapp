@@ -19,10 +19,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useEffect, useState, useMemo, useCallback } from "react"
-import { CalendarIcon, Clock, DollarSign, ExternalLink, Hash, Info, Loader2, MapPin, Mic, Phone, User, Trash2 } from "lucide-react"
+import { useEffect, useState, useMemo } from "react"
+import { CalendarIcon, Clock, DollarSign, ExternalLink, Hash, Info, Loader2, MapPin, Mic, Phone, User, Trash2, Users } from "lucide-react"
 import { EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS, EXTERNAL_CONTACTS } from "@/lib/constants"
-import { createEvent, findClientByPhone, updateEvent, type EventData, deleteEvent } from "@/services/eventService"
+import { createEvent, updateEvent, type EventData, deleteEvent, getClients, type ClientData } from "@/services/eventService"
 import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
 import {
@@ -37,8 +37,10 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { EventReceiptModal } from "./event-receipt-modal"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 const formSchema = z.object({
+  clientId: z.string().optional(),
   clientName: z.string().min(2, { message: "El nombre del cliente es obligatorio." }),
   clientPhone: z.string().min(10, { message: "El teléfono debe tener al menos 10 dígitos." }),
   eventType: z.string({ required_error: "Debe seleccionar un tipo de evento." }),
@@ -91,12 +93,32 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
   const dateFromQuery = searchParams.get('date');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCheckingClient, setIsCheckingClient] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [receiptData, setReceiptData] = useState<Partial<EventData> | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   
   const isEditMode = !!eventId;
+
+  const [clientSource, setClientSource] = useState<'new' | 'existing'>(initialData?.clientId ? 'existing' : 'new');
+  const [allClients, setAllClients] = useState<ClientData[]>([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(true);
+
+  useEffect(() => {
+    const fetchClients = async () => {
+        setIsLoadingClients(true);
+        try {
+            const clientsData = await getClients();
+            setAllClients(clientsData);
+        } catch (error) {
+            console.error("Failed to fetch clients", error);
+            toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los clientes." });
+        } finally {
+            setIsLoadingClients(false);
+        }
+    };
+    fetchClients();
+  }, [toast]);
+
 
   const [customFields, setCustomFields] = useState({
     contractedAmount: false,
@@ -112,6 +134,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
         amountPaid: initialData.amountPaid || 0,
         musiciansPay: initialData.musiciansPay || 0,
     } : {
+      clientId: "",
       clientName: "",
       clientPhone: "",
       eventType: "cumpleaños",
@@ -136,7 +159,6 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
   const amountPaid = watch("amountPaid")
   const musiciansPay = watch("musiciansPay")
   const externalGroup = watch("externalGroup")
-  const clientPhone = watch("clientPhone")
   const plan = watch("plan")
   const externalContactValue = watch("externalContact");
 
@@ -191,32 +213,6 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
     }
     return options;
   }, []);
-
-  const checkClient = useCallback(async (phone: string) => {
-    if (phone.length >= 10) {
-      setIsCheckingClient(true);
-      try {
-        const existingClient = await findClientByPhone(phone);
-        if (existingClient) {
-          setValue("clientName", existingClient.name, { shouldValidate: true });
-          toast({ title: "Cliente Encontrado", description: `Se autocompletó el nombre para ${existingClient.name}.` });
-        }
-      } catch (error) {
-        console.error("Error checking client", error);
-      } finally {
-        setIsCheckingClient(false);
-      }
-    }
-  }, [setValue, toast]);
-
-  useEffect(() => {
-    const handler = setTimeout(() => { 
-        if(clientPhone && !isEditMode) {
-            checkClient(clientPhone) 
-        }
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [clientPhone, checkClient, isEditMode]);
 
   useEffect(() => {
     const selectedPlan = EVENT_PLANS.find(p => p.value === plan);
@@ -347,6 +343,67 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                           <CardDescription>Complete la información principal del evento y del cliente.</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
+                            <RadioGroup 
+                                value={clientSource} 
+                                onValueChange={(value) => setClientSource(value as 'new' | 'existing')}
+                                className="flex items-center gap-6"
+                            >
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="new" id="client-new" />
+                                    <Label htmlFor="client-new" className="font-normal cursor-pointer">
+                                        Nuevo Cliente (Ingresar datos manualmente)
+                                    </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="existing" id="client-existing" />
+                                    <Label htmlFor="client-existing" className="font-normal cursor-pointer flex items-center gap-2">
+                                        <Users className="h-4 w-4" /> Cliente Existente
+                                    </Label>
+                                </div>
+                            </RadioGroup>
+
+                            {clientSource === 'existing' ? (
+                                <FormField
+                                    control={form.control}
+                                    name="clientId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Seleccionar Cliente</FormLabel>
+                                            <Select 
+                                                onValueChange={(value) => {
+                                                    field.onChange(value);
+                                                    const selectedClient = allClients.find(c => c.id === value);
+                                                    if (selectedClient) {
+                                                        setValue('clientName', selectedClient.name, { shouldValidate: true });
+                                                        setValue('clientPhone', selectedClient.phone, { shouldValidate: true });
+                                                    }
+                                                }} 
+                                                value={field.value}
+                                                disabled={isLoadingClients}
+                                            >
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="-- Seleccione un cliente registrado --" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {isLoadingClients ? (
+                                                        <SelectItem value="loading" disabled>Cargando clientes...</SelectItem>
+                                                    ) : (
+                                                        allClients.map(client => (
+                                                            <SelectItem key={client.id} value={client.id}>
+                                                                {client.name} ({client.phone})
+                                                            </SelectItem>
+                                                        ))
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            ) : null}
+
                           <div className="grid sm:grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
@@ -354,7 +411,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" />Nombre del Cliente</FormLabel>
-                                        <FormControl><Input placeholder="Ej: Familia Pérez" {...field} /></FormControl>
+                                        <FormControl><Input placeholder="Ej: Familia Pérez" {...field} disabled={clientSource === 'existing'} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -365,10 +422,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />Teléfono del Cliente</FormLabel>
-                                        <div className="relative">
-                                          <FormControl><Input type="tel" placeholder="Ej: 5551234567" {...field} /></FormControl>
-                                          {isCheckingClient && <Loader2 className="absolute right-2 top-2.5 h-5 w-5 animate-spin text-muted-foreground" />}
-                                        </div>
+                                        <FormControl><Input type="tel" placeholder="Ej: 5551234567" {...field} disabled={clientSource === 'existing'} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -712,7 +766,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                            <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
                             <AlertDialogDescription>
                                 Esta acción no se puede deshacer. Esto eliminará permanentemente el evento
                                 de tus registros.

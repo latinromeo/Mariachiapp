@@ -121,7 +121,9 @@ export interface ManualFinanceEntry {
 
 // --- FORM INPUT TYPES ---
 
-type EventInputData = Omit<EventData, 'id'|'clientId'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'> & { otherExternalContact?: string };
+type EventInputData = Omit<EventData, 'id'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'> & { 
+    otherExternalContact?: string;
+};
 type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;
 type RehearsalInputData = Omit<RehearsalData, 'id'|'createdAt'|'updatedAt'>;
 type ManualFinanceEntryInputData = Omit<ManualFinanceEntry, 'id'|'createdBy'|'createdAt'>;
@@ -232,15 +234,20 @@ export async function getEventById(id: string): Promise<EventData | null> {
 }
 
 export async function createEvent(data: EventInputData): Promise<{ success: boolean; eventId?: string, error?: string }> {
-  let client = await findClientByPhone(data.clientPhone);
-  let clientId = client?.id;
+  let clientId = data.clientId;
 
-  if (!client) {
+  // If no clientId is provided (i.e., new client flow), find or create the client
+  if (!clientId) {
+    let client = await findClientByPhone(data.clientPhone);
+    if (client) {
+      clientId = client.id;
+    } else {
       const clientResult = await createClient({ name: data.clientName, phone: data.clientPhone, sector: data.sector });
       if (!clientResult.success || !clientResult.clientId) {
-           return { success: false, error: "No se pudo crear el cliente asociado al evento." };
+        return { success: false, error: "No se pudo crear el cliente asociado al evento." };
       }
       clientId = clientResult.clientId;
+    }
   }
   
   const pendingBalance = data.contractedAmount - data.amountPaid;
@@ -256,8 +263,8 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
 
   const newEventData = {
     ...eventDataForFirestore,
-    externalContact: finalExternalContact,
     clientId,
+    externalContact: finalExternalContact,
     pendingBalance,
     profit,
     status: 'pending', // Default status
