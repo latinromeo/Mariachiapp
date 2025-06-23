@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ManualEntryForm } from "./manual-entry-form"
-import { endOfMonth, format, startOfMonth, subMonths, parseISO, isWithinInterval, startOfToday, endOfToday } from "date-fns"
+import { endOfMonth, format, startOfMonth, subMonths, parseISO, isWithinInterval } from "date-fns"
 import { es } from "date-fns/locale"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart"
 import { EVENT_TYPES } from "@/lib/constants"
@@ -87,6 +87,12 @@ export default function FinancePage() {
         fetchData();
     }, [fetchData]);
 
+    const safeParseDate = (dateStr: string) => {
+        if (!dateStr) return new Date(); // Return today if date is invalid, to avoid crashes
+        // Handles both 'YYYY-MM-DD' and ISO strings with 'T'
+        return dateStr.includes('T') ? parseISO(dateStr) : new Date(dateStr.replace(/-/g, '/'));
+    };
+
     const { 
         incomeHistory, 
         eventTypeDistribution, 
@@ -111,8 +117,6 @@ export default function FinancePage() {
         const currentMonthInterval = { start: firstDayCurrentMonth, end: lastDayCurrentMonth };
         const currentMonthName = format(now, 'MMM', { locale: es });
         
-        const safeParseDate = (dateStr: string) => dateStr.includes('T') ? parseISO(dateStr) : new Date(dateStr.replace(/-/g, '/'));
-
         // Current Month Totals
         const currentMonthEvents = events.filter(e => isWithinInterval(safeParseDate(e.eventDate), currentMonthInterval));
         const currentMonthManualEntries = manualEntries.filter(m => isWithinInterval(safeParseDate(m.date), currentMonthInterval));
