@@ -5,7 +5,7 @@ export function Logo() {
   return (
     <div className="flex items-center justify-center">
       <Image
-        src="/logo.png?v=4"
+        src="/logo.svg"
         alt="Logo de Mariachi Reyes de México"
         width={120}
         height={40}
