@@ -18,10 +18,10 @@ export const EVENT_PLANS = [
 ];
 
 export const PAYMENT_METHODS = [
+    { value: "bank_deposit", label: "Depósito Bancario" },
     { value: "cash", label: "Efectivo" },
-    { value: "transfer", label: "Transferencia" },
-    { value: "card", label: "Tarjeta" },
-    { value: "pending", label: "Pendiente" },
+    { value: "remittance", label: "Remesas" },
+    { value: "other", label: "Otro" },
 ];
 
 export const SONG_CATEGORIES = [
