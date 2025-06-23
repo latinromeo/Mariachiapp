@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useUser } from "@/lib/auth";
 
 const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -26,6 +27,7 @@ export default function EventDetailPage() {
     const eventId = params.id as string;
     const [event, setEvent] = useState<EventData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { permissions } = useUser();
 
     useEffect(() => {
         if (eventId) {
@@ -133,12 +135,14 @@ export default function EventDetailPage() {
                     <MoreVertical className="mr-2 h-4 w-4" />
                     Más Acciones
                 </Button>
-                <Button asChild>
-                    <Link href={`/dashboard/events/${eventId}/edit`}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Editar Evento
-                    </Link>
-                </Button>
+                {permissions.canCreateEvents && (
+                    <Button asChild>
+                        <Link href={`/dashboard/events/${eventId}/edit`}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar Evento
+                        </Link>
+                    </Button>
+                )}
             </div>
         </div>
     );

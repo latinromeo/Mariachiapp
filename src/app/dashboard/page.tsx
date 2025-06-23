@@ -256,21 +256,26 @@ export default function DashboardPage() {
                                                 
                                                 <div className="pl-8 space-y-2 text-sm">
                                                     <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground"/> {activity.eventTime}</p>
-                                                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground"/> {activity.location}</p>
-                                                    <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground"/> 
-                                                        <a href={`https://wa.me/${activity.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{activity.clientPhone}</a>
-                                                    </p>
-                                                </div>
-                                                
-                                                <div className="pl-8 space-y-1 text-sm">
+                                                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground"/> {activity.sector}</p>
                                                     <p>Plan: {planLabel}</p>
-                                                    <p>Total: <span className="font-semibold">{formatCurrency(activity.contractedAmount)}</span></p>
-                                                    <p>
-                                                        <span className="text-green-600 font-medium">Pagado: {formatCurrency(activity.amountPaid)}</span>
-                                                        {activity.pendingBalance > 0 && (
-                                                            <span className="text-destructive font-medium ml-2">(Resta: {formatCurrency(activity.pendingBalance)})</span>
-                                                        )}
-                                                    </p>
+                                                    
+                                                    {permissions.canSeeFinance && (
+                                                        <div className="pt-1 space-y-2">
+                                                            <p className="pl-6 text-muted-foreground">Dirección: {activity.location}</p>
+                                                            <p className="flex items-center gap-2 text-sm"><Phone className="h-4 w-4 text-muted-foreground"/> 
+                                                                <a href={`https://wa.me/${activity.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{activity.clientPhone}</a>
+                                                            </p>
+                                                            <div className="pt-1 space-y-1">
+                                                                <p>Total: <span className="font-semibold">{formatCurrency(activity.contractedAmount)}</span></p>
+                                                                <p>
+                                                                    <span className="text-green-600 font-medium">Pagado: {formatCurrency(activity.amountPaid)}</span>
+                                                                    {activity.pendingBalance > 0 && (
+                                                                        <span className="text-destructive font-medium ml-2">(Resta: {formatCurrency(activity.pendingBalance)})</span>
+                                                                    )}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 
                                                 {activity.externalGroup && activity.externalContact && (
@@ -287,17 +292,23 @@ export default function DashboardPage() {
                                                 <Separator className="my-2" />
                                 
                                                 <div className="flex justify-between items-center text-sm pt-1">
-                                                    <Link href={`/dashboard/events/${activity.id}/edit`} className="text-primary hover:underline font-medium">Ver Detalles / Editar</Link>
-                                                    <Button 
-                                                        size="sm" 
-                                                        variant="outline"
-                                                        className="bg-green-100/50 text-green-700 border-green-300 hover:bg-green-100 font-medium"
-                                                        onClick={() => handleCompleteEvent(activity.id)}
-                                                        disabled={isCompleting === activity.id}
-                                                    >
-                                                        {isCompleting === activity.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
-                                                        Marcar Completo
-                                                    </Button>
+                                                    {permissions.canCreateEvents ? (
+                                                      <>
+                                                        <Link href={`/dashboard/events/${activity.id}/edit`} className="text-primary hover:underline font-medium">Ver Detalles / Editar</Link>
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant="outline"
+                                                            className="bg-green-100/50 text-green-700 border-green-300 hover:bg-green-100 font-medium"
+                                                            onClick={() => handleCompleteEvent(activity.id)}
+                                                            disabled={isCompleting === activity.id}
+                                                        >
+                                                            {isCompleting === activity.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
+                                                            Marcar Completo
+                                                        </Button>
+                                                      </>
+                                                    ) : (
+                                                        <Link href={`/dashboard/events/${activity.id}`} className="text-primary hover:underline font-medium ml-auto">Ver Detalles</Link>
+                                                    )}
                                                 </div>
                                             </div>
                                         </Card>
