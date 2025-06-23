@@ -31,6 +31,7 @@ const songSchema = z.object({
   key: z.string().optional(),
   youtubeUrl: z.string().url({ message: "URL de YouTube no válida." }).optional().or(z.literal("")),
   sheetMusicUrl: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")),
+  audioUrl: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal("")),
 });
 
 const formSchema = z.object({
@@ -65,7 +66,7 @@ export function RehearsalForm({ initialData, rehearsalId }: RehearsalFormProps) 
       time: "",
       location: "",
       focus: "",
-      songs: [{ name: "", artist: "", key: "", youtubeUrl: "", sheetMusicUrl: "" }],
+      songs: [{ name: "", artist: "", key: "", youtubeUrl: "", sheetMusicUrl: "", audioUrl: "" }],
       notes: "",
     },
   })
@@ -74,7 +75,7 @@ export function RehearsalForm({ initialData, rehearsalId }: RehearsalFormProps) 
     if (initialData) {
       form.reset({
         ...initialData,
-        songs: initialData.songs && initialData.songs.length > 0 ? initialData.songs : [{ name: "", artist: "", key: "", youtubeUrl: "", sheetMusicUrl: "" }]
+        songs: initialData.songs && initialData.songs.length > 0 ? initialData.songs : [{ name: "", artist: "", key: "", youtubeUrl: "", sheetMusicUrl: "", audioUrl: "" }]
       });
     }
   }, [initialData, form]);
@@ -103,10 +104,17 @@ export function RehearsalForm({ initialData, rehearsalId }: RehearsalFormProps) 
 
   async function onSubmit(values: RehearsalInput) {
     setIsSubmitting(true);
+     const submissionValues = {
+        ...values,
+        songs: values.songs?.map(song => ({
+            ...song,
+            audioUrl: song.audioUrl?.startsWith('blob:') ? '' : song.audioUrl
+        }))
+    };
     try {
         let result;
         if (isEditMode && rehearsalId) {
-            result = await updateRehearsal(rehearsalId, values);
+            result = await updateRehearsal(rehearsalId, submissionValues);
             if (result.success) {
                 toast({
                     title: "¡Ensayo Actualizado!",
@@ -115,7 +123,7 @@ export function RehearsalForm({ initialData, rehearsalId }: RehearsalFormProps) 
                 router.push('/dashboard/rehearsals');
             }
         } else {
-            result = await createRehearsal(values);
+            result = await createRehearsal(submissionValues);
             if (result.success) {
                 toast({
                     title: "¡Ensayo Programado!",
@@ -284,7 +292,6 @@ export function RehearsalForm({ initialData, rehearsalId }: RehearsalFormProps) 
                                       type="file" 
                                       id={`sheet-music-upload-${field.id}`}
                                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                      // onChange handler would be needed for a full implementation
                                     />
                                     <label htmlFor={`sheet-music-upload-${field.id}`} className="flex items-center justify-between w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
                                       <span className="text-muted-foreground">Ningún archivo seleccionado</span>
@@ -295,9 +302,52 @@ export function RehearsalForm({ initialData, rehearsalId }: RehearsalFormProps) 
                                 <p className="text-xs text-muted-foreground">La subida de archivos se implementará en un paso futuro.</p>
                                 <FormMessage />
                             </FormItem>
+                             <FormItem>
+                                <FormLabel className="flex items-center gap-2"><Music className="h-4 w-4" />Audio de Referencia (Opcional)</FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Input 
+                                      type="file" 
+                                      id={`audio-upload-${field.id}`}
+                                      accept="audio/*"
+                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        const currentSongs = form.getValues('songs');
+                                        if (currentSongs && index < currentSongs.length) {
+                                            const oldUrl = currentSongs[index].audioUrl;
+                                            if (oldUrl && oldUrl.startsWith('blob:')) {
+                                                URL.revokeObjectURL(oldUrl);
+                                            }
+                                        }
+                                        if(file) {
+                                          form.setValue(`songs.${index}.audioUrl`, URL.createObjectURL(file), { shouldValidate: true });
+                                        } else {
+                                          form.setValue(`songs.${index}.audioUrl`, '', { shouldValidate: true });
+                                        }
+                                      }}
+                                    />
+                                    <label htmlFor={`audio-upload-${field.id}`} className="flex items-center justify-between w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                      <span className="text-muted-foreground truncate max-w-[calc(100%-140px)]">
+                                        {form.watch(`songs.${index}.audioUrl`) ? 'Archivo seleccionado' : 'Ningún archivo seleccionado'}
+                                      </span>
+                                      <div className="px-3 py-1 bg-secondary text-secondary-foreground rounded-sm text-sm font-medium">Seleccionar audio</div>
+                                    </label>
+                                  </div>
+                                </FormControl>
+                                {form.watch(`songs.${index}.audioUrl`)?.startsWith('blob:') && (
+                                  <div className="mt-2">
+                                    <audio controls src={form.watch(`songs.${index}.audioUrl`)} className="w-full h-10">
+                                      Tu navegador no soporta el elemento de audio.
+                                    </audio>
+                                  </div>
+                                )}
+                                 <p className="text-xs text-muted-foreground">El audio solo es para vista previa local y no se guardará permanentemente.</p>
+                                <FormMessage />
+                            </FormItem>
                            </div>
                         ))}
-                        <Button type="button" variant="secondary" onClick={() => append({ name: "", artist: "", key: "", youtubeUrl: "", sheetMusicUrl: "" })}>
+                        <Button type="button" variant="secondary" onClick={() => append({ name: "", artist: "", key: "", youtubeUrl: "", sheetMusicUrl: "", audioUrl: "" })}>
                            <PlusCircle className="mr-2 h-4 w-4" /> Agregar Otra Canción
                         </Button>
                     </CardContent>

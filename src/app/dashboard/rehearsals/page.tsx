@@ -33,7 +33,8 @@ import {
     Search, 
     Trash2,
     Youtube,
-    CheckCircle
+    CheckCircle,
+    Music
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -201,11 +202,21 @@ export default function RehearsalsPage() {
                                                     {song.artist && song.key && ' · '}
                                                     {song.key && `Tono: ${song.key}`}
                                                 </p>
-                                                {song.youtubeUrl && (
-                                                     <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-red-600 hover:underline text-sm mt-1">
-                                                        <Youtube className="h-4 w-4" /> YouTube
-                                                     </a>
-                                                )}
+                                                <div className="flex items-center gap-4 mt-1">
+                                                    {song.youtubeUrl && (
+                                                        <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-red-600 hover:underline text-sm">
+                                                            <Youtube className="h-4 w-4" /> YouTube
+                                                        </a>
+                                                    )}
+                                                    {song.audioUrl && (
+                                                        <div className="flex items-center gap-1 text-sm">
+                                                             <Music className="h-4 w-4 text-primary" />
+                                                             <audio controls src={song.audioUrl} className="h-8 w-full max-w-xs">
+                                                                Tu navegador no soporta el audio.
+                                                             </audio>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

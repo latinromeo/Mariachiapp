@@ -1,3 +1,4 @@
+
 // src/services/eventService.ts
 'use server';
 
@@ -64,6 +65,7 @@ export interface SongToRehearse {
   key?: string;
   youtubeUrl?: string;
   sheetMusicUrl?: string;
+  audioUrl?: string;
 }
 
 export interface RehearsalData {
