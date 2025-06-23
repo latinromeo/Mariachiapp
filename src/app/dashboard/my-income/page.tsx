@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExpenseForm } from "./expense-form"
-import { format, getYear, getMonth, parseISO } from "date-fns"
+import { format, getYear, getMonth } from "date-fns"
 import { es } from "date-fns/locale"
 import { useUser } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -37,20 +37,35 @@ const months = Array.from({ length: 12 }, (_, i) => ({
 }));
 
 /**
- * Parses a date string ('YYYY-MM-DD' or full ISO) robustly.
- * Returns a Date object at the start of the day in the local timezone.
+ * Parses a date string ('YYYY-MM-DD' or full ISO) robustly into a local Date object.
+ * This function is timezone-safe for date-only comparisons.
  * @param dateString The date string to parse.
  * @returns A Date object or null if invalid.
  */
 const robustParseDate = (dateString: string): Date | null => {
     if (!dateString || typeof dateString !== 'string') return null;
-    // Handles both 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return null;
-    // Normalize to the start of the day to avoid timezone issues with getMonth/getYear
-    date.setUTCHours(0, 0, 0, 0);
-    return date;
+    
+    // Handles 'YYYY-MM-DDTHH:mm:ss.sssZ' by default correctly
+    const isoDate = new Date(dateString);
+    if (!isNaN(isoDate.getTime()) && dateString.includes('T')) {
+        return isoDate;
+    }
+    
+    // Handles 'YYYY-MM-DD' by ensuring it's treated as local time, not UTC midnight
+    const parts = dateString.split('T')[0].split('-');
+    if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
+        const day = parseInt(parts[2], 10);
+        
+        if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+            return new Date(year, month, day);
+        }
+    }
+    
+    return null; // Return null if parsing fails
 }
+
 
 function IncomeEntryPopover({ event, onIncomeSet }: { event: EventData, onIncomeSet: () => void }) {
     const { user } = useUser();
@@ -322,7 +337,7 @@ export default function MyIncomePage() {
                                 <p className="font-semibold capitalize">{event.eventType} - {event.clientName}</p>
                                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                                     <Calendar className="h-3 w-3" />
-                                    {format(parseISO(event.eventDate), 'dd/MM/yyyy')} @ {event.sector}
+                                    {robustParseDate(event.eventDate) ? format(robustParseDate(event.eventDate)!, 'dd/MM/yyyy') : 'Fecha inválida'} @ {event.sector}
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -367,7 +382,7 @@ export default function MyIncomePage() {
                             <p className="font-semibold capitalize">{expense.description}</p>
                             <p className="text-sm text-muted-foreground flex items-center gap-2">
                                 <Calendar className="h-3 w-3" />
-                                {format(robustParseDate(expense.date)!, 'dd/MM/yyyy')}
+                                {robustParseDate(expense.date) ? format(robustParseDate(expense.date)!, 'dd/MM/yyyy') : 'Fecha inválida'}
                             </p>
                         </div>
                         <span className="font-bold text-red-600">{formatCurrency(expense.amount)}</span>
@@ -380,5 +395,3 @@ export default function MyIncomePage() {
     </div>
   );
 }
-
-    
