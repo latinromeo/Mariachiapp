@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ManualEntryForm } from "./manual-entry-form"
 import { endOfMonth, format, startOfMonth, subMonths } from "date-fns"
 import { es } from "date-fns/locale"
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart"
 import { EVENT_TYPES } from "@/lib/constants"
 
 const formatCurrency = (value: number | undefined) => {
@@ -34,20 +34,6 @@ export default function FinancePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [entryType, setEntryType] = useState<'income' | 'expense'>('expense');
-
-    const [monthlySummary, setMonthlySummary] = useState({
-        income: 0,
-        expenses: 0,
-        net: 0,
-    });
-
-    const [chartsData, setChartsData] = useState<{
-        incomeHistory: any[],
-        eventTypeDistribution: any[]
-    }>({
-        incomeHistory: [],
-        eventTypeDistribution: [],
-    });
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -69,8 +55,15 @@ export default function FinancePage() {
         fetchData();
     }, []);
 
-    useEffect(() => {
-        if (isLoading) return;
+    const { monthlySummary, incomeHistory, eventTypeDistribution, pieChartConfig } = useMemo(() => {
+        if (isLoading) {
+            return {
+                monthlySummary: { income: 0, expenses: 0, net: 0 },
+                incomeHistory: [],
+                eventTypeDistribution: [],
+                pieChartConfig: {} as ChartConfig,
+            };
+        }
 
         const now = new Date();
         const firstDay = startOfMonth(now);
@@ -92,13 +85,12 @@ export default function FinancePage() {
         const expenses = monthlyEvents.reduce((acc, e) => acc + (e.externalGroup ? 0 : (e.musiciansPay || 0)), 0) +
                          monthlyManualEntries.filter(m => m.type === 'expense').reduce((acc, m) => acc + m.amount, 0);
 
-        setMonthlySummary({ income, expenses, net: income - expenses });
-
+        const monthlySummary = { income, expenses, net: income - expenses };
 
         // --- Process data for charts ---
         
         // Income History (last 6 months)
-        const incomeHistoryData = Array.from({ length: 6 }).map((_, i) => {
+        const incomeHistory = Array.from({ length: 6 }).map((_, i) => {
             const monthDate = subMonths(now, 5 - i);
             const monthStart = startOfMonth(monthDate);
             const monthEnd = endOfMonth(monthDate);
@@ -128,31 +120,33 @@ export default function FinancePage() {
             return acc;
         }, {} as Record<string, string>)
         
-        const eventTypeColorMap: Record<string, string> = {
-            'Cumpleaños': 'var(--chart-2)',
-            'Boda': 'var(--chart-4)',
-            'Serenata': 'var(--chart-5)',
-            'Corporativo': 'var(--chart-1)',
-            'Otro': 'var(--chart-3)',
-        };
-        
         const eventTypeCounts = events.reduce((acc, event) => {
             const type = eventTypeLabelMap[event.eventType] || 'Otro';
             acc[type] = (acc[type] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
 
-        const eventTypeDistributionData = Object.keys(eventTypeCounts).map(name => ({
+        const eventTypeDistribution = Object.keys(eventTypeCounts).map(name => ({
             name: name,
             value: eventTypeCounts[name],
-            fill: eventTypeColorMap[name] || 'hsl(var(--muted-foreground))'
         }));
 
-
-        setChartsData({
-            incomeHistory: incomeHistoryData,
-            eventTypeDistribution: eventTypeDistributionData,
-        });
+        const pieChartConfig = Object.entries(eventTypeCounts).reduce((acc, [name]) => {
+            const colorMap: Record<string, string> = {
+                'Cumpleaños': 'hsl(var(--chart-2))',
+                'Boda': 'hsl(var(--chart-4))',
+                'Serenata': 'hsl(var(--chart-5))',
+                'Corporativo': 'hsl(var(--chart-1))',
+                'Otro': 'hsl(var(--chart-3))',
+            };
+            acc[name] = {
+                label: name,
+                color: colorMap[name] || 'hsl(var(--muted-foreground))',
+            };
+            return acc;
+        }, {} as ChartConfig);
+        
+        return { monthlySummary, incomeHistory, eventTypeDistribution, pieChartConfig };
 
     }, [events, manualEntries, isLoading]);
 
@@ -236,7 +230,7 @@ export default function FinancePage() {
                         },
                     }} className="h-[250px] w-full">
                         <LineChart
-                            data={chartsData.incomeHistory}
+                            data={incomeHistory}
                             margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
                         >
                             <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
@@ -266,10 +260,10 @@ export default function FinancePage() {
                     <CardDescription>Cantidad de eventos realizados por cada tipo.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {chartsData.eventTypeDistribution.length > 0 ? (
-                        <ChartContainer config={{}} className="h-[250px] w-full">
+                    {eventTypeDistribution.length > 0 ? (
+                        <ChartContainer config={pieChartConfig} className="h-[250px] w-full">
                             <PieChart>
-                                <Tooltip
+                                <ChartTooltip
                                     cursor={false}
                                     content={<ChartTooltipContent
                                         formatter={(value, name) => `${value} evento(s)`}
@@ -277,12 +271,16 @@ export default function FinancePage() {
                                         indicator="dot"
                                     />}
                                 />
-                                <Pie data={chartsData.eventTypeDistribution} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
-                                     {chartsData.eventTypeDistribution.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                    ))}
-                                </Pie>
-                                <Legend 
+                                <Pie 
+                                    data={eventTypeDistribution} 
+                                    dataKey="value" 
+                                    nameKey="name" 
+                                    innerRadius={50} 
+                                    outerRadius={80} 
+                                    paddingAngle={2} 
+                                />
+                                <ChartLegend 
+                                    content={<ChartLegendContent nameKey="name" />}
                                     iconType="square" 
                                     layout="horizontal" 
                                     verticalAlign="bottom" 
