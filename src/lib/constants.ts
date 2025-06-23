@@ -9,12 +9,12 @@ export const EVENT_TYPES = [
 ];
 
 export const EVENT_PLANS = [
-    { value: "personalizado", label: "Personalizado / Otro", price: 0 },
-    { value: "express", label: "Servicio Express (1-5 canciones)", price: 2500 },
-    { value: "30_min", label: "Servicio 30 Minutos", price: 3500 },
-    { value: "1_hora", label: "Servicio 1 Hora", price: 6000 },
-    { value: "1_5_horas", label: "Servicio 1.5 Horas", price: 8500 },
-    { value: "2_horas", label: "Servicio 2 Horas", price: 10000 },
+    { value: "personalizado", label: "Personalizado / Otro", price: 0, musicianPay: 0 },
+    { value: "express", label: "Servicio Express (1-5 canciones)", price: 7500, musicianPay: 4000 },
+    { value: "30_min", label: "Servicio 30 Minutos", price: 8500, musicianPay: 4800 },
+    { value: "1_hora", label: "Servicio 1 Hora", price: 15500, musicianPay: 8000 },
+    { value: "1_5_horas", label: "Servicio 1.5 Horas", price: 8500, musicianPay: 0 },
+    { value: "2_horas", label: "Servicio 2 Horas", price: 10000, musicianPay: 0 },
 ];
 
 export const PAYMENT_METHODS = [

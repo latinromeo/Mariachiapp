@@ -45,7 +45,7 @@ const formSchema = z.object({
   eventTime: z.string().min(1, { message: "La hora es obligatoria." }),
   plan: z.string({ required_error: "Debe seleccionar un plan." }),
   paymentMethod: z.string({ required_error: "Debe seleccionar un método de pago." }),
-  location: z.string().min(2, { message: "La ubicación es obligatoria." }),
+  location: z.string().min(2, { message: "La dirección es obligatoria." }),
   sector: z.string().min(2, { message: "El sector es obligatorio." }),
   contractedAmount: z.coerce.number().min(0, { message: "El monto debe ser positivo." }),
   amountPaid: z.coerce.number().min(0, { message: "El monto debe ser positivo." }),
@@ -113,6 +113,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
   const musiciansPay = watch("musiciansPay")
   const externalGroup = watch("externalGroup")
   const clientPhone = watch("clientPhone")
+  const plan = watch("plan")
 
   const [pendingBalance, setPendingBalance] = useState(0)
   const [profit, setProfit] = useState(0)
@@ -191,6 +192,23 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
     }, 500);
     return () => clearTimeout(handler);
   }, [clientPhone, checkClient, isEditMode]);
+
+  useEffect(() => {
+    const selectedPlan = EVENT_PLANS.find(p => p.value === plan);
+    if (!selectedPlan) return;
+
+    if (selectedPlan.price && selectedPlan.price > 0) {
+        setValue('contractedAmount', selectedPlan.price, { shouldValidate: true });
+        const isCustom = !standardAmountOptions.includes(selectedPlan.price);
+        setCustomFields(prev => ({ ...prev, contractedAmount: isCustom }));
+    }
+
+    if (selectedPlan.musicianPay && selectedPlan.musicianPay > 0 && !externalGroup) {
+        setValue('musiciansPay', selectedPlan.musicianPay, { shouldValidate: true });
+        const isCustom = !musicianAmountOptions.includes(selectedPlan.musicianPay);
+        setCustomFields(prev => ({ ...prev, musiciansPay: isCustom }));
+    }
+  }, [plan, setValue, standardAmountOptions, musicianAmountOptions, externalGroup]);
 
   useEffect(() => {
     const balance = (Number(contractedAmount) || 0) - (Number(amountPaid) || 0);
