@@ -25,18 +25,12 @@ export const PAYMENT_METHODS = [
 ];
 
 export const SONG_CATEGORIES = [
-  'Románticas',
   'Cumpleaños',
   'Serenatas',
-  'Dolor',
-  'Rancheras',
   'Corridos',
-  'Cumbias',
   'Sones',
-  'Pop en Mariachi',
-  'Infantiles',
-  'Clásicos Mexicanos',
-  'Huapangos'
+  'Rancheras',
+  'Para Madres y Padres'
 ];
 
 export const MUSICAL_KEYS = [
