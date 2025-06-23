@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { SongForm } from "./song-form";
+import { useUser } from "@/lib/auth";
 
 export default function RepertoirePage() {
   const [allSongs, setAllSongs] = useState<SongDetail[]>([]);
@@ -27,6 +28,7 @@ export default function RepertoirePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [songToEdit, setSongToEdit] = useState<SongDetail | null>(null);
+  const { permissions } = useUser();
 
   const fetchSongs = async () => {
     setIsLoading(true);
@@ -84,10 +86,12 @@ export default function RepertoirePage() {
             Explora y gestiona el catálogo de canciones de tu banda.
             </p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-            <PlusCircle className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Añadir Canción</span>
-        </Button>
+        {permissions.canCreateSongs && (
+            <Button onClick={() => handleOpenDialog()}>
+                <PlusCircle className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Añadir Canción</span>
+            </Button>
+        )}
       </div>
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -138,10 +142,12 @@ export default function RepertoirePage() {
                                       <FileText className="h-4 w-4" />
                                   </a>
                               )}
-                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleOpenDialog(song)}>
-                                 <Edit className="h-4 w-4" />
-                                 <span className="sr-only">Editar</span>
-                              </Button>
+                              {permissions.canCreateSongs && (
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleOpenDialog(song)}>
+                                   <Edit className="h-4 w-4" />
+                                   <span className="sr-only">Editar</span>
+                                </Button>
+                              )}
                             </div>
                         </CardTitle>
                         {song.artist && <CardDescription>{song.artist}</CardDescription>}

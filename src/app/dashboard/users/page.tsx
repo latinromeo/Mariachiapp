@@ -18,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, PlusCircle, Shield, Music, BarChart3, UserCog } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Shield, Music, BarChart3, UserCog, Wand2 } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -29,26 +29,49 @@ import {
   } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useUser, UserRole } from "@/lib/auth";
 
-const userRoles = {
-  Admin: { icon: Shield, color: "text-destructive" },
-  Assistant: { icon: UserCog, color: "text-blue-500" },
-  Accountant: { icon: BarChart3, color: "text-green-500" },
-  Musician: { icon: Music, color: "text-orange-500" },
+const userRoleDetails: Record<string, { icon: React.ElementType, color: string }> = {
+  'Administrador General': { icon: Shield, color: "text-destructive" },
+  'Director Musical': { icon: Music, color: "text-orange-500" },
+  'Coordinador de Eventos': { icon: UserCog, color: "text-blue-500" },
+  'Músico': { icon: Music, color: "text-purple-500" },
+  'Contador': { icon: BarChart3, color: "text-green-500" },
+  'Beta Tester': { icon: Wand2, color: "text-yellow-500" },
 };
 
-type UserRole = keyof typeof userRoles;
 
 const users = [
-    { name: "Administrador", email: "admin@mariachireyes.com", role: "Admin" as UserRole, avatar: "AD", status: "Active" },
-    { name: "Asistente General", email: "asistente@email.com", role: "Assistant" as UserRole, avatar: "AG", status: "Active" },
-    { name: "Contador Jefe", email: "contador@email.com", role: "Accountant" as UserRole, avatar: "CJ", status: "Active" },
-    { name: "Juan Pérez", email: "juan.perez@email.com", role: "Musician" as UserRole, avatar: "JP", status: "Active" },
-    { name: "Sofía Gómez", email: "sofia.gomez@email.com", role: "Musician" as UserRole, avatar: "SG", status: "Suspended" },
-    { name: "Miguel Hernández", email: "miguel.h@email.com", role: "Musician" as UserRole, avatar: "MH", status: "Active" },
+    { name: "Admin General", email: "admin@mariachireyes.com", role: "Administrador General" as UserRole, avatar: "AG", status: "Active" },
+    { name: "Director Musical", email: "director@mariachireyes.com", role: "Director Musical" as UserRole, avatar: "DM", status: "Active" },
+    { name: "Coordinador de Eventos", email: "coordinador@mariachireyes.com", role: "Coordinador de Eventos" as UserRole, avatar: "CE", status: "Active" },
+    { name: "Juan Pérez", email: "juan.perez@email.com", role: "Músico" as UserRole, avatar: "JP", status: "Active" },
+    { name: "Sofía Gómez", email: "sofia.gomez@email.com", role: "Músico" as UserRole, avatar: "SG", status: "Suspended" },
+    { name: "Contador Jefe", email: "contador@email.com", role: "Contador" as UserRole, avatar: "CJ", status: "Active" },
+    { name: "Beta Tester", email: "tester@mariachireyes.com", role: "Beta Tester" as UserRole, avatar: "BT", status: "Active" },
 ];
 
 export default function UsersPage() {
+  const { user } = useUser();
+
+  if (user.role !== 'Administrador General') {
+      return (
+          <div className="flex flex-col gap-6">
+              <h1 className="font-headline text-3xl font-bold tracking-tight text-destructive">
+                  Acceso Denegado
+              </h1>
+              <Card>
+                  <CardHeader>
+                      <CardTitle>No tienes permiso para ver esta página.</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <p>Solo los administradores generales pueden gestionar usuarios. Por favor, contacta a un administrador si crees que esto es un error.</p>
+                  </CardContent>
+              </Card>
+          </div>
+      );
+  }
+
   return (
     <div className="flex flex-col gap-6">
        <div className="flex flex-wrap items-center justify-between gap-4">
@@ -80,32 +103,33 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => {
-                const RoleIcon = userRoles[user.role]?.icon || Music;
-                const roleColor = userRoles[user.role]?.color || "text-foreground";
+              {users.map((u) => {
+                const roleInfo = userRoleDetails[u.role];
+                const RoleIcon = roleInfo?.icon || Music;
+                const roleColor = roleInfo?.color || "text-foreground";
                 
                 return (
-                  <TableRow key={user.email}>
+                  <TableRow key={u.email}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                           <Avatar>
-                              <AvatarFallback>{user.avatar}</AvatarFallback>
+                              <AvatarFallback>{u.avatar}</AvatarFallback>
                           </Avatar>
                           <div className="flex flex-col">
-                              <span className="font-medium">{user.name}</span>
-                              <span className="text-sm text-muted-foreground">{user.email}</span>
+                              <span className="font-medium">{u.name}</span>
+                              <span className="text-sm text-muted-foreground">{u.email}</span>
                           </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="flex items-center gap-2 w-fit">
                         <RoleIcon className={cn("h-4 w-4", roleColor)} />
-                        {user.role}
+                        {u.role}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                       <Badge variant={user.status === "Active" ? "secondary" : "destructive"} className={cn(user.status === 'Active' && 'text-green-600 border-green-300 bg-green-50')}>
-                          {user.status}
+                       <Badge variant={u.status === "Active" ? "secondary" : "destructive"} className={cn(u.status === 'Active' && 'text-green-600 border-green-300 bg-green-50')}>
+                          {u.status}
                         </Badge>
                     </TableCell>
                     <TableCell>
@@ -122,7 +146,7 @@ export default function UsersPage() {
                           <DropdownMenuItem>Restablecer Contraseña</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem>
-                           {user.status === 'Active' ? 'Suspender Usuario' : 'Activar Usuario'}
+                           {u.status === 'Active' ? 'Suspender Usuario' : 'Activar Usuario'}
                           </DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive focus:text-destructive">
                             Eliminar del Equipo

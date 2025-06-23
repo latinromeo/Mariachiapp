@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { EVENT_PLANS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useUser } from "@/lib/auth";
 
 const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCompleting, setIsCompleting] = useState<string | null>(null);
   const { toast } = useToast();
+  const { permissions } = useUser();
 
   const [isClient, setIsClient] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
@@ -191,12 +193,14 @@ export default function DashboardPage() {
                </p>
             )}
         </div>
-        <Button asChild>
-            <Link href="/dashboard/events/new">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Crear Nuevo Evento
-            </Link>
-        </Button>
+        {permissions.canCreateEvents && (
+          <Button asChild>
+              <Link href="/dashboard/events/new">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Crear Nuevo Evento
+              </Link>
+          </Button>
+        )}
       </div>
       
       <div className="space-y-4">

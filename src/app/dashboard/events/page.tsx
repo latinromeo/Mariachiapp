@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button"
 import { DayDetailModal } from "../day-detail-modal"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { useUser } from "@/lib/auth"
 
 type EventStatus = 'confirmed' | 'pending' | 'external' | 'cancelled' | 'completed';
 
@@ -44,6 +45,7 @@ export default function EventsCalendarPage() {
   const [selectedDay, setSelectedDay] = React.useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isClient, setIsClient] = React.useState(false);
+  const { permissions } = useUser();
 
   const fetchData = React.useCallback(async () => {
     setIsLoading(true);
@@ -157,12 +159,14 @@ export default function EventsCalendarPage() {
                 <Button variant="outline" size="icon" onClick={goToPreviousMonth}><ChevronLeft className="h-4 w-4" /></Button>
                 <span className="font-semibold text-lg text-center capitalize w-32">{format(currentMonth, "MMMM yyyy", { locale: es })}</span>
                 <Button variant="outline" size="icon" onClick={goToNextMonth}><ChevronRight className="h-4 w-4" /></Button>
-                 <Button asChild>
-                    <Link href="/dashboard/events/new">
-                        <PlusCircle className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Crear Evento</span>
-                    </Link>
-                </Button>
+                 {permissions.canCreateEvents && (
+                    <Button asChild>
+                        <Link href="/dashboard/events/new">
+                            <PlusCircle className="h-4 w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Crear Evento</span>
+                        </Link>
+                    </Button>
+                 )}
             </div>
         </div>
 

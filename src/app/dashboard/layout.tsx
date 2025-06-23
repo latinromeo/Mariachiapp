@@ -13,16 +13,15 @@ import {
   UserCog,
   UserCircle2,
   LogOut,
-  PlusCircle,
   Moon,
   Bot,
   Menu,
 } from "lucide-react"
+import { useState, type ReactNode } from "react"
 
 import {
   SidebarProvider,
   Sidebar,
-  SidebarHeader,
   SidebarContent,
   SidebarMenu,
   SidebarMenuItem,
@@ -35,20 +34,53 @@ import {
 } from "@/components/ui/sidebar"
 import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { AssistantChat } from "./assistant/assistant-chat"
+import { useUser, USERS, UserContext, ROLES_CONFIG, type User } from "@/lib/auth"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 
-// This is a mock user object. In a real app, you'd get this from your auth provider.
-const currentUser = {
-    name: "Administrador",
-    role: "Admin",
-    avatarFallback: "AD"
-};
+function UserProvider({ children }: { children: ReactNode }) {
+    const [user, setUser] = useState<User>(USERS.admin);
+
+    const permissions = {
+        hasAccess: (page: string): boolean => {
+            const roleConfig = ROLES_CONFIG[user.role];
+            return roleConfig?.pages.includes(page) ?? false;
+        },
+        ...ROLES_CONFIG[user.role]
+    };
+
+    return (
+        <UserContext.Provider value={{ user, setUser, permissions }}>
+            {children}
+        </UserContext.Provider>
+    );
+}
+
+function UserSwitcher() {
+    const { user, setUser } = useUser();
+    return (
+        <div className="flex items-center gap-2">
+            <Label htmlFor="user-switcher" className="text-sm font-medium whitespace-nowrap">Ver como:</Label>
+            <Select value={user.id} onValueChange={(userId) => setUser(USERS[userId])}>
+                <SelectTrigger id="user-switcher" className="w-[180px]">
+                    <SelectValue placeholder="Seleccionar rol" />
+                </SelectTrigger>
+                <SelectContent>
+                    {Object.values(USERS).map(u => (
+                        <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    );
+}
+
 
 function BottomNav() {
     const pathname = usePathname();
+    const { permissions } = useUser();
 
     const navItems = [
         { href: '/dashboard', icon: LayoutGrid, label: 'Panel' },
@@ -57,6 +89,8 @@ function BottomNav() {
         { href: '/dashboard/finance', icon: DollarSign, label: 'Finanzas' },
         { href: '/dashboard/profile', icon: UserCircle2, label: 'Perfil' },
     ];
+
+    const visibleNavItems = navItems.filter(item => permissions.hasAccess(item.href));
     
     const isActive = (path: string) => {
         if (path === '/dashboard') return pathname === path;
@@ -66,7 +100,7 @@ function BottomNav() {
     return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm md:hidden">
         <div className="flex h-16 items-center justify-around">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
             <Link
             key={item.href}
             href={item.href}
@@ -84,102 +118,128 @@ function BottomNav() {
     );
 }
 
-
-export default function DashboardLayout({
+function DashboardLayoutContent({
   children,
 }: {
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const { user, permissions } = useUser();
 
   const isActive = (path: string) => {
     return pathname === path || (path !== "/dashboard" && pathname.startsWith(path))
   }
 
   return (
-    <SidebarProvider>
+    <>
       <Sidebar>
         <SidebarContent className="p-0 flex flex-col pt-4">
           <div>
             <SidebarMenu className="px-4">
               <SidebarGroup>
                   <SidebarGroupLabel>PRINCIPAL</SidebarGroupLabel>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={isActive("/dashboard")}>
-                          <Link href="/dashboard">
-                              <LayoutGrid />
-                              <span>Panel Principal</span>
-                          </Link>
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={isActive("/dashboard/clients")}>
-                          <Link href="/dashboard/clients">
-                              <Users />
-                              <span>Clientes</span>
-                          </Link>
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {permissions.hasAccess("/dashboard") && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={isActive("/dashboard")}>
+                            <Link href="/dashboard">
+                                <LayoutGrid />
+                                <span>Panel Principal</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {permissions.hasAccess("/dashboard/clients") && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={isActive("/dashboard/clients")}>
+                            <Link href="/dashboard/clients">
+                                <Users />
+                                <span>Clientes</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
               </SidebarGroup>
 
               <SidebarGroup>
                   <SidebarGroupLabel>GESTIÓN</SidebarGroupLabel>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={isActive("/dashboard/events")}>
-                          <Link href="/dashboard/events">
-                              <Calendar />
-                              <span>Calendario Eventos</span>
-                          </Link>
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={isActive("/dashboard/rehearsals")}>
-                          <Link href="/dashboard/rehearsals">
-                              <Music />
-                              <span>Ensayos</span>
-                          </Link>
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {permissions.hasAccess("/dashboard/events") && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={isActive("/dashboard/events")}>
+                            <Link href="/dashboard/events">
+                                <Calendar />
+                                <span>Calendario Eventos</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {permissions.hasAccess("/dashboard/rehearsals") && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={isActive("/dashboard/rehearsals")}>
+                            <Link href="/dashboard/rehearsals">
+                                <Music />
+                                <span>Ensayos</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
               </SidebarGroup>
               
               <SidebarGroup>
                   <SidebarGroupLabel>RECURSOS</SidebarGroupLabel>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={isActive("/dashboard/repertoire")}>
-                          <Link href="/dashboard/repertoire">
-                              <BookOpen />
-                              <span>Repertorio</span>
-                          </Link>
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={isActive("/dashboard/media")}>
-                          <Link href="/dashboard/media">
-                              <Image />
-                              <span>Multimedia</span>
-                          </Link>
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {permissions.hasAccess("/dashboard/repertoire") && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={isActive("/dashboard/repertoire")}>
+                            <Link href="/dashboard/repertoire">
+                                <BookOpen />
+                                <span>Repertorio</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {permissions.hasAccess("/dashboard/media") && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={isActive("/dashboard/media")}>
+                            <Link href="/dashboard/media">
+                                <Image />
+                                <span>Multimedia</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
               </SidebarGroup>
               
                 <SidebarGroup>
                   <SidebarGroupLabel>ADMINISTRACIÓN</SidebarGroupLabel>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={isActive("/dashboard/finance")}>
-                          <Link href="/dashboard/finance">
-                              <DollarSign />
-                              <span>Finanzas (Admin)</span>
-                          </Link>
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={isActive("/dashboard/users")}>
-                          <Link href="/dashboard/users">
-                              <UserCog />
-                              <span>Administrar Usuarios</span>
-                          </Link>
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {permissions.hasAccess("/dashboard/finance") && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={isActive("/dashboard/finance")}>
+                            <Link href="/dashboard/finance">
+                                <DollarSign />
+                                <span>Finanzas (Admin)</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {permissions.hasAccess("/dashboard/my-income") && (
+                     <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={isActive("/dashboard/my-income")}>
+                            <Link href="/dashboard/my-income">
+                                <DollarSign />
+                                <span>Mis Ingresos</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {permissions.hasAccess("/dashboard/users") && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={isActive("/dashboard/users")}>
+                            <Link href="/dashboard/users">
+                                <UserCog />
+                                <span>Administrar Usuarios</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
               </SidebarGroup>
             </SidebarMenu>
           </div>
@@ -206,7 +266,7 @@ export default function DashboardLayout({
               </SidebarGroup>
             </SidebarMenu>
             <div className="text-center text-sm font-semibold p-4 pt-2">
-              <p>{currentUser.name}</p>
+              <p>{user.name}</p>
             </div>
              <div className="text-center text-xs text-muted-foreground p-4 pt-0">
                   © 2025 Mariachi Reyes
@@ -220,11 +280,26 @@ export default function DashboardLayout({
             <SidebarTrigger />
             <Logo />
           </div>
+          <UserSwitcher />
         </header>
         <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">{children}</main>
-         {currentUser.role === 'Admin' && <AssistantChat />}
+         {user.role === 'Administrador General' && <AssistantChat />}
       </SidebarInset>
        <BottomNav />
+    </>
+  )
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <SidebarProvider>
+      <UserProvider>
+        <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      </UserProvider>
     </SidebarProvider>
   )
 }

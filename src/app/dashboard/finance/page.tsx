@@ -22,6 +22,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 import { EVENT_TYPES } from "@/lib/constants"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { useUser } from "@/lib/auth"
 
 const formatCurrency = (value: number | undefined, compact = false) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -58,7 +59,19 @@ interface Transaction {
     id: string;
 }
 
+const safeParseDate = (dateString: string) => {
+    if (!dateString) return new Date(); // Fallback for invalid date
+    try {
+      return parseISO(dateString);
+    } catch (e) {
+      const parts = dateString.split('T')[0].split('-').map(Number);
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+  }
+
+
 export default function FinancePage() {
+    const { permissions } = useUser();
     const [events, setEvents] = useState<EventData[]>([]);
     const [manualEntries, setManualEntries] = useState<ManualFinanceEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -86,12 +99,6 @@ export default function FinancePage() {
         setIsClient(true);
         fetchData();
     }, [fetchData]);
-
-    const safeParseDate = (dateStr: string) => {
-        if (!dateStr) return new Date(); // Return today if date is invalid, to avoid crashes
-        // Handles both 'YYYY-MM-DD' and ISO strings with 'T'
-        return dateStr.includes('T') ? parseISO(dateStr) : new Date(dateStr.replace(/-/g, '/'));
-    };
 
     const { 
         incomeHistory, 
@@ -232,6 +239,25 @@ export default function FinancePage() {
     
     const showSkeleton = isLoading || !isClient;
 
+    if (!permissions.canSeeFinance) {
+        return (
+            <div className="flex flex-col gap-6">
+                <h1 className="font-headline text-3xl font-bold tracking-tight text-destructive">
+                    Acceso Denegado
+                </h1>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>No tienes permiso para ver esta página.</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p>Solo los administradores pueden ver la información financiera. Por favor, contacta a un administrador si crees que esto es un error.</p>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+
   return (
     <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -305,7 +331,7 @@ export default function FinancePage() {
                             <BarChart data={barChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
                                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value as number, true)} />
-                                <ChartTooltip cursor={true} content={<ChartTooltipContent formatter={(value, name) => `${formatCurrency(value as number)}`} />} />
+                                <ChartTooltip cursor={true} content={<ChartTooltipContent formatter={(value) => `${formatCurrency(value as number)}`} />} />
                                 <Legend content={<ChartLegendContent />} />
                                 <Bar dataKey="ingresos" fill="var(--color-ingresos)" radius={[4, 4, 0, 0]} />
                                 <Bar dataKey="egresos" fill="var(--color-egresos)" radius={[4, 4, 0, 0]} />

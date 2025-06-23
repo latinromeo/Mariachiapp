@@ -40,6 +40,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { useUser } from "@/lib/auth";
 
 export default function RehearsalsPage() {
   const [allRehearsals, setAllRehearsals] = useState<RehearsalData[]>([]);
@@ -50,6 +51,7 @@ export default function RehearsalsPage() {
   const [isCompleting, setIsCompleting] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  const { permissions } = useUser();
 
   const fetchRehearsals = async () => {
     setIsLoading(true);
@@ -136,12 +138,14 @@ export default function RehearsalsPage() {
         <h1 className="font-headline text-3xl font-bold tracking-tight">
             Ensayos
         </h1>
-        <Button asChild>
-            <Link href="/dashboard/rehearsals/new">
-                <PlusCircle className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Programar Ensayo</span>
-            </Link>
-        </Button>
+        {permissions.canCreateRehearsals && (
+            <Button asChild>
+                <Link href="/dashboard/rehearsals/new">
+                    <PlusCircle className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Programar Ensayo</span>
+                </Link>
+            </Button>
+        )}
       </div>
 
       <div className="relative w-full max-w-sm">

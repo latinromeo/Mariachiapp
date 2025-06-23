@@ -11,9 +11,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { es } from "date-fns/locale";
 import { Upload } from "lucide-react";
+import { useUser, UserRole } from "@/lib/auth";
+
+const TABS_CONFIG: { value: string; label: string; roles: UserRole[] }[] = [
+  { value: "invoices", label: "Facturas de Gastos", roles: ['Administrador General', 'Contador', 'Beta Tester'] },
+  { value: "scores", label: "Partituras", roles: ['Administrador General', 'Beta Tester'] },
+  { value: "promo-videos", label: "Videos Promo", roles: ['Administrador General', 'Beta Tester'] },
+  { value: "pro-photos", label: "Fotos Profesionales", roles: ['Administrador General', 'Beta Tester'] },
+  { value: "client-photos", label: "Fotos de Clientes", roles: ['Administrador General', 'Beta Tester'] },
+  { value: "other", label: "Otros Archivos", roles: ['Administrador General', 'Beta Tester'] },
+];
 
 export default function MediaPage() {
-  const [activeTab, setActiveTab] = useState("invoices");
+  const { user } = useUser();
+  
+  const availableTabs = TABS_CONFIG.filter(tab => tab.roles.includes(user.role));
+  const [activeTab, setActiveTab] = useState(availableTabs[0]?.value || "");
+
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [fileName, setFileName] = useState("ningún archivo seleccionado");
 
@@ -53,53 +67,52 @@ export default function MediaPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="h-auto w-full justify-start overflow-x-auto p-1">
-          <TabsTrigger value="invoices">Facturas de Gastos</TabsTrigger>
-          <TabsTrigger value="scores">Partituras</TabsTrigger>
-          <TabsTrigger value="promo-videos">Videos Promo</TabsTrigger>
-          <TabsTrigger value="pro-photos">Fotos Profesionales</TabsTrigger>
-          <TabsTrigger value="client-photos">Fotos de Clientes</TabsTrigger>
-          <TabsTrigger value="other">Otros Archivos</TabsTrigger>
+          {availableTabs.map(tab => (
+            <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+          ))}
         </TabsList>
         
         <TabsContent value="invoices" className="mt-6">
           <div className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Subir Factura de Gasto</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-8 md:grid-cols-2 items-start">
-                  <div className="flex flex-col items-center">
-                    <Label className="mb-2 self-start font-medium">Fecha de la Factura:</Label>
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      className="rounded-md border"
-                      locale={es}
-                      initialFocus
-                    />
-                  </div>
-                  <div className="space-y-4 pt-8">
-                    <div>
-                      <Label className="font-medium">Seleccionar Archivo de Factura:</Label>
-                      <div className="flex items-center gap-4 mt-2">
-                        <Button asChild className="shrink-0">
-                          <label htmlFor="invoice-file-input" className="cursor-pointer">Seleccionar archivo</label>
-                        </Button>
-                        <span className="text-sm text-muted-foreground truncate">{fileName}</span>
-                        <Input id="invoice-file-input" type="file" className="hidden" onChange={handleFileChange} />
-                      </div>
+             {user.role !== 'Contador' && (
+                <Card>
+                <CardHeader>
+                    <CardTitle>Subir Factura de Gasto</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid gap-8 md:grid-cols-2 items-start">
+                    <div className="flex flex-col items-center">
+                        <Label className="mb-2 self-start font-medium">Fecha de la Factura:</Label>
+                        <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        className="rounded-md border"
+                        locale={es}
+                        initialFocus
+                        />
                     </div>
-                    <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white w-full" disabled>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Subir Factura
-                    </Button>
-                     <p className="text-xs text-muted-foreground text-center">Nota: La subida de archivos a la nube no está implementada. Esto es solo para diseño visual.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                    <div className="space-y-4 pt-8">
+                        <div>
+                        <Label className="font-medium">Seleccionar Archivo de Factura:</Label>
+                        <div className="flex items-center gap-4 mt-2">
+                            <Button asChild className="shrink-0">
+                            <label htmlFor="invoice-file-input" className="cursor-pointer">Seleccionar archivo</label>
+                            </Button>
+                            <span className="text-sm text-muted-foreground truncate">{fileName}</span>
+                            <Input id="invoice-file-input" type="file" className="hidden" onChange={handleFileChange} />
+                        </div>
+                        </div>
+                        <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white w-full" disabled>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Subir Factura
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center">Nota: La subida de archivos a la nube no está implementada. Esto es solo para diseño visual.</p>
+                    </div>
+                    </div>
+                </CardContent>
+                </Card>
+             )}
 
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-4">

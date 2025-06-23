@@ -42,6 +42,7 @@ import { ClientForm } from "./client-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/lib/auth";
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientData[]>([]);
@@ -52,6 +53,7 @@ export default function ClientsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const { permissions } = useUser();
 
   const fetchClients = async () => {
     setIsLoading(true);
@@ -125,23 +127,25 @@ export default function ClientsPage() {
           </div>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-                <Button>
-                    <PlusCircle className="h-4 w-4 sm:mr-2" />
-                    <span>Agregar Nuevo Cliente</span>
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Agregar Nuevo Cliente</DialogTitle>
-                    <DialogDescription>
-                        Completa la información para registrar un nuevo cliente manualmente.
-                    </DialogDescription>
-                </DialogHeader>
-                <ClientForm onSuccess={handleSuccess} />
-            </DialogContent>
-        </Dialog>
+        {permissions.canCreateClients && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button>
+                        <PlusCircle className="h-4 w-4 sm:mr-2" />
+                        <span>Agregar Nuevo Cliente</span>
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Agregar Nuevo Cliente</DialogTitle>
+                        <DialogDescription>
+                            Completa la información para registrar un nuevo cliente manualmente.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ClientForm onSuccess={handleSuccess} />
+                </DialogContent>
+            </Dialog>
+        )}
 
        </div>
       <Card>
