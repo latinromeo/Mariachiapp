@@ -28,6 +28,15 @@ const formatCurrency = (value: number | undefined) => {
     return `$${(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
 
+const slugify = (str: string) =>
+  str
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+
 export default function FinancePage() {
     const [events, setEvents] = useState<EventData[]>([]);
     const [manualEntries, setManualEntries] = useState<ManualFinanceEntry[]>([]);
@@ -278,7 +287,14 @@ export default function FinancePage() {
                                     innerRadius={50} 
                                     outerRadius={80} 
                                     paddingAngle={2} 
-                                />
+                                >
+                                    {eventTypeDistribution.map((entry) => (
+                                      <Cell
+                                        key={`cell-${entry.name}`}
+                                        fill={`var(--color-${slugify(entry.name)})`}
+                                      />
+                                    ))}
+                                </Pie>
                                 <ChartLegend 
                                     content={<ChartLegendContent nameKey="name" />}
                                     iconType="square" 
