@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useForm } from "react-hook-form"
@@ -152,7 +153,7 @@ export function SongForm({ onSuccess, onCancel }: SongFormProps) {
                     </label>
                   </div>
                 </FormControl>
-                <p className="text-xs text-muted-foreground">La subida de archivos se implementará en un paso futuro.</p>
+                <p className="text-xs text-muted-foreground">Nota: La subida de archivos a la nube no está implementada. Esto es solo para diseño visual.</p>
                 <FormMessage />
             </FormItem>
             
@@ -189,7 +190,7 @@ export function SongForm({ onSuccess, onCancel }: SongFormProps) {
                     </audio>
                   </div>
                 )}
-                 <p className="text-xs text-muted-foreground">El audio solo es para vista previa local y no se guardará permanentemente.</p>
+                 <p className="text-xs text-muted-foreground">El audio es para vista previa local y no se guardará en la nube.</p>
                 <FormMessage />
             </FormItem>
 
