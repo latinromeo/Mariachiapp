@@ -1,7 +1,8 @@
+
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   Calendar,
   LayoutGrid,
@@ -124,7 +125,12 @@ function DashboardLayoutContent({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter();
   const { user, permissions } = useUser();
+
+  const handleLogout = () => {
+    router.push('/login');
+  };
 
   const isActive = (path: string) => {
     return pathname === path || (path !== "/dashboard" && pathname.startsWith(path))
@@ -258,7 +264,7 @@ function DashboardLayoutContent({
                       </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                      <SidebarMenuButton>
+                      <SidebarMenuButton onClick={handleLogout}>
                           <LogOut />
                           <span>Cerrar Sesión</span>
                       </SidebarMenuButton>
