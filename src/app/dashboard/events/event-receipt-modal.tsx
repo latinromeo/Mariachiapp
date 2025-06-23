@@ -4,7 +4,7 @@
 import React, { useRef, useState } from "react"
 import { format, parse } from "date-fns"
 import { es } from "date-fns/locale"
-import jsPDF from "jspdf"
+import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
 
 import {
