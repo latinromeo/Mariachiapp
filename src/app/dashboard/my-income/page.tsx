@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExpenseForm } from "./expense-form"
-import { endOfMonth, format, startOfMonth, getYear, getMonth, parseISO, isWithinInterval } from "date-fns"
+import { format, getYear, getMonth } from "date-fns"
 import { es } from "date-fns/locale"
 import { useUser } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -36,11 +36,10 @@ const months = Array.from({ length: 12 }, (_, i) => ({
   label: format(new Date(2000, i), "MMMM", { locale: es }),
 }));
 
-// Helper to parse 'YYYY-MM-DD' strings as local dates to avoid timezone issues
-const parseDateAsLocal = (dateString: string): Date => {
-    if (!dateString) return new Date(0); // Return an invalid date that won't match
-    const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
-    return new Date(year, month - 1, day);
+// Helper to treat 'YYYY-MM-DD' as a local date to avoid timezone issues.
+const parseDate = (dateString: string): Date => {
+  if (!dateString) return new Date(0); // Return an invalid date that won't match
+  return new Date(`${dateString}T00:00:00`);
 };
 
 function IncomeEntryPopover({ event, onIncomeSet }: { event: EventData, onIncomeSet: () => void }) {
@@ -144,8 +143,22 @@ export default function MyIncomePage() {
             setIncomes(incomesData);
             setExpenses(expensesData);
 
-            const allDates = [...eventsData.map(e => parseISO(e.eventDate)), ...expensesData.map(e => parseISO(e.date))];
-            const years = new Set(allDates.map(d => getYear(d)));
+            const years = new Set<number>();
+            const parseYearFromDateString = (dateString: string): number | null => {
+                if (!dateString) return null;
+                const year = parseInt(dateString.split('-')[0], 10);
+                return isNaN(year) ? null : year;
+            }
+
+            eventsData.forEach(e => {
+                const year = parseYearFromDateString(e.eventDate);
+                if (year) years.add(year);
+            });
+            expensesData.forEach(e => {
+                const year = parseYearFromDateString(e.date);
+                if (year) years.add(year);
+            });
+
             const currentYear = getYear(new Date());
             if (!years.has(currentYear)) years.add(currentYear);
             setAvailableYears(Array.from(years).sort((a,b) => b - a));
@@ -164,21 +177,28 @@ export default function MyIncomePage() {
 
     const {
         filteredEvents,
-        filteredIncomes,
-        filteredExpenses,
         totalIncome,
         totalExpenses,
-        netBalance
+        netBalance,
+        filteredExpenses
     } = useMemo(() => {
-        const dateFilter = new Date(selectedYear, selectedMonth);
-        const period = {
-            start: startOfMonth(dateFilter),
-            end: endOfMonth(dateFilter)
-        };
-        
-        const filteredEvents = events.filter(e => isWithinInterval(parseDateAsLocal(e.eventDate), period));
-        const filteredIncomes = incomes.filter(i => isWithinInterval(parseDateAsLocal(i.date), period));
-        const filteredExpenses = expenses.filter(e => isWithinInterval(parseDateAsLocal(e.date), period));
+        const filteredEvents = events.filter(e => {
+            if (!e.eventDate) return false;
+            const eventDate = parseDate(e.eventDate);
+            return eventDate.getFullYear() === selectedYear && eventDate.getMonth() === selectedMonth;
+        });
+
+        const filteredIncomes = incomes.filter(i => {
+            if (!i.date) return false;
+            const incomeDate = parseDate(i.date);
+            return incomeDate.getFullYear() === selectedYear && incomeDate.getMonth() === selectedMonth;
+        });
+
+        const filteredExpenses = expenses.filter(e => {
+            if (!e.date) return false;
+            const expenseDate = parseDate(e.date);
+            return expenseDate.getFullYear() === selectedYear && expenseDate.getMonth() === selectedMonth;
+        });
         
         const totalIncome = filteredIncomes.reduce((sum, income) => sum + income.amount, 0);
         const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -296,7 +316,7 @@ export default function MyIncomePage() {
             <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-green-600"/>Ingresos por Eventos</CardTitle></CardHeader>
             <CardContent className="space-y-2">
                 {filteredEvents.length > 0 ? filteredEvents.map(event => {
-                    const income = filteredIncomes.find(i => i.eventId === event.id);
+                    const income = incomes.find(i => i.eventId === event.id);
                     const isCompleted = !!income;
                     return (
                         <div key={event.id} className={cn("flex justify-between items-center p-3 rounded-md border", isCompleted ? "bg-green-50 dark:bg-green-950/30 border-green-200" : "bg-muted/50")}>
@@ -304,7 +324,7 @@ export default function MyIncomePage() {
                                 <p className="font-semibold capitalize">{event.eventType} - {event.clientName}</p>
                                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                                     <Calendar className="h-3 w-3" />
-                                    {format(parseDateAsLocal(event.eventDate), 'dd/MM/yyyy')} @ {event.sector}
+                                    {format(parseDate(event.eventDate), 'dd/MM/yyyy')} @ {event.sector}
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -349,7 +369,7 @@ export default function MyIncomePage() {
                             <p className="font-semibold capitalize">{expense.description}</p>
                             <p className="text-sm text-muted-foreground flex items-center gap-2">
                                 <Calendar className="h-3 w-3" />
-                                {format(parseDateAsLocal(expense.date), 'dd/MM/yyyy')}
+                                {format(parseDate(expense.date), 'dd/MM/yyyy')}
                             </p>
                         </div>
                         <span className="font-bold text-red-600">{formatCurrency(expense.amount)}</span>
@@ -362,3 +382,5 @@ export default function MyIncomePage() {
     </div>
   );
 }
+
+    
