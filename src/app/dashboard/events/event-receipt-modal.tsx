@@ -1,8 +1,7 @@
 
 "use client"
 
-import { useRef } from "react"
-import Image from "next/image"
+import React, { useRef } from "react"
 import { format, parse } from "date-fns"
 import { es } from "date-fns/locale"
 import {
@@ -34,27 +33,21 @@ const formatCurrency = (value: number | undefined) => {
 };
 
 // This component contains the actual content of the receipt.
-// It's used twice: once for display inside the modal, and once in a hidden
-// div for printing to avoid modal-related printing issues.
-const ReceiptBody = ({
-  eventData,
-  eventTypeLabel,
-  planLabel,
-  paymentMethodLabel,
-}: {
+// It is now a forwardRef component to ensure the ref is passed correctly.
+const ReceiptBody = React.forwardRef<HTMLDivElement, {
   eventData: Partial<EventData>;
   eventTypeLabel: string;
   planLabel: string;
   paymentMethodLabel: string;
-}) => (
+}>(({ eventData, eventTypeLabel, planLabel, paymentMethodLabel }, ref) => (
   // Using explicit colors for better print results regardless of theme
-  <div className="px-5 py-4 space-y-6 bg-white text-black">
+  <div ref={ref} className="px-5 py-4 space-y-6 bg-white text-black">
     <div className="text-center space-y-2">
-      <Image
+      {/* Use a standard <img> tag for printing compatibility */}
+      <img
         src="/logo.svg"
         alt="Logo Mariachi Reyes de México"
         width={150}
-        height={50}
         className="mx-auto"
       />
       <h2 className="text-2xl font-bold font-headline">Mariachi Reyes de México</h2>
@@ -148,7 +141,8 @@ const ReceiptBody = ({
       </p>
     </div>
   </div>
-);
+));
+ReceiptBody.displayName = "ReceiptBody";
 
 
 export function EventReceiptModal({ isOpen, onClose, eventData }: EventReceiptModalProps) {
@@ -197,10 +191,9 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
 
   return (
     <>
+      {/* This component is hidden from view but is used for printing */}
       <div className="hidden">
-        <div ref={receiptRef}>
-           <ReceiptBody {...receiptContentProps} />
-        </div>
+        <ReceiptBody ref={receiptRef} {...receiptContentProps} />
       </div>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-2xl p-0">
@@ -208,6 +201,7 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
             <DialogTitle>Evento Creado Exitosamente - Recibo</DialogTitle>
           </DialogHeader>
           <div className="max-h-[70vh] overflow-y-auto px-1">
+             {/* This is the visible component, without the ref */}
              <ReceiptBody {...receiptContentProps} />
           </div>
            <DialogFooter className="p-6 border-t bg-background flex-col gap-2">
