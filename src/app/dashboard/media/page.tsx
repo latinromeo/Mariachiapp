@@ -1,281 +1,153 @@
 
 "use client"
 
-import Image from "next/image";
-import { useEffect, useState, useMemo } from "react";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger, 
-  DialogFooter,
-  DialogClose
-} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Search, Upload, MoreVertical, Image as ImageIcon, Video, Music, Download, Trash2, X } from "lucide-react";
-import { type MediaFile, getMedia } from "@/services/eventService";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-
-const formatBytes = (bytes: number, decimals = 2) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
-
-const fileTypeIcons = {
-  image: <ImageIcon className="h-4 w-4" />,
-  video: <Video className="h-4 w-4" />,
-  audio: <Music className="h-4 w-4" />,
-};
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { es } from "date-fns/locale";
+import { Upload } from "lucide-react";
 
 export default function MediaPage() {
-  const [allMedia, setAllMedia] = useState<MediaFile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<"all" | "image" | "video" | "audio">("all");
-  const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("invoices");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [fileName, setFileName] = useState("ningún archivo seleccionado");
 
-  useEffect(() => {
-    const fetchMedia = async () => {
-      setIsLoading(true);
-      try {
-        const data = await getMedia();
-        setAllMedia(data);
-      } catch (error) {
-        console.error("Failed to fetch media", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchMedia();
-  }, []);
-  
-  const filteredMedia = useMemo(() => {
-    let media = [...allMedia];
-    
-    if (activeTab !== "all") {
-      media = media.filter(item => item.type === activeTab);
+  const months = Array.from({ length: 12 }, (_, i) => ({
+    value: String(i + 1),
+    label: new Date(2000, i).toLocaleString('es-ES', { month: 'long', timeZone: 'UTC' })
+  }));
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      setFileName(event.target.files[0].name);
+    } else {
+      setFileName("ningún archivo seleccionado");
     }
+  };
 
-    if (searchTerm) {
-      media = media.filter(item =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.tags && item.tags.join(' ').toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-    
-    return media;
-  }, [allMedia, searchTerm, activeTab]);
-
-  const handleDelete = (id: string) => {
-    // In a real app, this would call a service to delete the file
-    setAllMedia(prev => prev.filter(item => item.id !== id));
-    toast({ title: "Archivo Eliminado", description: "El archivo ha sido eliminado (simulación)." });
-  }
-
-  const handleUploadSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    // In a real app, this would handle file upload and data submission
-    console.log("Upload form submitted");
-    toast({ title: "Carga Exitosa", description: "El archivo ha sido subido (simulación)." });
-    setIsUploadOpen(false);
-  }
+  const renderPlaceholderContent = (title: string) => (
+    <div className="text-center py-16 text-muted-foreground border border-dashed rounded-lg mt-6">
+      <p className="font-semibold">No hay archivos en "{title}"</p>
+      <p className="text-sm">Sube nuevos archivos para verlos aquí.</p>
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-headline text-3xl font-bold tracking-tight">
-            Multimedia
-          </h1>
-          <p className="text-muted-foreground">
-            Tu colección de fotos y videos de eventos.
-          </p>
-        </div>
-         <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Upload className="mr-2 h-4 w-4" />
-                Subir Archivo
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Subir Nuevo Archivo</DialogTitle>
-                <DialogDescription>Añade un nuevo archivo a tu biblioteca multimedia.</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleUploadSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                      <Label htmlFor="file-upload">Archivo</Label>
-                      <Input id="file-upload" type="file" />
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="file-title">Título (Opcional)</Label>
-                      <Input id="file-title" placeholder="Ej: Foto Grupal Boda Pérez" />
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="file-notes">Notas (Opcional)</Label>
-                      <Textarea id="file-notes" placeholder="Descripción del archivo, personas involucradas, etc." />
-                  </div>
-                  <DialogFooter>
-                      <Button type="button" variant="ghost" onClick={() => setIsUploadOpen(false)}>Cancelar</Button>
-                      <Button type="submit">Subir</Button>
-                  </DialogFooter>
-              </form>
-            </DialogContent>
-        </Dialog>
+      <div>
+        <h1 className="font-headline text-3xl font-bold tracking-tight">
+          Gestión Multimedia
+        </h1>
+        <p className="text-muted-foreground">
+          Sube, visualiza y organiza tus archivos y facturas.
+        </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            type="search" 
-            placeholder="Buscar por nombre o etiqueta..." 
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="w-full sm:w-auto">
-          <TabsList className="grid w-full grid-cols-4 sm:w-auto">
-            <TabsTrigger value="all">Todo</TabsTrigger>
-            <TabsTrigger value="image">
-                <ImageIcon className="mr-2 h-4 w-4"/>
-                <span className="hidden sm:inline">Imágenes</span>
-            </TabsTrigger>
-            <TabsTrigger value="video">
-                <Video className="mr-2 h-4 w-4"/>
-                <span className="hidden sm:inline">Videos</span>
-            </TabsTrigger>
-            <TabsTrigger value="audio">
-                <Music className="mr-2 h-4 w-4"/>
-                <span className="hidden sm:inline">Audio</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-      
-      {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 8 }).map((_, i) => <Card key={i}><CardHeader className="p-0"><Skeleton className="aspect-video w-full h-auto" /></CardHeader><CardContent className="p-3"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-3 w-1/2 mt-2" /></CardContent></Card>)}
-          </div>
-      ) : filteredMedia.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredMedia.map((item) => (
-            <Card key={item.id} className="overflow-hidden group flex flex-col">
-                <CardHeader className="p-0 relative">
-                    <Image
-                        src={item.url}
-                        alt={item.name}
-                        data-ai-hint={item.hint}
-                        width={600}
-                        height={400}
-                        className="aspect-video w-full h-auto object-cover transition-transform hover:scale-105 cursor-pointer"
-                        onClick={() => setPreviewFile(item)}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="h-auto w-full justify-start overflow-x-auto p-1">
+          <TabsTrigger value="invoices">Facturas de Gastos</TabsTrigger>
+          <TabsTrigger value="scores">Partituras</TabsTrigger>
+          <TabsTrigger value="promo-videos">Videos Promo</TabsTrigger>
+          <TabsTrigger value="pro-photos">Fotos Profesionales</TabsTrigger>
+          <TabsTrigger value="client-photos">Fotos de Clientes</TabsTrigger>
+          <TabsTrigger value="other">Otros Archivos</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="invoices" className="mt-6">
+          <div className="space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Subir Factura de Gasto</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-8 md:grid-cols-2 items-start">
+                  <div className="flex flex-col items-center">
+                    <Label className="mb-2 self-start font-medium">Fecha de la Factura:</Label>
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      className="rounded-md border"
+                      locale={es}
+                      initialFocus
                     />
-                     <div className="absolute top-2 right-2">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full opacity-80 group-hover:opacity-100 transition-opacity">
-                                    <MoreVertical className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => setPreviewFile(item)}>Ver</DropdownMenuItem>
-                                <DropdownMenuItem>
-                                    <Download className="mr-2 h-4 w-4" /> Descargar
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(item.id)}>
-                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                  </div>
+                  <div className="space-y-4 pt-8">
+                    <div>
+                      <Label className="font-medium">Seleccionar Archivo de Factura:</Label>
+                      <div className="flex items-center gap-4 mt-2">
+                        <Button asChild className="shrink-0">
+                          <label htmlFor="invoice-file-input" className="cursor-pointer">Seleccionar archivo</label>
+                        </Button>
+                        <span className="text-sm text-muted-foreground truncate">{fileName}</span>
+                        <Input id="invoice-file-input" type="file" className="hidden" onChange={handleFileChange} />
+                      </div>
                     </div>
-                </CardHeader>
-              <CardContent className="p-3 flex-1">
-                <p className="font-semibold text-sm truncate" title={item.name}>{item.name}</p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
-                    <span className="flex items-center gap-1.5">{fileTypeIcons[item.type]} {item.type.charAt(0).toUpperCase() + item.type.slice(1)}</span>
-                    <span>{formatBytes(item.size)}</span>
+                    <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white w-full">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Subir Factura
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
-              {item.tags && item.tags.length > 0 && (
-                <CardFooter className="p-3 pt-0">
-                  <div className="flex flex-wrap gap-1">
-                    {item.tags.slice(0, 2).map(tag => <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>)}
-                  </div>
-                </CardFooter>
-              )}
             </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-16 text-muted-foreground border border-dashed rounded-lg">
-          <p className="font-semibold">No se encontraron archivos.</p>
-          <p className="text-sm">Intenta ajustar tu búsqueda o filtros, o sube un nuevo archivo.</p>
-        </div>
-      )}
 
-      {/* Preview Dialog */}
-      <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
-        <DialogContent className="max-w-4xl p-0">
-          {previewFile && (
-            <>
-              <div className="relative">
-                {previewFile.type === 'image' && (
-                  <Image src={previewFile.url} alt={previewFile.name} width={1200} height={800} className="w-full h-auto max-h-[80vh] object-contain rounded-t-lg" />
-                )}
-                {previewFile.type === 'video' && (
-                  <div className="w-full aspect-video bg-black flex items-center justify-center text-white rounded-t-lg">
-                      <Video className="h-16 w-16 text-muted" /> <p className="ml-4 text-xl font-semibold">Simulador de Video Player</p>
-                  </div>
-                )}
-                {previewFile.type === 'audio' && (
-                  <div className="w-full h-64 bg-black flex items-center justify-center text-white rounded-t-lg">
-                      <Music className="h-16 w-16 text-muted" /> <p className="ml-4 text-xl font-semibold">Simulador de Audio Player</p>
-                  </div>
-                )}
-                <DialogClose asChild>
-                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 bg-black/50 hover:bg-black/75 text-white hover:text-white rounded-full">
-                    <X className="h-5 w-5"/>
-                    <span className="sr-only">Cerrar</span>
-                    </Button>
-                </DialogClose>
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="filter-month">Filtrar por Mes:</Label>
+                  <Select defaultValue="all">
+                    <SelectTrigger id="filter-month" className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Todos los Meses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los Meses</SelectItem>
+                      {months.map(month => (
+                        <SelectItem key={month.value} value={month.value} className="capitalize">{month.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="filter-year">Filtrar por Año:</Label>
+                  <Select defaultValue="all">
+                    <SelectTrigger id="filter-year" className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Todos los Años" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los Años</SelectItem>
+                      {years.map(year => (
+                        <SelectItem key={year} value={String(year)}>{String(year)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="p-6">
-                <DialogTitle>{previewFile.name}</DialogTitle>
-                <DialogDescription>Subido el {new Date(previewFile.uploadedAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</DialogDescription>
+              
+              <div>
+                <h3 className="text-xl font-semibold mt-6">Listado de Facturas (0)</h3>
+                <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg mt-4">
+                  <p>No hay archivos en esta categoría o que coincidan con el filtro actual.</p>
+                </div>
               </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="scores">{renderPlaceholderContent("Partituras")}</TabsContent>
+        <TabsContent value="promo-videos">{renderPlaceholderContent("Videos Promo")}</TabsContent>
+        <TabsContent value="pro-photos">{renderPlaceholderContent("Fotos Profesionales")}</TabsContent>
+        <TabsContent value="client-photos">{renderPlaceholderContent("Fotos de Clientes")}</TabsContent>
+        <TabsContent value="other">{renderPlaceholderContent("Otros Archivos")}</TabsContent>
+      </Tabs>
     </div>
   );
 }
