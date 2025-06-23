@@ -255,8 +255,18 @@ export default function DashboardPage() {
                                                 </div>
                                                 
                                                 <div className="pl-8 space-y-2 text-sm">
-                                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-purple-600"/> {activity.eventTime}</p>
-                                                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green-600"/> {activity.sector}</p>
+                                                    {permissions.canCreateEvents ? (
+                                                        <>
+                                                            <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-purple-600"/> {activity.eventTime}</p>
+                                                            <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green-600"/> {activity.sector}</p>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex items-center gap-4">
+                                                            <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-purple-600"/> {activity.eventTime}</p>
+                                                            <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green-600"/> {activity.sector}</p>
+                                                        </div>
+                                                    )}
+                                                    
                                                     <p>Plan: {planLabel}</p>
                                                     
                                                     {permissions.canSeeFinance && (
@@ -289,25 +299,24 @@ export default function DashboardPage() {
                                                     </div>
                                                 )}
 
-                                                <Separator className="my-2" />
-                                
-                                                <div className="flex justify-between items-center text-sm pt-1">
-                                                    {permissions.canCreateEvents && (
-                                                      <div className="flex justify-between w-full">
-                                                        <Link href={`/dashboard/events/${activity.id}/edit`} className="text-primary hover:underline font-medium">Ver Detalles / Editar</Link>
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="outline"
-                                                            className="bg-green-100/50 text-green-700 border-green-300 hover:bg-green-100 font-medium"
-                                                            onClick={() => handleCompleteEvent(activity.id)}
-                                                            disabled={isCompleting === activity.id}
-                                                        >
-                                                            {isCompleting === activity.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
-                                                            Marcar Completo
-                                                        </Button>
-                                                      </div>
-                                                    )}
-                                                </div>
+                                                {permissions.canCreateEvents && (
+                                                    <>
+                                                        <Separator className="my-2" />
+                                                        <div className="flex justify-between items-center text-sm pt-1">
+                                                            <Link href={`/dashboard/events/${activity.id}/edit`} className="text-primary hover:underline font-medium">Ver Detalles / Editar</Link>
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="outline"
+                                                                className="bg-green-100/50 text-green-700 border-green-300 hover:bg-green-100 font-medium"
+                                                                onClick={() => handleCompleteEvent(activity.id)}
+                                                                disabled={isCompleting === activity.id}
+                                                            >
+                                                                {isCompleting === activity.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
+                                                                Marcar Completo
+                                                            </Button>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         </Card>
                                     );
@@ -328,10 +337,14 @@ export default function DashboardPage() {
                                             <Separator className="my-2" />
                                         
                                             <div className="flex justify-start items-center text-sm pt-1">
-                                                {permissions.canCreateRehearsals && (
+                                                {permissions.canCreateRehearsals ? (
                                                     <Link href={`/dashboard/rehearsals/${activity.id}/edit`} className="text-primary hover:underline font-medium flex items-center gap-1">
                                                         Ver Detalles / Editar
                                                         <Edit className="h-3 w-3" />
+                                                    </Link>
+                                                ) : (
+                                                    <Link href={`/dashboard/rehearsals/${activity.id}`} className="text-primary hover:underline font-medium flex items-center gap-1">
+                                                        Ver más
                                                     </Link>
                                                 )}
                                             </div>
