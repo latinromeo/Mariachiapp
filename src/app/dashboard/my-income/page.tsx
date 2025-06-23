@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExpenseForm } from "./expense-form"
-import { format, getYear, getMonth, parse } from "date-fns"
+import { format, getYear, getMonth, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 import { useUser } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -35,20 +35,6 @@ const months = Array.from({ length: 12 }, (_, i) => ({
   value: i,
   label: format(new Date(2000, i), "MMMM", { locale: es }),
 }));
-
-// Helper robusto para tratar 'YYYY-MM-DD' como una fecha local para evitar problemas de zona horaria.
-const robustParseDate = (dateString: string): Date => {
-    if (!dateString) return new Date(0);
-    // Maneja tanto 'YYYY-MM-DD' como strings ISO sin cambio de zona horaria para la parte de la fecha
-    const datePart = dateString.split('T')[0];
-    try {
-        // Usar parse de date-fns para interpretar la fecha como local
-        return parse(datePart, 'yyyy-MM-dd', new Date());
-    } catch {
-        return new Date(0); // Devuelve fecha inválida si el formato es incorrecto
-    }
-};
-
 
 function IncomeEntryPopover({ event, onIncomeSet }: { event: EventData, onIncomeSet: () => void }) {
     const { user } = useUser();
@@ -153,17 +139,23 @@ export default function MyIncomePage() {
 
             const years = new Set<number>();
             
+            const getYearFromString = (dateString: string): number | null => {
+                if (!dateString || typeof dateString !== 'string' || !dateString.includes('-')) return null;
+                const year = parseInt(dateString.split('-')[0], 10);
+                return isNaN(year) ? null : year;
+            }
+
             eventsData.forEach(e => {
-                if (e.eventDate) {
-                    const year = getYear(robustParseDate(e.eventDate));
-                    if (year > 1970) years.add(year);
-                }
+                const year = getYearFromString(e.eventDate);
+                if (year) years.add(year);
             });
             expensesData.forEach(e => {
-                if (e.date) {
-                    const year = getYear(robustParseDate(e.date));
-                    if (year > 1970) years.add(year);
-                }
+                const year = getYearFromString(e.date);
+                if (year) years.add(year);
+            });
+             incomesData.forEach(i => {
+                const year = getYearFromString(i.date);
+                if (year) years.add(year);
             });
 
             const currentYear = getYear(new Date());
@@ -190,10 +182,10 @@ export default function MyIncomePage() {
         filteredExpenses
     } = useMemo(() => {
         const filterByMonthAndYear = (dateString: string) => {
-            if (!dateString) return false;
-            const itemDate = robustParseDate(dateString);
-            if (getYear(itemDate) < 1971) return false; // Filtrar fechas inválidas
-            return getYear(itemDate) === selectedYear && getMonth(itemDate) === selectedMonth;
+            if (!dateString || typeof dateString !== 'string' || !dateString.includes('-')) return false;
+            const [year, month] = dateString.split('-').map(Number);
+            // month from string is 1-12, selectedMonth state is 0-11
+            return year === selectedYear && (month - 1) === selectedMonth;
         };
 
         const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
@@ -323,7 +315,7 @@ export default function MyIncomePage() {
                                 <p className="font-semibold capitalize">{event.eventType} - {event.clientName}</p>
                                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                                     <Calendar className="h-3 w-3" />
-                                    {format(robustParseDate(event.eventDate), 'dd/MM/yyyy')} @ {event.sector}
+                                    {format(parseISO(event.eventDate), 'dd/MM/yyyy')} @ {event.sector}
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -368,7 +360,7 @@ export default function MyIncomePage() {
                             <p className="font-semibold capitalize">{expense.description}</p>
                             <p className="text-sm text-muted-foreground flex items-center gap-2">
                                 <Calendar className="h-3 w-3" />
-                                {format(robustParseDate(expense.date), 'dd/MM/yyyy')}
+                                {format(parseISO(expense.date), 'dd/MM/yyyy')}
                             </p>
                         </div>
                         <span className="font-bold text-red-600">{formatCurrency(expense.amount)}</span>
