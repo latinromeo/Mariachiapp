@@ -267,8 +267,8 @@ export default function FinancePage() {
                 <CardContent>
                     {showSkeleton ? <Skeleton className="h-[250px] w-full" /> : (
                         <ChartContainer config={{
-                            Ingresos: { label: 'Ingresos', color: 'hsl(var(--chart-4))' },
-                            Egresos: { label: 'Egresos', color: 'hsl(var(--chart-2))' },
+                            Ingresos: { label: 'Ingresos', color: 'hsl(var(--chart-5))' },
+                            Egresos: { label: 'Egresos', color: 'hsl(var(--chart-1))' },
                         }} className="h-[250px] w-full">
                             <BarChart data={barChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
@@ -291,7 +291,7 @@ export default function FinancePage() {
                 <CardContent>
                     {showSkeleton ? <Skeleton className="h-[250px] w-full" /> : (
                         <ChartContainer config={{
-                            Ingresos: { label: "Ingresos", color: "hsl(var(--chart-4))" },
+                            Ingresos: { label: "Ingresos", color: "hsl(var(--chart-5))" },
                         }} className="h-[250px] w-full">
                             <LineChart data={incomeHistory} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
