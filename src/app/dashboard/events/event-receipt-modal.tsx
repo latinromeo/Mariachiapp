@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useRef } from "react"
@@ -80,8 +81,8 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>Evento Creado Exitosamente - Recibo</DialogTitle>
         </DialogHeader>
-        <div className="max-h-[70vh] overflow-y-auto">
-            <div className="px-6 py-4 space-y-6" ref={receiptRef}>
+        <div className="max-h-[70vh] overflow-y-auto px-1">
+            <div className="px-5 py-4 space-y-6" ref={receiptRef}>
                 <div className="text-center space-y-2">
                     <Image src="/logo.svg" alt="Logo Mariachi Reyes de México" width={150} height={50} className="mx-auto" />
                     <h2 className="text-2xl font-bold font-headline">Mariachi Reyes de México</h2>
@@ -93,11 +94,11 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
                         <h3 className="font-semibold text-base border-b pb-1">Datos del Cliente</h3>
                         <div className="space-y-1">
                             <div className="flex justify-between items-start gap-4">
-                                <span className="text-muted-foreground">Nombre:</span>
+                                <span className="text-muted-foreground shrink-0">Nombre:</span>
                                 <span className="font-medium text-right">{eventData.clientName}</span>
                             </div>
                             <div className="flex justify-between items-start gap-4">
-                                <span className="text-muted-foreground">Teléfono:</span>
+                                <span className="text-muted-foreground shrink-0">Teléfono:</span>
                                 <span className="font-medium text-right">{eventData.clientPhone}</span>
                             </div>
                         </div>
@@ -106,23 +107,23 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
                         <h3 className="font-semibold text-base border-b pb-1">Detalles del Evento</h3>
                         <div className="space-y-1">
                             <div className="flex justify-between items-start gap-4">
-                                <span className="text-muted-foreground">Tipo:</span>
+                                <span className="text-muted-foreground shrink-0">Tipo:</span>
                                 <span className="font-medium text-right">{eventTypeLabel}</span>
                             </div>
                             <div className="flex justify-between items-start gap-4">
-                                <span className="text-muted-foreground">Fecha:</span>
+                                <span className="text-muted-foreground shrink-0">Fecha:</span>
                                 <span className="font-medium text-right">{eventData.eventDate ? format(parse(eventData.eventDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy", { locale: es }) : 'N/A'}</span>
                             </div>
                             <div className="flex justify-between items-start gap-4">
-                                <span className="text-muted-foreground">Hora:</span>
+                                <span className="text-muted-foreground shrink-0">Hora:</span>
                                 <span className="font-medium text-right">{eventData.eventTime}</span>
                             </div>
                             <div className="flex justify-between items-start gap-4">
-                                <span className="text-muted-foreground">Dirección:</span>
+                                <span className="text-muted-foreground shrink-0">Dirección:</span>
                                 <span className="font-medium text-right break-words">{eventData.location}, {eventData.sector}</span>
                             </div>
                             <div className="flex justify-between items-start gap-4">
-                                <span className="text-muted-foreground">Duración:</span>
+                                <span className="text-muted-foreground shrink-0">Duración:</span>
                                 <span className="font-medium text-right">{planLabel}</span>
                             </div>
                         </div>
@@ -139,9 +140,9 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
                             <span className="text-muted-foreground">Abono Realizado:</span>
                             <span className="font-medium text-green-600 text-right">{formatCurrency(eventData.amountPaid)}</span>
                         </div>
-                        <div className="flex justify-between items-start text-red-600">
+                        <div className="flex justify-between items-start">
                             <span className="text-muted-foreground">Monto Restante a Pagar:</span>
-                            <span className="font-bold text-base text-right">{formatCurrency(eventData.pendingBalance)}</span>
+                            <span className="font-bold text-base text-right text-red-600">{formatCurrency(eventData.pendingBalance)}</span>
                         </div>
                         <Separator className="!my-3" />
                         <div className="flex justify-between items-start">
@@ -159,18 +160,23 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
                 </div>
             </div>
         </div>
-         <DialogFooter className="p-6 border-t bg-background flex flex-col sm:flex-row gap-2 justify-end">
-            <Button onClick={handlePrint} variant="outline" className="w-full sm:w-auto">
-                <Printer className="mr-2 h-4 w-4" />
-                Imprimir Recibo / Guardar PDF
-            </Button>
-            <Button onClick={handleWhatsAppShare} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Enviar Confirmación por WhatsApp
-            </Button>
-            <DialogClose asChild>
-                <Button variant="secondary" className="w-full sm:w-auto">Cerrar</Button>
-            </DialogClose>
+         <DialogFooter className="p-6 border-t bg-background flex-col gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                <Button onClick={handlePrint} variant="outline" className="w-full sm:w-auto">
+                    <Printer className="mr-2 h-4 w-4" />
+                    Imprimir / Guardar PDF
+                </Button>
+                <Button onClick={handleWhatsAppShare} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Enviar Resumen por WhatsApp
+                </Button>
+                <DialogClose asChild>
+                    <Button variant="secondary" className="w-full sm:w-auto">Cerrar</Button>
+                </DialogClose>
+            </div>
+            <p className="text-xs text-muted-foreground text-center sm:text-right mt-2">
+                Para enviar el PDF, primero guárdelo en su dispositivo y luego adjúntelo en WhatsApp.
+            </p>
         </DialogFooter>
       </DialogContent>
     </Dialog>
