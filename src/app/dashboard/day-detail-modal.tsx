@@ -64,7 +64,10 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                                     <MapPin className="h-4 w-4"/> @{event.location}, {event.sector}
                                 </p>
                                 <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Phone className="h-4 w-4"/> Tel Cliente: <span className="text-foreground font-medium">{event.clientPhone}</span>
+                                    <Phone className="h-4 w-4"/> Tel Cliente: 
+                                    <a href={`https://wa.me/${event.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
+                                        {event.clientPhone}
+                                    </a>
                                 </p>
                                 <p className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <DollarSign className="h-4 w-4"/> Monto: {formatCurrency(event.contractedAmount)} / Pagado: {formatCurrency(event.amountPaid)}
