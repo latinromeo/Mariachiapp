@@ -128,7 +128,7 @@ export function ClientForm({ onSuccess }: ClientFormProps) {
                 name="sector"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4" />Sector / Colonia (Opcional)</FormLabel>
+                        <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4" />Sector (Opcional)</FormLabel>
                         <FormControl><Input placeholder="Ej: Polanco" {...field} /></FormControl>
                         <FormMessage />
                     </FormItem>

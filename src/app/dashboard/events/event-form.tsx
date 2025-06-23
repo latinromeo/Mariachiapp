@@ -361,7 +361,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                     name="sector"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Sector / Colonia</FormLabel>
+                                            <FormLabel>Sector</FormLabel>
                                             <FormControl><Input placeholder="Ej: Polanco" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
