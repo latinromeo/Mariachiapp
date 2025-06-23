@@ -111,11 +111,11 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
     } : {
       clientName: "",
       clientPhone: "",
-      eventType: "",
+      eventType: "cumpleaños",
       eventDate: dateFromQuery || "",
       eventTime: "",
       plan: "",
-      paymentMethod: "",
+      paymentMethod: "bank_deposit",
       location: "",
       sector: "",
       contractedAmount: 0,
@@ -474,7 +474,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                     name="sector"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground"/>Sector</FormLabel>
+                                            <FormLabel className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />Sector</FormLabel>
                                             <FormControl><Input placeholder="Ej: Polanco" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
