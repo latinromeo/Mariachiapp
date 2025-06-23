@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExpenseForm } from "./expense-form"
-import { format, getYear, getMonth } from "date-fns"
+import { format, getYear, getMonth, parse } from "date-fns"
 import { es } from "date-fns/locale"
 import { useUser } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -38,12 +38,14 @@ const months = Array.from({ length: 12 }, (_, i) => ({
 
 // Helper robusto para tratar 'YYYY-MM-DD' como una fecha local para evitar problemas de zona horaria.
 const robustParseDate = (dateString: string): Date => {
-  if (!dateString || !/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
-    const d = new Date(dateString);
-    return isNaN(d.getTime()) ? new Date(0) : d;
-  }
-  const [year, month, day] = dateString.slice(0, 10).split('-').map(Number);
-  return new Date(year, month - 1, day);
+    if (!dateString) return new Date(0);
+    // Handles both 'YYYY-MM-DD' and ISO strings without timezone shift for date part
+    const datePart = dateString.split('T')[0];
+    try {
+        return parse(datePart, 'yyyy-MM-dd', new Date());
+    } catch {
+        return new Date(0);
+    }
 };
 
 
@@ -151,12 +153,16 @@ export default function MyIncomePage() {
             const years = new Set<number>();
             
             eventsData.forEach(e => {
-                const date = robustParseDate(e.eventDate);
-                if (date.getFullYear() > 1970) years.add(date.getFullYear());
+                if (e.eventDate && e.eventDate.length >=4) {
+                    const year = parseInt(e.eventDate.substring(0, 4), 10);
+                    if (year > 1970) years.add(year);
+                }
             });
             expensesData.forEach(e => {
-                const date = robustParseDate(e.date);
-                if (date.getFullYear() > 1970) years.add(date.getFullYear());
+                if (e.date && e.date.length >= 4) {
+                    const year = parseInt(e.date.substring(0, 4), 10);
+                    if (year > 1970) years.add(year);
+                }
             });
 
             const currentYear = getYear(new Date());
@@ -182,35 +188,28 @@ export default function MyIncomePage() {
         netBalance,
         filteredExpenses
     } = useMemo(() => {
-        const filteredEvents = events.filter(e => {
-            if (!e.eventDate) return false;
-            const eventDate = robustParseDate(e.eventDate);
-            return eventDate.getFullYear() === selectedYear && eventDate.getMonth() === selectedMonth;
-        });
+        const filterByMonthAndYear = (item: { date: string } | { eventDate: string }) => {
+            const dateStr = 'date' in item ? item.date : item.eventDate;
+            if (!dateStr || dateStr.length < 10) return false;
+            const itemYear = parseInt(dateStr.substring(0, 4), 10);
+            const itemMonth = parseInt(dateStr.substring(5, 7), 10) - 1; // JS months are 0-indexed
+            return itemYear === selectedYear && itemMonth === selectedMonth;
+        };
 
-        const filteredIncomes = incomes.filter(i => {
-            if (!i.date) return false;
-            const incomeDate = robustParseDate(i.date);
-            return incomeDate.getFullYear() === selectedYear && incomeDate.getMonth() === selectedMonth;
-        });
+        const currentFilteredEvents = events.filter(e => filterByMonthAndYear({ eventDate: e.eventDate }));
+        const currentFilteredIncomes = incomes.filter(i => filterByMonthAndYear({ date: i.date }));
+        const currentFilteredExpenses = expenses.filter(e => filterByMonthAndYear({ date: e.date }));
 
-        const filteredExpenses = expenses.filter(e => {
-            if (!e.date) return false;
-            const expenseDate = robustParseDate(e.date);
-            return expenseDate.getFullYear() === selectedYear && expenseDate.getMonth() === selectedMonth;
-        });
-        
-        const totalIncome = filteredIncomes.reduce((sum, income) => sum + income.amount, 0);
-        const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        const totalIncome = currentFilteredIncomes.reduce((sum, income) => sum + income.amount, 0);
+        const totalExpenses = currentFilteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
         const netBalance = totalIncome - totalExpenses;
 
         return {
-            filteredEvents,
-            filteredIncomes,
-            filteredExpenses,
+            filteredEvents: currentFilteredEvents,
             totalIncome,
             totalExpenses,
-            netBalance
+            netBalance,
+            filteredExpenses: currentFilteredExpenses
         };
     }, [selectedYear, selectedMonth, events, incomes, expenses]);
 
@@ -382,5 +381,3 @@ export default function MyIncomePage() {
     </div>
   );
 }
-
-    
