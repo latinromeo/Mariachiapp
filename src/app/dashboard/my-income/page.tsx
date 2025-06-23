@@ -36,21 +36,6 @@ const months = Array.from({ length: 12 }, (_, i) => ({
   label: format(new Date(2000, i), "MMMM", { locale: es }),
 }));
 
-/**
- * Parses a date string ('YYYY-MM-DD' or ISO) into a local Date object reliably.
- * This prevents timezone issues by explicitly parsing the date part only.
- */
-const robustParseDate = (dateString: string): Date | null => {
-  if (typeof dateString !== 'string') return null;
-  const datePart = dateString.split('T')[0];
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
-    return null;
-  }
-  // Using parse from date-fns ensures the date is interpreted in the local timezone at midnight.
-  return parse(datePart, 'yyyy-MM-dd', new Date());
-};
-
-
 function IncomeEntryPopover({ event, onIncomeSet }: { event: EventData, onIncomeSet: () => void }) {
     const { user } = useUser();
     const { toast } = useToast();
@@ -154,15 +139,18 @@ export default function MyIncomePage() {
 
             const years = new Set<number>();
             
-            const addYearFromDate = (date: Date | null) => {
-                 if (date) {
-                    years.add(getYear(date));
+            const addYearFromString = (dateString: string) => {
+                if (dateString && typeof dateString === 'string' && dateString.includes('-')) {
+                    const year = parseInt(dateString.split('-')[0], 10);
+                    if (!isNaN(year)) {
+                        years.add(year);
+                    }
                 }
             };
             
-            eventsData.forEach(e => addYearFromDate(robustParseDate(e.eventDate)));
-            expensesData.forEach(e => addYearFromDate(robustParseDate(e.date)));
-            incomesData.forEach(i => addYearFromDate(robustParseDate(i.date)));
+            eventsData.forEach(e => addYearFromString(e.eventDate));
+            expensesData.forEach(e => addYearFromString(e.date));
+            incomesData.forEach(i => addYearFromString(i.date));
 
             const currentYear = getYear(new Date());
             if (!years.has(currentYear)) years.add(currentYear);
@@ -188,9 +176,14 @@ export default function MyIncomePage() {
         filteredExpenses
     } = useMemo(() => {
          const filterByMonthAndYear = (dateString: string) => {
-            const date = robustParseDate(dateString);
-            if (!date) return false;
-            return getYear(date) === selectedYear && getMonth(date) === selectedMonth;
+            if (!dateString || typeof dateString !== 'string' || !dateString.includes('-')) {
+                return false;
+            }
+            const dateParts = dateString.split('T')[0].split('-');
+            const year = parseInt(dateParts[0], 10);
+            const month = parseInt(dateParts[1], 10) - 1; // JS months are 0-indexed
+            
+            return year === selectedYear && month === selectedMonth;
         };
 
         const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
@@ -314,7 +307,7 @@ export default function MyIncomePage() {
                 {filteredEvents.length > 0 ? filteredEvents.map(event => {
                     const income = incomes.find(i => i.eventId === event.id);
                     const isCompleted = !!income;
-                    const eventDate = robustParseDate(event.eventDate);
+                    const eventDate = parse(event.eventDate, "yyyy-MM-dd", new Date());
                     return (
                         <div key={event.id} className={cn("flex justify-between items-center p-3 rounded-md border", isCompleted ? "bg-green-50 dark:bg-green-950/30 border-green-200" : "bg-muted/50")}>
                             <div>
@@ -361,7 +354,7 @@ export default function MyIncomePage() {
             </CardHeader>
             <CardContent className="space-y-2">
                  {filteredExpenses.length > 0 ? filteredExpenses.map(expense => {
-                    const expenseDate = robustParseDate(expense.date);
+                    const expenseDate = parse(expense.date, 'yyyy-MM-dd', new Date());
                     return (
                         <div key={expense.id} className="flex justify-between items-center p-3 rounded-md border bg-muted/50">
                             <div>
@@ -382,5 +375,7 @@ export default function MyIncomePage() {
     </div>
   );
 }
+
+    
 
     
