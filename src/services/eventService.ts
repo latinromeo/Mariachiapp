@@ -19,6 +19,7 @@ import {
     deleteDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { EVENT_PLANS } from "@/lib/constants";
 
 // --- INTERFACES ---
 
@@ -282,8 +283,10 @@ export async function getEventById(id: string): Promise<EventData | null> {
 export async function createEvent(data: EventInputData): Promise<{ success: boolean; eventId?: string, error?: string }> {
   let clientId = data.clientId;
 
-  // If no clientId is provided (i.e., new client flow), find or create the client
   if (!clientId) {
+    if (!data.clientPhone) {
+        return { success: false, error: "Para crear un nuevo cliente, el número de teléfono es obligatorio. Por favor, solicítalo al usuario." };
+    }
     let client = await findClientByPhone(data.clientPhone);
     if (client) {
       clientId = client.id;
@@ -296,24 +299,32 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
     }
   }
   
-  const pendingBalance = data.contractedAmount - data.amountPaid;
-  const profit = data.contractedAmount - (data.musiciansPay || 0);
+  const selectedPlan = data.plan ? EVENT_PLANS.find(p => p.value === data.plan) : null;
+
+  const contractedAmount = data.contractedAmount ?? selectedPlan?.price ?? 0;
+  const musiciansPay = data.musiciansPay ?? (data.externalGroup ? 0 : (selectedPlan?.musicianPay ?? 0));
+  const amountPaid = data.amountPaid ?? 0;
+
+  const pendingBalance = contractedAmount - amountPaid;
+  const profit = contractedAmount - musiciansPay;
 
   let finalExternalContact = data.externalContact;
   if (data.externalContact === 'otro' && data.otherExternalContact) {
       finalExternalContact = data.otherExternalContact;
   }
 
-  // Create a new object for Firestore without the temporary 'otherExternalContact' field
   const { otherExternalContact, ...eventDataForFirestore } = data;
 
   const newEventData = {
     ...eventDataForFirestore,
     clientId,
     externalContact: finalExternalContact,
+    contractedAmount,
+    amountPaid,
+    musiciansPay,
     pendingBalance,
     profit,
-    status: data.externalGroup ? 'external' : 'pending',
+    status: data.externalGroup ? 'external' as const : 'pending' as const,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -337,35 +348,41 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
         }
         
         const existingData = eventSnap.data() as EventData;
-        const contractedAmount = data.contractedAmount ?? existingData.contractedAmount;
-        const amountPaid = data.amountPaid ?? existingData.amountPaid;
-        const musiciansPay = data.musiciansPay ?? existingData.musiciansPay;
+        const mergedData = { ...existingData, ...data };
+        const selectedPlan = mergedData.plan ? EVENT_PLANS.find(p => p.value === mergedData.plan) : null;
 
+        const contractedAmount = data.contractedAmount !== undefined ? data.contractedAmount : (data.plan ? (selectedPlan?.price ?? existingData.contractedAmount) : existingData.contractedAmount);
+        const musiciansPay = data.musiciansPay !== undefined ? data.musiciansPay : (data.plan && !mergedData.externalGroup ? (selectedPlan?.musicianPay ?? existingData.musiciansPay) : existingData.musiciansPay);
+        const amountPaid = data.amountPaid !== undefined ? data.amountPaid : existingData.amountPaid;
+        
         const pendingBalance = contractedAmount - amountPaid;
         const profit = contractedAmount - (musiciansPay || 0);
         
-        let finalExternalContact = data.externalContact;
+        let finalExternalContact = mergedData.externalContact;
         if (data.externalContact === 'otro' && data.otherExternalContact) {
             finalExternalContact = data.otherExternalContact;
         }
 
         const { otherExternalContact, ...updateDataForFirestore } = data;
 
-        const updateData: { [key: string]: any } = {
+        const updatePayload: { [key: string]: any } = {
             ...updateDataForFirestore,
             externalContact: finalExternalContact,
             pendingBalance,
             profit,
+            contractedAmount,
+            musiciansPay,
+            amountPaid,
             updatedAt: serverTimestamp(),
         };
 
         if (data.externalGroup !== undefined) {
             if (existingData.status !== 'completed' && existingData.status !== 'cancelled') {
-                updateData.status = data.externalGroup ? 'external' : 'pending';
+                updatePayload.status = data.externalGroup ? 'external' : 'pending';
             }
         }
 
-        await updateDoc(eventRef, updateData);
+        await updateDoc(eventRef, updatePayload);
         return { success: true };
     } catch (error) {
         console.error("Error updating event:", error);

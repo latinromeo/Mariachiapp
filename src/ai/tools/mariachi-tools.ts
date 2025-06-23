@@ -1,3 +1,4 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -96,18 +97,18 @@ export const listClients = ai.defineTool(
 
 // Tool to create an event
 const CreateEventInputSchema = z.object({
-    clientName: z.string().describe("Nombre del cliente para el evento."),
-    clientPhone: z.string().describe("Teléfono del cliente."),
-    eventType: z.string().describe("Tipo de evento (ej: boda, cumpleaños)."),
-    eventDate: z.string().describe("Fecha del evento en formato YYYY-MM-DD."),
-    eventTime: z.string().describe("Hora del evento (ej: 8:00 PM)."),
-    plan: z.string().describe("Plan contratado (ej: 1_hora, express)."),
-    paymentMethod: z.string().describe("Método de pago (ej: cash, bank_deposit)."),
-    location: z.string().describe("Dirección o lugar del evento."),
-    sector: z.string().describe("Sector o zona donde se realizará el evento."),
-    contractedAmount: z.number().describe("Monto total contratado por el servicio."),
-    amountPaid: z.number().describe("Monto ya pagado o anticipo."),
-    musiciansPay: z.number().optional().describe("Pago para los músicos (si aplica)."),
+    clientName: z.string().describe("Nombre del cliente para el evento. Este campo es obligatorio."),
+    eventDate: z.string().describe("Fecha del evento en formato YYYY-MM-DD. Este campo es obligatorio."),
+    clientPhone: z.string().optional().describe("Teléfono del cliente. Necesario si es un cliente nuevo que no está en el sistema."),
+    eventType: z.string().optional().describe("Tipo de evento (ej: boda, cumpleaños)."),
+    eventTime: z.string().optional().describe("Hora del evento (ej: 8:00 PM)."),
+    plan: z.string().optional().describe("Plan contratado (ej: 'express', '1_hora'). El asistente debe usar esto para calcular el costo si no se provee un monto específico."),
+    paymentMethod: z.string().optional().describe("Método de pago (ej: cash, bank_deposit)."),
+    location: z.string().optional().describe("Dirección o lugar del evento."),
+    sector: z.string().optional().describe("Sector o zona donde se realizará el evento."),
+    contractedAmount: z.number().optional().describe("Monto total contratado. Si no se especifica, se calculará a partir del 'plan' seleccionado."),
+    amountPaid: z.number().optional().describe("Monto ya pagado o anticipo. Si no se especifica, se asume 0."),
+    musiciansPay: z.number().optional().describe("Pago para los músicos. Si no se especifica, se calculará a partir del 'plan'."),
     externalGroup: z.boolean().default(false).describe("Indica si el evento es realizado por un grupo externo."),
     externalContact: z.string().optional().describe("Nombre e info de contacto del grupo externo (si aplica)."),
     notes: z.string().optional().describe("Notas adicionales sobre el evento."),
@@ -116,7 +117,7 @@ const CreateEventInputSchema = z.object({
 export const createNewEvent = ai.defineTool(
     {
         name: 'createEvent',
-        description: 'Crea un nuevo evento en el calendario. Recopila toda la información necesaria y la guarda.',
+        description: 'Crea un nuevo evento en el calendario. Recopila la información necesaria y la guarda. El asistente debe ser capaz de inferir costos y pagos a músicos a partir del plan si no se especifican montos. Si falta información crítica como el teléfono de un cliente nuevo, debe solicitarla.',
         inputSchema: CreateEventInputSchema,
         outputSchema: z.object({
             success: z.boolean(),
