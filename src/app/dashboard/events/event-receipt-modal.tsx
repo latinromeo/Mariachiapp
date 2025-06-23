@@ -1,9 +1,12 @@
 
 "use client"
 
-import React, { useRef } from "react"
+import React, { useRef, useState } from "react"
 import { format, parse } from "date-fns"
 import { es } from "date-fns/locale"
+import jsPDF from "jspdf"
+import html2canvas from "html2canvas"
+
 import {
   Dialog,
   DialogContent,
@@ -14,10 +17,10 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Printer, MessageSquare } from "lucide-react"
+import { Printer, MessageSquare, Loader2 } from "lucide-react"
 import { type EventData } from "@/services/eventService"
 import { EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
-import { useReactToPrint } from 'react-to-print'
+
 
 interface EventReceiptModalProps {
   isOpen: boolean
@@ -32,18 +35,14 @@ const formatCurrency = (value: number | undefined) => {
     return `RD$${(value).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-// This component contains the actual content of the receipt.
-// It is a forwardRef component to ensure the ref is passed correctly.
 const ReceiptBody = React.forwardRef<HTMLDivElement, {
   eventData: Partial<EventData>;
   eventTypeLabel: string;
   planLabel: string;
   paymentMethodLabel: string;
 }>(({ eventData, eventTypeLabel, planLabel, paymentMethodLabel }, ref) => (
-  // Using explicit colors for better print results regardless of theme
   <div ref={ref} className="px-5 py-4 space-y-6 bg-white text-black">
     <div className="text-center space-y-2">
-      {/* Use a standard <img> tag for printing compatibility */}
       <img
         src="/logo.svg"
         alt="Logo Mariachi Reyes de México"
@@ -58,44 +57,44 @@ const ReceiptBody = React.forwardRef<HTMLDivElement, {
       <div className="space-y-3">
         <h3 className="font-semibold text-base border-b pb-1">Datos del Cliente</h3>
         <div className="space-y-1">
-          <div className="flex justify-between items-start gap-4">
-            <span className="text-gray-500 shrink-0">Nombre:</span>
-            <span className="font-medium text-right">{eventData.clientName}</span>
+          <div className="grid grid-cols-2 items-start gap-2">
+            <span className="text-gray-500">Nombre:</span>
+            <span className="font-medium text-right break-words">{eventData.clientName}</span>
           </div>
-          <div className="flex justify-between items-start gap-4">
-            <span className="text-gray-500 shrink-0">Teléfono:</span>
-            <span className="font-medium text-right">{eventData.clientPhone}</span>
+          <div className="grid grid-cols-2 items-start gap-2">
+            <span className="text-gray-500">Teléfono:</span>
+            <span className="font-medium text-right break-words">{eventData.clientPhone}</span>
           </div>
         </div>
       </div>
       <div className="space-y-3">
         <h3 className="font-semibold text-base border-b pb-1">Detalles del Evento</h3>
         <div className="space-y-1">
-          <div className="flex justify-between items-start gap-4">
-            <span className="text-gray-500 shrink-0">Tipo:</span>
-            <span className="font-medium text-right">{eventTypeLabel}</span>
+          <div className="grid grid-cols-2 items-start gap-2">
+            <span className="text-gray-500">Tipo:</span>
+            <span className="font-medium text-right break-words">{eventTypeLabel}</span>
           </div>
-          <div className="flex justify-between items-start gap-4">
-            <span className="text-gray-500 shrink-0">Fecha:</span>
-            <span className="font-medium text-right">
+          <div className="grid grid-cols-2 items-start gap-2">
+            <span className="text-gray-500">Fecha:</span>
+            <span className="font-medium text-right break-words">
               {eventData.eventDate
                 ? format(parse(eventData.eventDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy", { locale: es })
                 : "N/A"}
             </span>
           </div>
-          <div className="flex justify-between items-start gap-4">
-            <span className="text-gray-500 shrink-0">Hora:</span>
-            <span className="font-medium text-right">{eventData.eventTime}</span>
+          <div className="grid grid-cols-2 items-start gap-2">
+            <span className="text-gray-500">Hora:</span>
+            <span className="font-medium text-right break-words">{eventData.eventTime}</span>
           </div>
-          <div className="flex justify-between items-start gap-4">
-            <span className="text-gray-500 shrink-0">Dirección:</span>
+          <div className="grid grid-cols-2 items-start gap-2">
+            <span className="text-gray-500">Dirección:</span>
             <span className="font-medium text-right break-words">
               {eventData.location}, {eventData.sector}
             </span>
           </div>
-          <div className="flex justify-between items-start gap-4">
-            <span className="text-gray-500 shrink-0">Duración:</span>
-            <span className="font-medium text-right">{planLabel}</span>
+           <div className="grid grid-cols-2 items-start gap-2">
+            <span className="text-gray-500">Duración:</span>
+            <span className="font-medium text-right break-words">{planLabel}</span>
           </div>
         </div>
       </div>
@@ -103,32 +102,32 @@ const ReceiptBody = React.forwardRef<HTMLDivElement, {
     <div className="space-y-3">
       <h3 className="font-semibold text-base border-b pb-1">Información del Pago</h3>
       <div className="space-y-1.5">
-        <div className="flex justify-between items-start">
+        <div className="grid grid-cols-2 items-start">
           <span className="text-gray-500">Costo Total del Servicio:</span>
           <span className="font-bold text-base text-right">
             {formatCurrency(eventData.contractedAmount)}
           </span>
         </div>
-        <div className="flex justify-between items-start">
+        <div className="grid grid-cols-2 items-start">
           <span className="text-gray-500">Abono Realizado:</span>
           <span className="font-medium text-green-600 text-right">
             {formatCurrency(eventData.amountPaid)}
           </span>
         </div>
-        <div className="flex justify-between items-start">
+        <div className="grid grid-cols-2 items-start">
           <span className="text-gray-500">Monto Restante a Pagar:</span>
           <span className="font-bold text-base text-right text-red-600">
             {formatCurrency(eventData.pendingBalance)}
           </span>
         </div>
         <Separator className="!my-3" />
-        <div className="flex justify-between items-start">
+        <div className="grid grid-cols-2 items-start">
           <span className="text-gray-500">Fecha de Pago del Abono:</span>
           <span className="font-medium text-right">
             {format(new Date(), "dd/MM/yyyy", { locale: es })}
           </span>
         </div>
-        <div className="flex justify-between items-start">
+        <div className="grid grid-cols-2 items-start">
           <span className="text-gray-500">Método de Pago del Abono:</span>
           <span className="font-medium text-right">{paymentMethodLabel}</span>
         </div>
@@ -147,11 +146,37 @@ ReceiptBody.displayName = "ReceiptBody";
 
 export function EventReceiptModal({ isOpen, onClose, eventData }: EventReceiptModalProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handlePrint = useReactToPrint({
-    content: () => receiptRef.current,
-    documentTitle: `Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}`
-  });
+  const handleSavePdf = () => {
+    const input = receiptRef.current;
+    if (!input) return;
+
+    setIsSaving(true);
+    html2canvas(input, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
+        .then((canvas) => {
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const ratio = canvasWidth / canvasHeight;
+
+            const imgWidth = pdfWidth - 20; // 10mm margin each side
+            const imgHeight = imgWidth / ratio;
+
+            pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+            pdf.save(`Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}.pdf`);
+        })
+        .catch(err => {
+            console.error("Error generating PDF:", err);
+            alert("Hubo un error al generar el PDF. Por favor, inténtelo de nuevo.");
+        })
+        .finally(() => {
+            setIsSaving(false);
+        });
+  };
 
   if (!eventData) return null
 
@@ -196,14 +221,13 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
           <DialogTitle>Evento Creado Exitosamente - Recibo</DialogTitle>
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto px-1">
-           {/* This is the visible component, now with the ref */}
            <ReceiptBody ref={receiptRef} {...receiptContentProps} />
         </div>
          <DialogFooter className="p-6 border-t bg-background flex-col gap-2">
             <div className="flex flex-col sm:flex-row gap-2 justify-end">
-                <Button onClick={handlePrint} variant="outline" className="w-full sm:w-auto">
-                    <Printer className="mr-2 h-4 w-4" />
-                    Imprimir / Guardar PDF
+                <Button onClick={handleSavePdf} variant="outline" className="w-full sm:w-auto" disabled={isSaving}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                    {isSaving ? 'Guardando PDF...' : 'Guardar como PDF'}
                 </Button>
                 <Button onClick={handleWhatsAppShare} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
                     <MessageSquare className="mr-2 h-4 w-4" />
@@ -214,7 +238,7 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
                 </DialogClose>
             </div>
             <p className="text-xs text-muted-foreground text-center sm:text-right mt-2">
-                Para enviar el PDF, primero guárdelo en su dispositivo y luego adjúntelo en WhatsApp.
+                Para compartir el recibo por WhatsApp, guárdelo como PDF y luego adjúntelo en la conversación.
             </p>
         </DialogFooter>
       </DialogContent>
