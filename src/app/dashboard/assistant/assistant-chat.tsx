@@ -28,7 +28,7 @@ export function AssistantChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -44,31 +44,28 @@ export function AssistantChat() {
   }, [isOpen, messages.length]);
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-        scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    const currentInput = input.trim();
+    if (!currentInput || isLoading) return;
 
-    const userMessage: Message = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-
+    const userMessage: Message = { role: "user", content: currentInput };
+    
     const historyForApi = messages.map((msg) => ({
       role: msg.role,
       parts: [{ text: msg.content }],
     }));
 
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
     try {
       const response = await askAssistant({
-        message: input,
+        message: currentInput,
         history: historyForApi,
       });
       const assistantMessage: Message = { role: "model", content: response };
@@ -108,7 +105,7 @@ export function AssistantChat() {
             </SheetDescription>
           </SheetHeader>
           <ScrollArea className="flex-1">
-            <div ref={scrollAreaRef} className="space-y-6 p-6">
+            <div className="space-y-6 p-6">
               <AnimatePresence>
               {messages.map((message, index) => (
                 <motion.div
@@ -162,6 +159,7 @@ export function AssistantChat() {
                     </div>
                 </motion.div>
               )}
+               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
            <SheetFooter className="p-4 bg-background border-t">
