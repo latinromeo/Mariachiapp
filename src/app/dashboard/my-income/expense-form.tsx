@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
 import { Loader2, CalendarIcon, DollarSign, Edit } from "lucide-react"
 import { createMusicianExpense } from "@/services/eventService"
-import { FINANCE_CATEGORIES } from "@/lib/constants"
+import { MUSICIAN_EXPENSE_CATEGORIES } from "@/lib/constants"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useUser } from "@/lib/auth"
 import { Textarea } from "@/components/ui/textarea"
@@ -91,7 +91,7 @@ export function ExpenseForm({ onSuccess }: ExpenseFormProps) {
                          <Select onValueChange={field.onChange} value={field.value} defaultValue="">
                             <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
                             <SelectContent>
-                                {FINANCE_CATEGORIES.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}
+                                {MUSICIAN_EXPENSE_CATEGORIES.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}
                             </SelectContent>
                         </Select>
                         <FormMessage />

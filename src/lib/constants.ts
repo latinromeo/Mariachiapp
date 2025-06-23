@@ -48,6 +48,22 @@ export const FINANCE_CATEGORIES = [
   { value: "otro", label: "Otro" },
 ];
 
+export const MUSICIAN_EXPENSE_CATEGORIES = [
+  { value: "casa", label: "Casa (Alquiler/Hipoteca, Mantenimiento)" },
+  { value: "lavanderia", label: "Lavandería (Personal y de Trajes)" },
+  { value: "telefono", label: "Teléfono / Comunicación Personal" },
+  { value: "transporte_personal", label: "Transporte Personal (Fuera de eventos)" },
+  { value: "alimentacion_personal", label: "Alimentación Personal (Fuera de eventos)" },
+  { value: "ocio", label: "Entretenimiento y Ocio" },
+  { value: "salud", label: "Salud (Seguro, Medicamentos, Consultas)" },
+  { value: "educacion", label: "Educación Personal / Cursos" },
+  { value: "vestuario_personal", label: "Vestuario Personal (No de mariachi)" },
+  { value: "ahorros", label: "Ahorros / Inversiones Personales" },
+  { value: "deudas", label: "Deudas Personales (Préstamos, Tarjetas)" },
+  { value: "regalos", label: "Regalos / Donaciones Personales" },
+  { value: "otro", label: "Otro Gasto Personal" },
+];
+
 export const EXTERNAL_CONTACTS = [
   { value: "mariachi_aguila_nerio", label: "Mariachi Aguila (Nerio) Tel:8293868745" },
   { value: "mariachi_monterrey_jorge_luis", label: "Mariachi Monterrey (Jorge Luis) Tel: 8098556036" },
