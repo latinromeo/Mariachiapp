@@ -1,4 +1,3 @@
-
 "use client"
 
 import { Lock, User } from "lucide-react"
@@ -32,7 +31,7 @@ export default function LoginPage() {
             <div className="flex justify-center">
                 <Logo />
             </div>
-            <CardTitle className="text-3xl font-bold text-red-700">Iniciar Sesión</CardTitle>
+            <CardTitle className="text-3xl font-bold">Iniciar Sesión</CardTitle>
             <CardDescription>Accede a tu panel de Mariachi Manager.</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
