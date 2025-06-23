@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { type EventData, getEvents, completeEvent, type RehearsalData, getRehearsals } from "@/services/eventService";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, Music, PlusCircle, ExternalLink, User } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, Music, PlusCircle, ExternalLink, User, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { EVENT_PLANS } from "@/lib/constants";
@@ -300,19 +300,26 @@ export default function DashboardPage() {
                                     );
                                 }
                                 return ( // Rehearsal card
-                                    <Card key={activity.id} className="p-4 bg-muted/50">
-                                        <div className="flex justify-between items-start gap-4">
-                                            <div className="flex-1 space-y-3">
-                                                <div className="font-semibold text-base capitalize flex items-center gap-2"><Music className="h-5 w-5 text-primary" /> Ensayo</div>
-                                                <div className="text-muted-foreground text-sm">Tema: <span className="font-semibold text-foreground">{activity.focus}</span></div>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-muted-foreground text-sm">
+                                    <Card key={activity.id} className="bg-muted/50">
+                                        <div className="p-4 space-y-3">
+                                            <div className="font-semibold text-base capitalize flex items-center gap-2"><Music className="h-5 w-5 text-primary" /> Ensayo</div>
+                                            
+                                            <div className="space-y-2 text-sm">
+                                                <div className="text-muted-foreground">Tema: <span className="font-semibold text-foreground">{activity.focus}</span></div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-muted-foreground">
                                                     <p className="flex items-center gap-2"><Clock className="h-4 w-4"/> {activity.time}</p>
                                                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4"/> {activity.location}</p>
                                                 </div>
                                             </div>
-                                                <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
-                                                <span>No requiere acción</span>
-                                                </div>
+                                            
+                                            <Separator className="my-2" />
+                                        
+                                            <div className="flex justify-start items-center text-sm pt-1">
+                                                <Link href={`/dashboard/rehearsals/${activity.id}/edit`} className="text-primary hover:underline font-medium flex items-center gap-1">
+                                                    Ver Detalles / Editar
+                                                    <Edit className="h-3 w-3" />
+                                                </Link>
+                                            </div>
                                         </div>
                                     </Card>
                                 );
