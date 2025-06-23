@@ -57,21 +57,21 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                         <div key={event.id} className="relative p-4 rounded-lg bg-destructive/10 border border-destructive/20 border-l-4 border-l-destructive">
                             <Badge variant="destructive" className="absolute top-4 right-4 bg-red-100 text-red-800 border-red-200">Evento</Badge>
                             <div className="space-y-3">
-                                <p className="flex items-center gap-2 text-destructive font-semibold text-base pr-20">
-                                    <Calendar className="h-5 w-5"/> {event.eventTime} - {event.eventType} {event.clientName}
+                                <p className="flex items-center gap-2 text-foreground font-semibold text-base pr-20">
+                                    <Calendar className="h-5 w-5 text-destructive"/> {event.eventTime} - {event.eventType} {event.clientName}
                                 </p>
                                 <div className="text-sm space-y-2">
-                                    <p className="flex items-center gap-2 text-muted-foreground">
-                                        <MapPin className="h-4 w-4 text-primary/80"/> @{event.location}, {event.sector}
+                                    <p className="flex items-center gap-2 text-foreground">
+                                        <MapPin className="h-4 w-4 text-green-600"/> @{event.location}, {event.sector}
                                     </p>
-                                    <p className="flex items-center gap-2 text-muted-foreground">
-                                        <Phone className="h-4 w-4 text-primary/80"/> Tel Cliente: 
+                                    <p className="flex items-center gap-2 text-foreground">
+                                        <Phone className="h-4 w-4 text-blue-600"/> Tel Cliente: 
                                         <a href={`https://wa.me/${event.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
                                             {event.clientPhone}
                                         </a>
                                     </p>
-                                    <div className="flex items-start gap-2 text-muted-foreground">
-                                        <DollarSign className="h-4 w-4 text-primary/80 mt-0.5"/> 
+                                    <div className="flex items-start gap-2 text-foreground">
+                                        <DollarSign className="h-4 w-4 text-yellow-600 mt-0.5"/> 
                                         <div>
                                             Total: <span className="font-semibold text-foreground">{formatCurrency(event.contractedAmount)}</span>
                                             <br/>
@@ -101,19 +101,19 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                          <div key={rehearsal.id} className="p-4 rounded-lg border bg-secondary/50 border-l-4 border-l-primary">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="font-semibold flex items-center gap-2"><Music className="h-5 w-5 text-primary"/>Ensayo: {rehearsal.focus}</h3>
+                                    <h3 className="font-semibold flex items-center gap-2 text-foreground"><Music className="h-5 w-5 text-primary"/>Ensayo: {rehearsal.focus}</h3>
                                 </div>
                                  <Badge variant="secondary">Ensayo</Badge>
                             </div>
                              <Separator className="my-2" />
-                             <div className="text-sm text-muted-foreground space-y-2">
+                             <div className="text-sm text-foreground space-y-2">
                                 <div className="space-y-1">
-                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4"/> {rehearsal.time}</p>
-                                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4"/> {rehearsal.location}</p>
+                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-purple-600"/> {rehearsal.time}</p>
+                                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green-600"/> {rehearsal.location}</p>
                                 </div>
                                 {rehearsal.songs && rehearsal.songs.length > 0 && (
                                     <div>
-                                        <h4 className="flex items-center gap-2 font-medium text-foreground mb-1"><ListMusic className="h-4 w-4"/>Canciones a Ensayar:</h4>
+                                        <h4 className="flex items-center gap-2 font-medium text-foreground mb-1"><ListMusic className="h-4 w-4 text-orange-600"/>Canciones a Ensayar:</h4>
                                         <ul className="list-none text-xs pl-0 space-y-1">
                                             {rehearsal.songs.map((song, index) => (
                                                 <li key={index} className="flex items-center justify-between bg-background/50 p-1.5 rounded-md">
