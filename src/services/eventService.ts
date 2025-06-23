@@ -267,7 +267,7 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
     externalContact: finalExternalContact,
     pendingBalance,
     profit,
-    status: 'pending', // Default status
+    status: data.externalGroup ? 'external' : 'pending',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -305,7 +305,7 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
 
         const { otherExternalContact, ...updateDataForFirestore } = data;
 
-        const updateData = {
+        const updateData: { [key: string]: any } = {
             ...updateDataForFirestore,
             externalContact: finalExternalContact,
             pendingBalance,
@@ -313,7 +313,13 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
             updatedAt: serverTimestamp(),
         };
 
-        await updateDoc(eventRef, updateData as { [x: string]: any });
+        if (data.externalGroup !== undefined) {
+            if (existingData.status !== 'completed' && existingData.status !== 'cancelled') {
+                updateData.status = data.externalGroup ? 'external' : 'pending';
+            }
+        }
+
+        await updateDoc(eventRef, updateData);
         return { success: true };
     } catch (error) {
         console.error("Error updating event:", error);
