@@ -151,7 +151,7 @@ export default function ClientsPage() {
                       <div className="text-sm text-muted-foreground">{client.email}</div>
                     </TableCell>
                     <TableCell>
-                       <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-primary hover:underline">
+                       <a href={`https://wa.me/${client.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline">
                         <Phone className="h-4 w-4" />
                         {client.phone}
                       </a>
