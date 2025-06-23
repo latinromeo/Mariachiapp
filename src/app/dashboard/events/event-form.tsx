@@ -36,6 +36,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { EventReceiptModal } from "./event-receipt-modal"
 
 const formSchema = z.object({
   clientName: z.string().min(2, { message: "El nombre del cliente es obligatorio." }),
@@ -92,6 +93,8 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingClient, setIsCheckingClient] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [receiptData, setReceiptData] = useState<Partial<EventData> | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   
   const isEditMode = !!eventId;
 
@@ -272,25 +275,53 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
     }
   }
 
+  const handleCloseReceipt = () => {
+    setIsReceiptModalOpen(false);
+    setReceiptData(null);
+    router.push('/dashboard');
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-        const result = isEditMode && eventId
-                ? await updateEvent(eventId, values)
-                : await createEvent(values);
-
-        if (result.success) {
-            toast({
-                title: isEditMode ? "¡Evento Actualizado!" : "¡Evento Creado!",
-                description: `El evento ha sido ${isEditMode ? 'actualizado' : 'guardado'} exitosamente.`,
-            });
-            router.push('/dashboard');
+        if (isEditMode && eventId) {
+            const result = await updateEvent(eventId, values);
+            if (result.success) {
+                toast({
+                    title: "¡Evento Actualizado!",
+                    description: `El evento ha sido actualizado exitosamente.`,
+                });
+                router.push('/dashboard');
+            } else {
+                 toast({
+                    variant: "destructive",
+                    title: `Error al actualizar el evento`,
+                    description: result.error || "Hubo un problema al guardar. Inténtalo de nuevo.",
+                });
+            }
         } else {
-             toast({
-                variant: "destructive",
-                title: `Error al ${isEditMode ? 'actualizar' : 'crear'} el evento`,
-                description: result.error || "Hubo un problema al guardar. Inténtalo de nuevo.",
-            });
+            const result = await createEvent(values);
+            if (result.success && result.eventId) {
+                const pendingBalance = values.contractedAmount - values.amountPaid;
+                const newEventData = {
+                    ...values,
+                    id: result.eventId,
+                    pendingBalance,
+                };
+                setReceiptData(newEventData);
+                setIsReceiptModalOpen(true);
+                form.reset();
+                toast({
+                    title: "¡Evento Creado!",
+                    description: "El evento ha sido guardado exitosamente. Se generó un recibo.",
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Error al crear el evento",
+                    description: result.error || "Hubo un problema al guardar. Inténtalo de nuevo.",
+                });
+            }
         }
     } catch (error) {
         toast({
@@ -305,6 +336,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
   }
 
   return (
+    <>
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid lg:grid-cols-3 gap-6">
@@ -350,7 +382,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                       <FormItem>
                                           <FormLabel className="flex items-center gap-2"><Mic className="h-4 w-4 text-muted-foreground"/>Tipo de Evento</FormLabel>
                                           <Select onValueChange={field.onChange} value={field.value}>
-                                              <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger></FormControl>
+                                              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                               <SelectContent>
                                                 {EVENT_TYPES.map(type => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
                                               </SelectContent>
@@ -507,7 +539,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                   <FormItem>
                                       <FormLabel>Método de Pago</FormLabel>
                                       <Select onValueChange={field.onChange} value={field.value}>
-                                          <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar método..." /></SelectTrigger></FormControl>
+                                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                           <SelectContent>
                                              {PAYMENT_METHODS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                                           </SelectContent>
@@ -703,5 +735,11 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
         </div>
       </form>
     </Form>
+    <EventReceiptModal 
+        isOpen={isReceiptModalOpen}
+        onClose={handleCloseReceipt}
+        eventData={receiptData}
+      />
+    </>
   )
 }

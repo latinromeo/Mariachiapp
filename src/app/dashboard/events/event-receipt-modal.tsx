@@ -1,0 +1,134 @@
+"use client"
+
+import { useRef } from "react"
+import Image from "next/image"
+import { format, parse } from "date-fns"
+import { es } from "date-fns/locale"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import { Printer, MessageSquare } from "lucide-react"
+import { type EventData } from "@/services/eventService"
+import { EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
+import { useReactToPrint } from 'react-to-print'
+
+interface EventReceiptModalProps {
+  isOpen: boolean
+  onClose: () => void
+  eventData: Partial<EventData> | null
+}
+
+const formatCurrency = (value: number | undefined) => {
+    if (typeof value !== 'number' || isNaN(value)) {
+        return "RD$0.00";
+    }
+    return `RD$${(value).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+export function EventReceiptModal({ isOpen, onClose, eventData }: EventReceiptModalProps) {
+  const receiptRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    content: () => receiptRef.current,
+    documentTitle: `Recibo-Evento-${eventData?.clientName?.replace(/\s/g, '_') || 'sin_nombre'}`
+  });
+
+  if (!eventData) return null
+
+  const eventTypeLabel = EVENT_TYPES.find(e => e.value === eventData.eventType)?.label || eventData.eventType
+  const planLabel = EVENT_PLANS.find(p => p.value === eventData.plan)?.label || eventData.plan
+  const paymentMethodLabel = PAYMENT_METHODS.find(p => p.value === eventData.paymentMethod)?.label || eventData.paymentMethod
+
+  const whatsappMessage = `*Recibo de Confirmación de Evento - Mariachi Reyes de México*
+-----------------------------------
+*Datos del Cliente:*
+- Nombre: ${eventData.clientName}
+- Teléfono: ${eventData.clientPhone}
+
+*Detalles del Evento:*
+- Tipo: ${eventTypeLabel}
+- Fecha: ${eventData.eventDate ? format(parse(eventData.eventDate, 'yyyy-MM-dd', new Date()), "dd/MM/yyyy", { locale: es }) : 'N/A'}
+- Hora: ${eventData.eventTime}
+- Dirección: ${eventData.location}, ${eventData.sector}
+- Duración: ${planLabel}
+
+*Información del Pago:*
+- Costo Total: ${formatCurrency(eventData.contractedAmount)}
+- Abono Realizado: ${formatCurrency(eventData.amountPaid)}
+- Monto Restante: ${formatCurrency(eventData.pendingBalance)}
+- Fecha de Pago: ${format(new Date(), "dd/MM/yyyy", { locale: es })}
+- Método de Pago: ${paymentMethodLabel}
+
+Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos en su celebración!`;
+
+  const handleWhatsAppShare = () => {
+    const phone = eventData.clientPhone?.replace(/\D/g, '') || '';
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMessage)}`;
+    window.open(url, "_blank");
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl p-0">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle>Evento Creado Exitosamente - Recibo</DialogTitle>
+        </DialogHeader>
+        <div className="px-6 py-4 space-y-6" ref={receiptRef}>
+            <div className="text-center space-y-2">
+                <Image src="/logo.svg" alt="Logo Mariachi Reyes de México" width={150} height={50} className="mx-auto" />
+                <h2 className="text-2xl font-bold font-headline">Mariachi Reyes de México</h2>
+                <p className="text-muted-foreground">Recibo de Confirmación de Evento</p>
+            </div>
+            <Separator />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                <div className="space-y-3">
+                    <h3 className="font-semibold text-base border-b pb-1">Datos del Cliente</h3>
+                    <div className="flex justify-between"><span>Nombre:</span> <span className="font-medium text-right">{eventData.clientName}</span></div>
+                    <div className="flex justify-between"><span>Teléfono:</span> <span className="font-medium text-right">{eventData.clientPhone}</span></div>
+                </div>
+                 <div className="space-y-3">
+                    <h3 className="font-semibold text-base border-b pb-1">Detalles del Evento</h3>
+                    <div className="flex justify-between"><span>Tipo:</span> <span className="font-medium text-right">{eventTypeLabel}</span></div>
+                    <div className="flex justify-between"><span>Fecha:</span> <span className="font-medium text-right">{eventData.eventDate ? format(parse(eventData.eventDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy", { locale: es }) : 'N/A'}</span></div>
+                    <div className="flex justify-between"><span>Hora:</span> <span className="font-medium text-right">{eventData.eventTime}</span></div>
+                    <div className="flex justify-between"><span>Dirección:</span> <span className="font-medium text-right">{eventData.location}, {eventData.sector}</span></div>
+                    <div className="flex justify-between"><span>Duración:</span> <span className="font-medium text-right">{planLabel}</span></div>
+                </div>
+            </div>
+            <div className="space-y-3">
+                <h3 className="font-semibold text-base border-b pb-1">Información del Pago</h3>
+                <div className="flex justify-between"><span>Costo Total del Servicio:</span> <span className="font-bold text-base text-right">{formatCurrency(eventData.contractedAmount)}</span></div>
+                <div className="flex justify-between"><span>Abono Realizado:</span> <span className="font-medium text-green-600 text-right">{formatCurrency(eventData.amountPaid)}</span></div>
+                <div className="flex justify-between text-red-600"><span>Monto Restante a Pagar:</span> <span className="font-bold text-base text-right">{formatCurrency(eventData.pendingBalance)}</span></div>
+                <Separator className="my-2" />
+                <div className="flex justify-between"><span>Fecha de Pago del Abono:</span> <span className="font-medium text-right">{format(new Date(), "dd/MM/yyyy", { locale: es })}</span></div>
+                <div className="flex justify-between"><span>Método de Pago del Abono:</span> <span className="font-medium text-right">{paymentMethodLabel}</span></div>
+            </div>
+            <div className="mt-6 p-4 bg-muted/50 rounded-lg text-center text-sm text-muted-foreground">
+                <p>Este recibo confirma la contratación de nuestros servicios para la fecha indicada. Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos en su celebración!</p>
+            </div>
+        </div>
+         <DialogFooter className="p-6 border-t bg-background flex-col sm:flex-row gap-2 justify-end">
+            <Button onClick={handlePrint} variant="outline" className="w-full sm:w-auto">
+                <Printer className="mr-2 h-4 w-4" />
+                Imprimir Recibo / Guardar PDF
+            </Button>
+            <Button onClick={handleWhatsAppShare} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Enviar Confirmación por WhatsApp
+            </Button>
+            <DialogClose asChild>
+                <Button variant="secondary" className="w-full sm:w-auto">Cerrar</Button>
+            </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
