@@ -221,6 +221,7 @@ export default function EventsCalendarPage() {
             <DayDetailModal
                 isOpen={isModalOpen}
                 onClose={handleModalClose}
+                onRefresh={fetchData}
                 date={selectedDay}
                 events={selectedDayEvents}
                 rehearsals={selectedDayRehearsals}

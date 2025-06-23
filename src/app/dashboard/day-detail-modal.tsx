@@ -4,9 +4,9 @@
 import Link from "next/link"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { Calendar, Clock, MapPin, Music, PlusCircle, ListMusic, FileText, Video, Phone, DollarSign, CheckCircle, Edit, XCircle } from "lucide-react"
+import { Calendar, Clock, MapPin, Music, PlusCircle, ListMusic, FileText, Video, Phone, DollarSign, CheckCircle, Edit, XCircle, Loader2 } from "lucide-react"
 
-import { type EventData, type RehearsalData } from "@/services/eventService"
+import { type EventData, type RehearsalData, completeEvent } from "@/services/eventService"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -17,10 +17,13 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
+import { useState } from "react"
+import { useToast } from "@/hooks/use-toast"
 
 interface DayDetailModalProps {
   isOpen: boolean
   onClose: () => void
+  onRefresh: () => void
   date: Date
   events: EventData[]
   rehearsals: RehearsalData[]
@@ -73,9 +76,30 @@ const statusConfig = {
 };
 
 
-export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: DayDetailModalProps) {
+export function DayDetailModal({ isOpen, onClose, onRefresh, date, events, rehearsals }: DayDetailModalProps) {
   const formattedDate = format(date, "eeee, d 'de' MMMM 'de' yyyy", { locale: es })
   const dateForLink = format(date, 'yyyy-MM-dd')
+  const { toast } = useToast();
+  const [isCompleting, setIsCompleting] = useState<string | null>(null);
+
+  const handleCompleteEvent = async (eventId: string) => {
+    setIsCompleting(eventId);
+    const result = await completeEvent(eventId);
+    if (result.success) {
+      toast({
+        title: "¡Evento Completado!",
+        description: "El evento se marcó como completado y las finanzas se actualizaron.",
+      });
+      onRefresh();
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: result.error || "No se pudo completar el evento.",
+      });
+    }
+    setIsCompleting(null);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -95,13 +119,14 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                     {events.map(event => {
                         const config = statusConfig[event.status as keyof typeof statusConfig] || statusConfig.default;
+                        const canBeCompleted = event.status === 'pending' || event.status === 'confirmed';
                         
                         return (
-                        <div key={event.id} className={cn("relative p-4 rounded-lg bg-muted/30 border border-border border-l-4", config.borderColor)}>
+                        <div key={event.id} className={cn("p-4 rounded-lg bg-muted/30 border border-border border-l-4", config.borderColor)}>
                             <Badge variant={config.badgeVariant} className="absolute top-4 right-4">{config.badgeText}</Badge>
                             <div className="space-y-3">
-                                <p className={cn("flex items-center gap-2 text-foreground font-semibold text-base pr-20", config.iconColor)}>
-                                    <Calendar className="h-5 w-5"/> {event.eventTime} - {event.eventType} {event.clientName}
+                                <p className="flex items-center gap-2 text-foreground font-semibold text-base pr-20">
+                                    <Calendar className={cn("h-5 w-5", config.iconColor)}/> {event.eventTime} - {event.eventType} {event.clientName}
                                 </p>
                                 <div className="text-sm space-y-2">
                                     <p className="flex items-center gap-2 text-foreground">
@@ -136,9 +161,24 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                                     </p>
                                 )}
                             </div>
-                            <Link href={`/dashboard/events/${event.id}`} className="absolute bottom-4 right-4 text-sm text-primary hover:underline flex items-center gap-1">
-                                Ver / Editar <Edit className="h-3 w-3"/>
-                            </Link>
+                            <Separator className="my-3"/>
+                            <div className="flex justify-between items-center">
+                                <Link href={`/dashboard/events/${event.id}`} className="text-sm text-primary hover:underline flex items-center gap-1">
+                                    Ver / Editar <Edit className="h-3 w-3"/>
+                                </Link>
+                                {canBeCompleted && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="bg-green-100/50 text-green-700 border-green-300 hover:bg-green-100 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700 dark:hover:bg-green-900 font-medium"
+                                        onClick={() => handleCompleteEvent(event.id)}
+                                        disabled={isCompleting === event.id}
+                                    >
+                                        {isCompleting === event.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
+                                        Completar
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     )})}
                     {rehearsals.map(rehearsal => (
