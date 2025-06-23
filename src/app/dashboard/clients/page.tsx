@@ -214,7 +214,7 @@ export default function ClientsPage() {
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                             <DropdownMenuItem
-                                onClick={() => router.push(`/dashboard/clients/${client.id}/edit`)}
+                                onSelect={() => router.push(`/dashboard/clients/${client.id}/edit`)}
                             >
                                 <Edit className="mr-2 h-4 w-4" />
                                 <span>Editar</span>
@@ -222,7 +222,7 @@ export default function ClientsPage() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
-                                onClick={() => openDeleteDialog(client)}
+                                onSelect={() => openDeleteDialog(client)}
                             >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 <span>Eliminar</span>
