@@ -6,13 +6,14 @@ import Link from "next/link";
 import { format, getYear, getMonth, isSameMonth, parse, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { type EventData, getEvents, completeEvent, type RehearsalData, getRehearsals } from "@/services/eventService";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, PlusCircle, Music, Info, Edit } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, Music } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { EVENT_PLANS } from "@/lib/constants";
 
 const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -85,7 +86,7 @@ export default function DashboardPage() {
 
   const groupedActivities = useMemo(() => {
     return pendingActivities.reduce((acc, activity) => {
-      const dateKey = format(new Date(activity.date), "EEEE, dd 'de' MMMM", { locale: es });
+      const dateKey = format(new Date(activity.date), "EEEE, dd MMM", { locale: es });
       if (!acc[dateKey]) {
         acc[dateKey] = [];
       }
@@ -120,16 +121,11 @@ export default function DashboardPage() {
             <h1 className="font-headline text-3xl font-bold tracking-tight">
                 Actividades Pendientes ({pendingActivities.length})
             </h1>
-            <p className="text-muted-foreground">Eventos no pagados y ensayos del mes.</p>
+            <p className="text-muted-foreground">
+              {`Eventos y ensayos para ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}.`}
+            </p>
         </div>
       </div>
-
-       <Button asChild size="lg" className="w-full">
-            <Link href="/dashboard/events/new">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Nuevo Evento
-            </Link>
-        </Button>
       
       <div className="space-y-4">
          <div className="dark">
@@ -163,52 +159,62 @@ export default function DashboardPage() {
             ) : Object.keys(groupedActivities).length > 0 ? (
                 Object.entries(groupedActivities).map(([date, activitiesOnDay]) => (
                     <div key={date}>
-                            <h3 className="font-semibold capitalize mb-2 text-lg text-primary">{date}</h3>
+                            <h3 className="font-semibold capitalize mb-2 text-lg">{date}</h3>
                             <div className="space-y-4">
-                            {activitiesOnDay.map(activity => (
-                                <Card key={activity.id} className="p-4">
-                                    {activity.type === 'event' ? (
-                                        <div className="flex justify-between items-start gap-4">
-                                            <div className="flex-1 space-y-3">
-                                                <div className="font-semibold text-base capitalize">{activity.eventType}</div>
-                                                <div className="text-muted-foreground text-sm">Cliente: <span className="font-semibold text-foreground">{activity.clientName}</span></div>
+                            {activitiesOnDay.map(activity => {
+                                if (activity.type === 'event') {
+                                    const planLabel = EVENT_PLANS.find(p => p.value === activity.plan)?.label || activity.plan;
+                                    return (
+                                        <Card key={activity.id}>
+                                            <div className="p-4 space-y-3">
+                                                <div className="flex items-start gap-3">
+                                                    <Calendar className="h-5 w-5 text-destructive mt-1 flex-shrink-0" />
+                                                    <div>
+                                                        <p className="font-bold lowercase">{activity.eventType}</p>
+                                                        <p className="text-sm text-muted-foreground">Cliente: {activity.clientName}</p>
+                                                    </div>
+                                                </div>
                                                 
-                                                <div className="text-muted-foreground text-sm space-y-1">
-                                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4"/> {activity.eventTime}</p>
-                                                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4"/> {activity.location}</p>
-                                                    <p className="flex items-center gap-2"><Phone className="h-4 w-4"/> <a href={`https://wa.me/${activity.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{activity.clientPhone}</a></p>
+                                                <div className="pl-8 space-y-2 text-sm">
+                                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground"/> {activity.eventTime}</p>
+                                                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground"/> {activity.location}</p>
+                                                    <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground"/> 
+                                                        <a href={`https://wa.me/${activity.clientPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{activity.clientPhone}</a>
+                                                    </p>
                                                 </div>
-
-                                                <div className="pt-2 text-sm">
-                                                    {activity.pendingBalance > 0 ? (
-                                                        <p className="font-semibold text-destructive">Pago pendiente: {formatCurrency(activity.pendingBalance)}</p>
-                                                    ) : (
-                                                        <p className="font-semibold text-green-600">Pagado en su totalidad</p>
-                                                    )}
+                                                
+                                                <div className="pl-8 space-y-1 text-sm">
+                                                    <p>Plan: {planLabel}</p>
+                                                    <p>Total: <span className="font-semibold">{formatCurrency(activity.contractedAmount)}</span></p>
+                                                    <p>
+                                                        <span className="text-green-600 font-medium">Pagado: {formatCurrency(activity.amountPaid)}</span>
+                                                        {activity.pendingBalance > 0 && (
+                                                            <span className="text-red-600 font-medium ml-2">(Resta: {formatCurrency(activity.pendingBalance)})</span>
+                                                        )}
+                                                    </p>
                                                 </div>
-                                            </div>
-
-                                            <div className="flex flex-col items-end gap-2">
-                                                 <div className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id={`complete-${activity.id}`}
-                                                        onCheckedChange={(checked) => {
-                                                            if (checked) {
-                                                                handleCompleteEvent(activity.id);
-                                                            }
-                                                        }}
+                                                
+                                                <Separator className="my-2" />
+                                
+                                                <div className="flex justify-between items-center text-sm pt-1">
+                                                    <Link href={`/dashboard/events/${activity.id}/edit`} className="text-primary hover:underline font-medium">Ver Detalles / Editar</Link>
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline"
+                                                        className="bg-green-100/50 text-green-700 border-green-300 hover:bg-green-100 font-medium"
+                                                        onClick={() => handleCompleteEvent(activity.id)}
                                                         disabled={isCompleting === activity.id}
-                                                    />
-                                                    <label
-                                                        htmlFor={`complete-${activity.id}`}
-                                                        className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                                     >
-                                                        Marcar <br/>Completo
-                                                    </label>
+                                                        {isCompleting === activity.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
+                                                        Marcar Completo
+                                                    </Button>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ) : (
+                                        </Card>
+                                    );
+                                }
+                                return ( // Rehearsal card
+                                    <Card key={activity.id} className="p-4 bg-muted/50">
                                         <div className="flex justify-between items-start gap-4">
                                             <div className="flex-1 space-y-3">
                                                 <div className="font-semibold text-base capitalize flex items-center gap-2"><Music className="h-5 w-5 text-primary" /> Ensayo</div>
@@ -218,13 +224,13 @@ export default function DashboardPage() {
                                                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4"/> {activity.location}</p>
                                                 </div>
                                             </div>
-                                             <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
+                                                <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
                                                 <span>No requiere acción</span>
-                                             </div>
+                                                </div>
                                         </div>
-                                    )}
-                                </Card>
-                            ))}
+                                    </Card>
+                                );
+                            })}
                             </div>
                     </div>
                 ))
@@ -239,4 +245,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

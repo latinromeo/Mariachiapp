@@ -9,7 +9,7 @@ export const EVENT_TYPES = [
 ];
 
 export const EVENT_PLANS = [
-    { value: "serenata_basica", label: "Serenata Básica (5 canciones)" },
+    { value: "servicio_express", label: "Servicio Express (1-5 canciones)" },
     { value: "hora_completa", label: "Hora Completa" },
     { value: "evento_premium", label: "Evento Premium (2 horas + equipo)" },
     { value: "personalizado", label: "Personalizado" },
