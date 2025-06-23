@@ -54,7 +54,7 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
             ) : (
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                     {events.map(event => (
-                        <div key={event.id} className="relative p-4 rounded-lg bg-destructive/10 border border-destructive/20 border-l-4 border-l-destructive">
+                        <div key={event.id} className="relative p-4 rounded-lg bg-background border border-border border-l-4 border-l-destructive">
                             <Badge variant="destructive" className="absolute top-4 right-4 bg-red-100 text-red-800 border-red-200">Evento</Badge>
                             <div className="space-y-3">
                                 <p className="flex items-center gap-2 text-foreground font-semibold text-base pr-20">
@@ -98,7 +98,7 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                         </div>
                     ))}
                     {rehearsals.map(rehearsal => (
-                         <div key={rehearsal.id} className="p-4 rounded-lg border bg-secondary/50 border-l-4 border-l-primary">
+                         <div key={rehearsal.id} className="p-4 rounded-lg border bg-background border-l-4 border-l-primary">
                             <div className="flex justify-between items-start">
                                 <div>
                                     <h3 className="font-semibold flex items-center gap-2 text-foreground"><Music className="h-5 w-5 text-primary"/>Ensayo: {rehearsal.focus}</h3>
