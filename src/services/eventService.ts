@@ -2,7 +2,7 @@
 // src/services/eventService.ts
 'use server';
 
-import { add, sub, isBefore, startOfToday } from "date-fns";
+import { add, sub, isBefore, startOfToday, limit } from "date-fns";
 import { 
     collection, 
     getDocs, 
@@ -643,18 +643,19 @@ async function seedInitialSongs() {
     console.log("Checking for initial songs to seed...");
     const songsCol = collection(db, 'songs');
     
-    // This is a simple check to see if we should seed. 
-    // It assumes if one specific song exists, the seeding has been done.
-    const checkQuery = query(songsCol, where("title", "==", "Las Mañanitas"), limit(1));
-    const checkSnapshot = await getDocs(checkQuery);
+    // Fetch all existing songs to avoid duplicates.
+    const existingSongsSnapshot = await getDocs(songsCol);
+    const existingSongTitles = new Set(existingSongsSnapshot.docs.map(doc => doc.data().title));
+    
+    const songsToSeed = initialSongs.filter(song => !existingSongTitles.has(song.title));
 
-    if (!checkSnapshot.empty) {
-        console.log("Initial songs seem to be seeded already. Skipping.");
+    if (songsToSeed.length === 0) {
+        console.log("All initial songs seem to be seeded already. Skipping.");
         return;
     }
 
-    console.log("Seeding initial song list...");
-    for (const songData of initialSongs) {
+    console.log(`Seeding ${songsToSeed.length} new initial song(s)...`);
+    for (const songData of songsToSeed) {
         try {
             await addDoc(songsCol, {
                 ...songData,
@@ -734,7 +735,53 @@ export async function getMedia(): Promise<MediaFile[]> {
         const snapshot = await getDocs(q);
          if (snapshot.empty) {
           console.log("No media found in Firestore. The 'media' collection might be empty.");
-          return [];
+          // This is a placeholder for dummy data
+          const dummyMedia: MediaFile[] = [
+            {
+              id: "1",
+              name: "Boda Pérez 2024",
+              type: "image",
+              url: "https://placehold.co/600x400.png",
+              hint: "wedding mariachi",
+              size: 1200000,
+              uploadedBy: "Admin",
+              uploadedAt: new Date().toISOString(),
+              tags: ["boda", "2024"],
+            },
+             {
+              id: "2",
+              name: "Serenata a Mamá",
+              type: "video",
+              url: "https://placehold.co/600x400.png",
+              hint: "serenade music",
+              size: 25000000,
+              uploadedBy: "Admin",
+              uploadedAt: sub(new Date(), { days: 5 }).toISOString(),
+              tags: ["serenata", "familia"],
+            },
+            {
+              id: "3",
+              name: "Cumpleaños Sr. Juan",
+              type: "image",
+              url: "https://placehold.co/600x400.png",
+              hint: "birthday party",
+              size: 980000,
+              uploadedBy: "Admin",
+              uploadedAt: sub(new Date(), { days: 10 }).toISOString(),
+              tags: ["cumpleaños"],
+            },
+             {
+              id: "4",
+              name: "Audio de Referencia - El Rey",
+              type: "audio",
+              url: "",
+              size: 4500000,
+              uploadedBy: "Admin",
+              uploadedAt: sub(new Date(), { months: 1 }).toISOString(),
+              tags: ["repertorio", "referencia"],
+            }
+          ];
+          return dummyMedia;
         }
         const media = snapshot.docs.map(processDocTimestamps).filter(Boolean);
         return media as MediaFile[];
