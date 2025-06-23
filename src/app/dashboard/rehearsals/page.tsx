@@ -248,14 +248,18 @@ export default function RehearsalsPage() {
                                     </div>
                                 ) : <div />}
                                 <div className="flex items-center gap-1">
-                                     <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/rehearsals/${rehearsal.id}/edit`)} disabled={rehearsal.status === 'completed'}>
-                                        <Edit className="h-4 w-4" />
-                                        <span className="sr-only">Editar Ensayo</span>
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setRehearsalToDelete(rehearsal)}>
-                                        <Trash2 className="h-4 w-4" />
-                                        <span className="sr-only">Eliminar Ensayo</span>
-                                    </Button>
+                                    {permissions.canCreateRehearsals && (
+                                        <>
+                                            <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/rehearsals/${rehearsal.id}/edit`)} disabled={rehearsal.status === 'completed'}>
+                                                <Edit className="h-4 w-4" />
+                                                <span className="sr-only">Editar Ensayo</span>
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setRehearsalToDelete(rehearsal)}>
+                                                <Trash2 className="h-4 w-4" />
+                                                <span className="sr-only">Eliminar Ensayo</span>
+                                            </Button>
+                                        </>
+                                    )}
                                 </div>
                              </div>
                         </div>
