@@ -275,8 +275,8 @@ export default function FinancePage() {
                                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value as number, true)} />
                                 <ChartTooltip cursor={true} content={<ChartTooltipContent formatter={(value) => formatCurrency(value as number)} />} />
                                 <Legend content={<ChartLegendContent />} />
-                                <Bar dataKey="Ingresos" fill="var(--color-Ingresos)" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="Egresos" fill="var(--color-Egresos)" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="Ingresos" fill="var(--color-ingresos)" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="Egresos" fill="var(--color-egresos)" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ChartContainer>
                     )}
@@ -297,7 +297,7 @@ export default function FinancePage() {
                                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
                                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value as number, true)} />
                                 <ChartTooltip cursor={true} content={<ChartTooltipContent formatter={(value) => formatCurrency(value as number)} indicator="dot" />} />
-                                <Line type="monotone" dataKey="Ingresos" strokeWidth={2} stroke="var(--color-Ingresos)" dot={true} />
+                                <Line type="monotone" dataKey="Ingresos" strokeWidth={2} stroke="var(--color-ingresos)" dot={true} />
                             </LineChart>
                         </ChartContainer>
                     )}
