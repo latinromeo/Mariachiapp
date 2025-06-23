@@ -531,11 +531,51 @@ export async function createManualFinanceEntry(data: ManualFinanceEntryInputData
 
 // --- REPERTOIRE & MEDIA SERVICE FUNCTIONS ---
 
+const initialSongs: Omit<SongDetail, 'id' | 'createdAt'>[] = [
+    { title: 'Las Mañanitas', artist: 'Tradicional', category: 'Cumpleaños' },
+    { title: 'En Tu Día', artist: 'Tradicional', category: 'Cumpleaños' },
+    { title: 'Que Dios Te Bendiga', artist: 'Peter Manjarrés', category: 'Cumpleaños' },
+    { title: 'Cumpleaños Feliz', artist: 'Tradicional', category: 'Cumpleaños' },
+    { title: 'Si Nos Dejan', artist: 'José Alfredo Jiménez', category: 'Rancheras' },
+    { title: 'El Rey', artist: 'José Alfredo Jiménez', category: 'Rancheras' },
+    { title: 'Cielito Lindo', artist: 'Tradicional', category: 'Sones' },
+    { title: 'La Bamba', artist: 'Tradicional', category: 'Sones' },
+    { title: 'Hermoso Cariño', artist: 'Vicente Fernández', category: 'Serenatas' },
+    { title: 'Gema', artist: 'Los Dandys', category: 'Serenatas' },
+    { title: 'Amor Eterno', artist: 'Rocío Dúrcal', category: 'Para Madres y Padres' },
+    { title: 'A Mi Padre', artist: 'Julio Jaramillo', category: 'Para Madres y Padres' },
+    { title: 'El Corrido de Chihuahua', artist: 'Lucha Villa', category: 'Corridos' },
+];
+
+async function seedInitialSongs() {
+    console.log("Checking for initial songs to seed...");
+    const songsCol = collection(db, 'songs');
+    
+    for (const songData of initialSongs) {
+        const q = query(songsCol, where("title", "==", songData.title), where("artist", "==", songData.artist));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+            console.log(`Seeding song: ${songData.title}`);
+            try {
+                await addDoc(songsCol, {
+                    ...songData,
+                    createdAt: serverTimestamp()
+                });
+            } catch (e) {
+                console.error(`Error seeding song ${songData.title}:`, e);
+            }
+        }
+    }
+}
+
 export async function getSongs(): Promise<SongDetail[]> {
     console.log("Fetching songs from Firestore");
     try {
+        await seedInitialSongs();
+
         const songsCol = collection(db, 'songs');
-        const q = query(songsCol, orderBy("createdAt", "desc"));
+        const q = query(songsCol, orderBy("title", "asc"));
         const snapshot = await getDocs(q);
         if (snapshot.empty) {
           console.log("No songs found in Firestore. The 'songs' collection might be empty.");
