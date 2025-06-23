@@ -55,8 +55,8 @@ export const FINANCE_CATEGORIES = [
 ];
 
 export const EXTERNAL_CONTACTS = [
-  { value: "mariachi_sol_quisqueya", label: "Mariachi Sol de Quisqueya (Mariachi Sol) - 809-555-1212" },
-  { value: "mariachi_nuevo_amanecer", label: "Mariachi Nuevo Amanecer (Amanecer) - 829-444-3322" },
-  { value: "juan_valdez", label: "Juan Valdéz (Trompetista) (Solista) - 849-111-0000" },
-  { value: "otro", label: "Otro (especificar abajo)" },
+  { value: "mariachi_aguila_nerio", label: "Mariachi Aguila (Nerio) Tel:8293868745" },
+  { value: "mariachi_monterrey_jorge_luis", label: "Mariachi Monterrey (Jorge Luis) Tel: 8098556036" },
+  { value: "mariachi_arcoiris_leidy", label: "Mariachi Arcoiris (leidy) Tel: 8092122023" },
+  { value: "otro", label: "Otro (especificar)" },
 ];

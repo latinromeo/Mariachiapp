@@ -52,16 +52,26 @@ const formSchema = z.object({
   musiciansPay: z.coerce.number().min(0, { message: "El monto debe ser positivo." }).optional(),
   externalGroup: z.boolean().default(false),
   externalContact: z.string().optional(),
+  otherExternalContact: z.string().optional(),
   notes: z.string().optional(),
-}).refine(data => {
+}).superRefine((data, ctx) => {
     if (data.externalGroup) {
-      return !!data.externalContact && data.externalContact !== "";
+        if (!data.externalContact) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Debe seleccionar un contacto externo.",
+                path: ["externalContact"],
+            });
+        } else if (data.externalContact === "otro" && (!data.otherExternalContact || data.otherExternalContact.trim() === '')) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Por favor, especifique el nombre y teléfono del contacto externo.",
+                path: ["otherExternalContact"],
+            });
+        }
     }
-    return true;
-  }, {
-    message: "Debe seleccionar un contacto externo.",
-    path: ["externalContact"],
 });
+
 
 const formatCurrency = (value: number | undefined) => {
     if (value === undefined || value === null) return "$0.00";
@@ -113,6 +123,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
       musiciansPay: 0,
       externalGroup: false,
       externalContact: "",
+      otherExternalContact: "",
       notes: "",
     },
   })
@@ -124,6 +135,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
   const externalGroup = watch("externalGroup")
   const clientPhone = watch("clientPhone")
   const plan = watch("plan")
+  const externalContactValue = watch("externalContact");
 
   const [pendingBalance, setPendingBalance] = useState(0)
   const [profit, setProfit] = useState(0)
@@ -412,7 +424,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                 <CardHeader className="pb-4">
                                     <CardTitle className="text-base text-amber-900">Información del Contacto Externo</CardTitle>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="space-y-4">
                                     <FormField
                                         control={form.control}
                                         name="externalContact"
@@ -429,6 +441,19 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                             </FormItem>
                                         )}
                                     />
+                                    {externalContactValue === 'otro' && (
+                                        <FormField
+                                            control={form.control}
+                                            name="otherExternalContact"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Especifique el Contacto</FormLabel>
+                                                    <FormControl><Input placeholder="Nombre y teléfono del contacto" {...field} /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
                                 </CardContent>
                             </Card>
                           )}
