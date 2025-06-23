@@ -198,6 +198,48 @@ export async function createClient(data: ClientInputData): Promise<{ success: bo
     }
 }
 
+export async function getClientById(id: string): Promise<ClientData | null> {
+    console.log(`Fetching client with ID: ${id}`);
+    try {
+        const clientRef = doc(db, "clients", id);
+        const docSnap = await getDoc(clientRef);
+
+        if (!docSnap.exists()) {
+            console.error("No such client!");
+            return null;
+        }
+
+        return processDocTimestamps(docSnap) as ClientData;
+    } catch (error) {
+        console.error("Error fetching client by ID:", error);
+        return null;
+    }
+}
+
+export async function updateClient(id: string, data: Partial<ClientInputData>): Promise<{ success: boolean; error?: string }> {
+    const clientRef = doc(db, "clients", id);
+    try {
+        await updateDoc(clientRef, {
+            ...data,
+            updatedAt: serverTimestamp(),
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating client:", error);
+        return { success: false, error: "Failed to update client in database." };
+    }
+}
+
+export async function deleteClient(id: string): Promise<{ success: boolean; error?: string }> {
+    const clientRef = doc(db, "clients", id);
+    try {
+        await deleteDoc(clientRef);
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting client:", error);
+        return { success: false, error: "Failed to delete client from database." };
+    }
+}
 
 // --- EVENT SERVICE FUNCTIONS ---
 

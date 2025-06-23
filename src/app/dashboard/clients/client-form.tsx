@@ -16,9 +16,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Loader2, Mail, MapPin, Phone, User, Hash } from "lucide-react"
-import { createClient } from "@/services/eventService"
+import { createClient, updateClient, type ClientData } from "@/services/eventService"
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "El nombre es obligatorio (mín. 3 caracteres)." }),
@@ -29,17 +29,22 @@ const formSchema = z.object({
   notes: z.string().optional(),
 })
 
+type ClientInput = z.infer<typeof formSchema>;
+
 interface ClientFormProps {
   onSuccess?: () => void;
+  initialData?: ClientData;
+  clientId?: string;
 }
 
-export function ClientForm({ onSuccess }: ClientFormProps) {
+export function ClientForm({ onSuccess, initialData, clientId }: ClientFormProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditMode = !!clientId;
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<ClientInput>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: initialData || {
       name: "",
       phone: "",
       email: "",
@@ -48,29 +53,50 @@ export function ClientForm({ onSuccess }: ClientFormProps) {
       notes: "",
     },
   })
+  
+  useEffect(() => {
+    if (initialData) {
+      form.reset(initialData);
+    }
+  }, [initialData, form]);
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+
+  async function onSubmit(values: ClientInput) {
     setIsSubmitting(true);
     try {
-        const result = await createClient(values);
-        if (result.success) {
-            toast({
-                title: "¡Cliente Creado!",
-                description: "El nuevo cliente ha sido guardado exitosamente.",
-            });
-            form.reset({
-              name: "",
-              phone: "",
-              email: "",
-              address: "",
-              sector: "",
-              notes: "",
-            });
-            onSuccess?.();
+        let result;
+        if (isEditMode && clientId) {
+            result = await updateClient(clientId, values);
+            if (result.success) {
+                toast({
+                    title: "¡Cliente Actualizado!",
+                    description: "Los datos del cliente se han guardado exitosamente.",
+                });
+            }
+        } else {
+            result = await createClient(values);
+            if (result.success) {
+                toast({
+                    title: "¡Cliente Creado!",
+                    description: "El nuevo cliente ha sido guardado exitosamente.",
+                });
+                form.reset({
+                  name: "",
+                  phone: "",
+                  email: "",
+                  address: "",
+                  sector: "",
+                  notes: "",
+                });
+            }
+        }
+
+        if(result.success) {
+          onSuccess?.();
         } else {
              toast({
                 variant: "destructive",
-                title: "Error al crear cliente",
+                title: isEditMode ? "Error al actualizar" : "Error al crear cliente",
                 description: result.error || "Hubo un problema al guardar. Inténtalo de nuevo.",
             });
         }
@@ -159,7 +185,7 @@ export function ClientForm({ onSuccess }: ClientFormProps) {
         </div>
         <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? "Guardando..." : "Guardar Cliente"}
+            {isSubmitting ? "Guardando..." : (isEditMode ? "Guardar Cambios" : "Guardar Cliente")}
         </Button>
       </form>
     </Form>

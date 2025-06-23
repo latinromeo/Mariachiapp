@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -18,7 +18,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, PlusCircle, Search, Phone, Edit, Check } from "lucide-react";
+import { Users, PlusCircle, Search, Phone, Edit, Loader2, Trash2 } from "lucide-react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
     Dialog,
     DialogContent,
@@ -27,16 +37,20 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { type ClientData, getClients } from "@/services/eventService";
+import { type ClientData, getClients, deleteClient } from "@/services/eventService";
 import { ClientForm } from "./client-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [clientToDelete, setClientToDelete] = useState<ClientData | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
   const fetchClients = async () => {
     setIsLoading(true);
@@ -68,10 +82,32 @@ export default function ClientsPage() {
     fetchClients();
   }
 
-  const handleDeleteClient = (id: string) => {
-    console.log(`Deleting client ${id}`);
-    // In a real app, this would call a service to delete the client
-  }
+  const openDeleteDialog = (client: ClientData) => {
+    setClientToDelete(client);
+  };
+
+  const handleDeleteClient = async () => {
+    if (!clientToDelete) return;
+
+    setIsDeleting(true);
+    const result = await deleteClient(clientToDelete.id);
+    if (result.success) {
+      toast({
+        title: "Cliente Eliminado",
+        description: `El cliente "${clientToDelete.name}" ha sido eliminado.`,
+      });
+      fetchClients();
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error al eliminar",
+        description: result.error || "No se pudo eliminar el cliente.",
+      });
+    }
+    setIsDeleting(false);
+    setClientToDelete(null);
+  };
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -160,13 +196,13 @@ export default function ClientsPage() {
                     <TableCell>{index % 2 === 0 ? "2025-01-15" : "2025-02-20"}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-4">
-                        <Link href="#" className="text-primary">
+                        <Link href={`/dashboard/clients/${client.id}/edit`} className="text-primary hover:text-primary/80">
                           <Edit className="h-4 w-4" />
                         </Link>
-                         <button onClick={() => handleDeleteClient(client.id)} className="flex items-center gap-1 text-destructive hover:underline">
-                           <Check className="h-4 w-4" />
+                         <Button variant="link" className="text-destructive hover:underline p-0 h-auto gap-1" onClick={() => openDeleteDialog(client)}>
+                           <Trash2 className="h-4 w-4" />
                            Eliminar
-                         </button>
+                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -182,6 +218,27 @@ export default function ClientsPage() {
           </Table>
         </CardContent>
       </Card>
+        <AlertDialog open={!!clientToDelete} onOpenChange={(isOpen) => !isOpen && setClientToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Estás seguro de que quieres eliminar este cliente?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta acción no se puede deshacer. Se eliminará permanentemente al cliente <span className="font-semibold">"{clientToDelete?.name}"</span> y todos sus datos asociados.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setClientToDelete(null)}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleDeleteClient}
+                        disabled={isDeleting}
+                        className={buttonVariants({ variant: "destructive" })}
+                    >
+                        {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Sí, eliminar cliente
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
