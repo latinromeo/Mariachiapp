@@ -2,7 +2,7 @@
 "use client"
 
 import { useEffect, useState, useMemo, useCallback } from "react"
-import { Area, AreaChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, Cell, LineChart, Line } from "recharts"
+import { Area, AreaChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, Cell, LineChart, Line, BarChart, Bar } from "recharts"
 import {
   Card,
   CardContent,
@@ -10,20 +10,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { DollarSign, TrendingUp, TrendingDown, Equal, PlusCircle, Clock } from "lucide-react"
+import { DollarSign, TrendingUp, TrendingDown, Clock, PlusCircle } from "lucide-react"
 import { type EventData, type ManualFinanceEntry, getEvents, getManualFinanceEntries } from "@/services/eventService"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ManualEntryForm } from "./manual-entry-form"
-import { endOfMonth, format, startOfMonth, subMonths } from "date-fns"
+import { endOfMonth, format, startOfMonth, subMonths, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart"
 import { EVENT_TYPES } from "@/lib/constants"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
 
-const formatCurrency = (value: number | undefined) => {
+const formatCurrency = (value: number | undefined, compact = false) => {
     if (typeof value !== 'number' || isNaN(value)) {
         return "$0";
+    }
+    if (compact && value >= 1000) {
+      return `$${(value / 1000).toLocaleString('en-US', {maximumFractionDigits: 0})}k`
     }
     return `$${(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
@@ -36,6 +41,22 @@ const slugify = (str: string) =>
     .replace(/[\s_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+const COLORS: Record<string, string> = {
+    'Cumpleaños': 'hsl(var(--chart-2))',
+    'Boda': 'hsl(var(--chart-4))',
+    'Serenata': 'hsl(var(--chart-5))',
+    'Corporativo': 'hsl(var(--chart-1))',
+    'Otro': 'hsl(var(--chart-3))',
+};
+
+interface Transaction {
+    date: string;
+    description: string;
+    category: string;
+    type: 'Ingreso' | 'Gasto';
+    amount: number;
+    id: string;
+}
 
 export default function FinancePage() {
     const [events, setEvents] = useState<EventData[]>([]);
@@ -66,43 +87,55 @@ export default function FinancePage() {
         fetchData();
     }, [fetchData]);
 
-    const { monthlySummary, incomeHistory, eventTypeDistribution, pieChartConfig } = useMemo(() => {
+    const { 
+        incomeHistory, 
+        eventTypeDistribution, 
+        pieChartConfig,
+        barChartData,
+        transactionHistory
+    } = useMemo(() => {
         if (isLoading || !isClient) {
             return {
-                monthlySummary: { income: 0, expenses: 0, net: 0 },
                 incomeHistory: [],
                 eventTypeDistribution: [],
                 pieChartConfig: {} as ChartConfig,
+                barChartData: [],
+                transactionHistory: []
             };
         }
 
         const now = new Date();
-        const firstDay = startOfMonth(now);
-        const lastDay = endOfMonth(now);
+        
+        // Bar Chart Data (Current Month)
+        const firstDayCurrentMonth = startOfMonth(now);
+        const lastDayCurrentMonth = endOfMonth(now);
+        const currentMonthName = format(now, 'MMM', { locale: es });
 
-        const monthlyEvents = events.filter(e => {
+        const currentMonthEvents = events.filter(e => {
             try {
                 const eventDate = new Date(e.eventDate);
-                return eventDate >= firstDay && eventDate <= lastDay;
+                return eventDate >= firstDayCurrentMonth && eventDate <= lastDayCurrentMonth;
             } catch { return false; }
         });
 
-        const monthlyManualEntries = manualEntries.filter(m => {
+        const currentMonthManualEntries = manualEntries.filter(m => {
             try {
                 const entryDate = new Date(m.date);
-                return entryDate >= firstDay && entryDate <= lastDay;
+                return entryDate >= firstDayCurrentMonth && entryDate <= lastDayCurrentMonth;
             } catch { return false; }
         });
 
-        const income = monthlyEvents.reduce((acc, e) => acc + (e.externalGroup ? 0 : e.contractedAmount), 0) +
-                       monthlyManualEntries.filter(m => m.type === 'income').reduce((acc, m) => acc + m.amount, 0);
+        const currentMonthIncome = currentMonthEvents.reduce((acc, e) => acc + (e.externalGroup ? 0 : e.contractedAmount), 0) +
+                       currentMonthManualEntries.filter(m => m.type === 'income').reduce((acc, m) => acc + m.amount, 0);
 
-        const expenses = monthlyEvents.reduce((acc, e) => acc + (e.externalGroup ? 0 : (e.musiciansPay || 0)), 0) +
-                         monthlyManualEntries.filter(m => m.type === 'expense').reduce((acc, m) => acc + m.amount, 0);
-
-        const monthlySummary = { income, expenses, net: income - expenses };
-
-        // --- Process data for charts ---
+        const currentMonthExpenses = currentMonthEvents.reduce((acc, e) => acc + (e.externalGroup ? 0 : (e.musiciansPay || 0)), 0) +
+                         currentMonthManualEntries.filter(m => m.type === 'expense').reduce((acc, m) => acc + m.amount, 0);
+        
+        const barChartData = [{
+            name: currentMonthName,
+            Ingresos: currentMonthIncome,
+            Egresos: currentMonthExpenses
+        }];
         
         // Income History (last 6 months)
         const incomeHistory = Array.from({ length: 6 }).map((_, i) => {
@@ -148,24 +181,44 @@ export default function FinancePage() {
         const eventTypeDistribution = Object.keys(eventTypeCounts).map(name => ({
             name: name,
             value: eventTypeCounts[name],
+            fill: COLORS[name] || 'hsl(var(--muted-foreground))',
         }));
 
         const pieChartConfig = Object.entries(eventTypeCounts).reduce((acc, [name]) => {
-            const colorMap: Record<string, string> = {
-                'Cumpleaños': 'hsl(var(--chart-2))',
-                'Boda': 'hsl(var(--chart-4))',
-                'Serenata': 'hsl(var(--chart-5))',
-                'Corporativo': 'hsl(var(--chart-1))',
-                'Otro': 'hsl(var(--chart-3))',
-            };
             acc[name] = {
                 label: name,
-                color: colorMap[name] || 'hsl(var(--muted-foreground))',
+                color: COLORS[name] || 'hsl(var(--muted-foreground))',
             };
             return acc;
         }, {} as ChartConfig);
+
+        // Transaction History
+        const eventTransactions: Transaction[] = events.map(event => ({
+            date: event.eventDate,
+            description: `Evento: ${event.eventType} - ${event.clientName}`,
+            category: event.externalGroup ? 'Referido Externo' : 'Presentación Mariachi',
+            type: 'Ingreso',
+            amount: event.contractedAmount,
+            id: `evt-${event.id}`
+        }));
+
+        const manualTransactions: Transaction[] = manualEntries.map(entry => ({
+            date: entry.date,
+            description: entry.description,
+            category: entry.category || 'Otro',
+            type: entry.type === 'income' ? 'Ingreso' : 'Gasto',
+            amount: entry.amount,
+            id: `man-${entry.id}`
+        }));
         
-        return { monthlySummary, incomeHistory, eventTypeDistribution, pieChartConfig };
+        const allTransactions = [...eventTransactions, ...manualTransactions];
+        allTransactions.sort((a, b) => {
+            const dateA = a.date.includes('T') ? parseISO(a.date) : new Date(a.date.replace(/-/g, '/'));
+            const dateB = b.date.includes('T') ? parseISO(b.date) : new Date(b.date.replace(/-/g, '/'));
+            return dateB.getTime() - dateA.getTime();
+        });
+        
+        return { incomeHistory, eventTypeDistribution, pieChartConfig, barChartData, transactionHistory };
 
     }, [events, manualEntries, isLoading, isClient]);
 
@@ -196,134 +249,149 @@ export default function FinancePage() {
              <div className="flex items-center gap-2">
                 <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => openDialog('income')}>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Nuevo Ingreso Manual
+                    Nuevo Ingreso
                 </Button>
                  <Button variant="destructive" onClick={() => openDialog('expense')}>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Nuevo Egreso Manual
+                    Nuevo Gasto
                 </Button>
             </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Ingresos Generales (Mes)</CardTitle>
-                    <TrendingUp className="h-5 w-5 text-green-500" />
-                </CardHeader>
-                <CardContent>
-                    {showSkeleton ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(monthlySummary.income)}</div>}
-                    <p className="text-xs text-muted-foreground">Total de ingresos este mes</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Egresos Generales (Mes)</CardTitle>
-                    <TrendingDown className="h-5 w-5 text-red-500" />
-                </CardHeader>
-                <CardContent>
-                    {showSkeleton ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(monthlySummary.expenses)}</div>}
-                    <p className="text-xs text-muted-foreground">Total de egresos este mes</p>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Balance Neto (Mes)</CardTitle>
-                    <Equal className="h-5 w-5 text-blue-500" />
-                </CardHeader>
-                <CardContent>
-                    {showSkeleton ? <Skeleton className="h-8 w-3/4" /> : <div className={`text-2xl font-bold ${monthlySummary.net < 0 ? 'text-destructive' : ''}`}>{formatCurrency(monthlySummary.net)}</div>}
-                    <p className="text-xs text-muted-foreground">Ingresos - Egresos</p>
-                </CardContent>
-            </Card>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-5">
-            <Card className="lg:col-span-3">
                 <CardHeader>
-                    <CardTitle>Evolución de los ingresos a lo largo de los meses.</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5"/>Ingresos vs Egresos (Mes Actual)</CardTitle>
+                    <CardDescription>Comparativa del mes en curso.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {showSkeleton ? <Skeleton className="h-[250px] w-full" /> : (
                         <ChartContainer config={{
-                            Ingresos: {
-                                label: "Ingresos",
-                                color: "hsl(var(--chart-4))",
-                            },
+                            Ingresos: { label: 'Ingresos', color: 'hsl(var(--chart-4))' },
+                            Egresos: { label: 'Egresos', color: 'hsl(var(--chart-2))' },
                         }} className="h-[250px] w-full">
-                            <LineChart
-                                data={incomeHistory}
-                                margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                            >
+                            <BarChart data={barChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
-                                <YAxis 
-                                    stroke="hsl(var(--muted-foreground))" 
-                                    fontSize={12} 
-                                    tickLine={false} 
-                                    axisLine={false} 
-                                    tickFormatter={(value) => formatCurrency(value as number)} 
-                                />
-                                <ChartTooltip
-                                    cursor={true}
-                                    content={<ChartTooltipContent
-                                        formatter={(value) => formatCurrency(value as number).replace('.00', '')}
-                                        indicator="dot"
-                                    />}
-                                />
+                                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value as number, true)} />
+                                <ChartTooltip cursor={true} content={<ChartTooltipContent formatter={(value) => formatCurrency(value as number)} />} />
                                 <Legend content={<ChartLegendContent />} />
+                                <Bar dataKey="Ingresos" fill="var(--color-Ingresos)" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="Egresos" fill="var(--color-Egresos)" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ChartContainer>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5"/>Desglose de Ingresos Mensuales</CardTitle>
+                    <CardDescription>Evolución de los ingresos a lo largo de los meses.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {showSkeleton ? <Skeleton className="h-[250px] w-full" /> : (
+                        <ChartContainer config={{
+                            Ingresos: { label: "Ingresos", color: "hsl(var(--chart-4))" },
+                        }} className="h-[250px] w-full">
+                            <LineChart data={incomeHistory} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
+                                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value as number, true)} />
+                                <ChartTooltip cursor={true} content={<ChartTooltipContent formatter={(value) => formatCurrency(value as number)} indicator="dot" />} />
                                 <Line type="monotone" dataKey="Ingresos" strokeWidth={2} stroke="var(--color-Ingresos)" dot={true} />
                             </LineChart>
                         </ChartContainer>
                     )}
                 </CardContent>
             </Card>
-             <Card className="lg:col-span-2">
+
+            <Card className="lg:col-span-2">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5"/>Distribución de Ingresos por Tipo de Evento</CardTitle>
-                    <CardDescription>Cantidad de eventos realizados por cada tipo.</CardDescription>
+                    <CardDescription>Cantidad total de eventos realizados por cada tipo.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    {showSkeleton ? <Skeleton className="h-[250px] w-full" /> : (
+                <CardContent className="flex flex-col md:flex-row items-center justify-center gap-8 py-6">
+                    {showSkeleton ? <Skeleton className="h-[200px] w-[200px] rounded-full" /> : (
                         eventTypeDistribution.length > 0 ? (
-                            <ChartContainer config={pieChartConfig} className="h-[250px] w-full">
-                                <PieChart>
-                                    <ChartTooltip
-                                        cursor={false}
-                                        content={<ChartTooltipContent
-                                            formatter={(value, name) => `${value} evento(s)`}
-                                            nameKey="name"
-                                            indicator="dot"
-                                        />}
-                                    />
-                                    <Pie 
-                                        data={eventTypeDistribution} 
-                                        dataKey="value" 
-                                        nameKey="name" 
-                                        innerRadius={50} 
-                                        outerRadius={80} 
-                                        paddingAngle={2} 
-                                    >
-                                        {eventTypeDistribution.map((entry) => (
-                                          <Cell
-                                            key={`cell-${entry.name}`}
-                                            fill={`var(--color-${slugify(entry.name)})`}
-                                          />
-                                        ))}
-                                    </Pie>
-                                    <ChartLegend 
-                                        content={<ChartLegendContent nameKey="name" />}
-                                        iconType="square" 
-                                        layout="horizontal" 
-                                        verticalAlign="bottom" 
-                                        align="center"
-                                        wrapperStyle={{paddingTop: '20px'}} 
-                                    />
-                                </PieChart>
-                            </ChartContainer>
+                             <div className="w-[200px] h-[200px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <ChartTooltip
+                                            cursor={false}
+                                            content={<ChartTooltipContent
+                                                formatter={(value, name) => `${value} evento(s)`}
+                                                nameKey="name"
+                                                indicator="dot"
+                                            />}
+                                        />
+                                        <Pie data={eventTypeDistribution} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} paddingAngle={2}>
+                                           {eventTypeDistribution.map((entry) => (
+                                              <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                                            ))}
+                                        </Pie>
+                                    </PieChart>
+                                 </ResponsiveContainer>
+                             </div>
                         ) : (
-                            <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">No hay datos de eventos para mostrar.</div>
+                            <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">No hay datos de eventos para mostrar.</div>
                         )
                     )}
+                     {!showSkeleton && eventTypeDistribution.length > 0 && (
+                        <div className="flex flex-col gap-2 text-sm">
+                            {eventTypeDistribution.map(entry => (
+                                <div key={entry.name} className="flex items-center gap-2">
+                                    <span className="w-3 h-3 rounded-full" style={{backgroundColor: entry.fill}}></span>
+                                    <span>{entry.name} ({entry.value})</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2">
+                <CardHeader>
+                    <CardTitle>Historial de Transacciones</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>FECHA</TableHead>
+                                <TableHead>DESCRIPCIÓN</TableHead>
+                                <TableHead>TIPO</TableHead>
+                                <TableHead className="text-right">MONTO</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {showSkeleton ? (
+                                Array.from({length: 5}).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-4 w-20"/></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-48"/></TableCell>
+                                        <TableCell><Skeleton className="h-6 w-16 rounded-full"/></TableCell>
+                                        <TableCell className="text-right"><Skeleton className="h-4 w-24 float-right"/></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : transactionHistory.length > 0 ? (
+                                transactionHistory.map(t => (
+                                    <TableRow key={t.id}>
+                                        <TableCell className="font-medium">
+                                            {format(t.date.includes('T') ? parseISO(t.date) : new Date(t.date.replace(/-/g, '/')), 'dd/MM/yyyy')}
+                                        </TableCell>
+                                        <TableCell>{t.description}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={t.type === 'Ingreso' ? 'secondary' : 'destructive'} className={t.type === 'Ingreso' ? 'text-green-600 border-green-300 bg-green-50' : ''}>{t.type}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right font-semibold">{formatCurrency(t.amount)}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">No hay transacciones registradas.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
                 </CardContent>
             </Card>
         </div>
@@ -340,5 +408,5 @@ export default function FinancePage() {
             </DialogContent>
         </Dialog>
     </div>
-  )
+  );
 }
