@@ -46,21 +46,23 @@ export function ManualEntryForm({ onSuccess, defaultType = "expense" }: ManualEn
       type: defaultType,
       description: "",
       amount: 0,
-      date: new Date().toISOString().split('T')[0],
+      date: "", // Initialize empty to avoid hydration mismatch
       category: "",
     },
   })
   
+  const { reset } = form;
+
   useEffect(() => {
-    form.reset({
-        ...form.getValues(),
+    // Reset form with default values and today's date on mount or when defaultType changes
+    reset({
         type: defaultType,
         description: "",
         amount: 0,
         date: new Date().toISOString().split('T')[0],
         category: "",
     });
-  }, [defaultType, form]);
+  }, [defaultType, reset]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

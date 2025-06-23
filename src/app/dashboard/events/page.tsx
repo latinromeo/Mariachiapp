@@ -37,47 +37,54 @@ const statusColors: Record<EventStatus, string> = {
 
 export default function EventsCalendarPage() {
   const [isLoading, setIsLoading] = React.useState(true);
-  const [currentMonth, setCurrentMonth] = React.useState(new Date())
+  const [currentMonth, setCurrentMonth] = React.useState(new Date());
   const [events, setEvents] = React.useState<EventData[]>([]);
   const [rehearsals, setRehearsals] = React.useState<RehearsalData[]>([]);
 
-  const [selectedDay, setSelectedDay] = React.useState<Date | null>(null)
-  const [isModalOpen, setIsModalOpen] = React.useState(false)
+  const [selectedDay, setSelectedDay] = React.useState<Date | null>(null);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isClient, setIsClient] = React.useState(false);
 
-  const firstDayOfCurrentMonth = startOfMonth(currentMonth)
-
-  const daysInMonth = eachDayOfInterval({
-    start: startOfWeek(firstDayOfCurrentMonth, { weekStartsOn: 1 }),
-    end: endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 }),
-  })
-  
-  const fetchData = async () => {
-        setIsLoading(true);
-        try {
-            const [eventsData, rehearsalsData] = await Promise.all([
-                getEvents(),
-                getRehearsals()
-            ]);
-            setEvents(eventsData);
-            setRehearsals(rehearsalsData);
-        } catch (error) {
-            console.error("Failed to fetch calendar data", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  const fetchData = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+        const [eventsData, rehearsalsData] = await Promise.all([
+            getEvents(),
+            getRehearsals()
+        ]);
+        setEvents(eventsData);
+        setRehearsals(rehearsalsData);
+    } catch (error) {
+        console.error("Failed to fetch calendar data", error);
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
 
   React.useEffect(() => {
+    setIsClient(true);
     fetchData();
-  }, []);
+  }, [fetchData]);
 
 
   const getEventsForDay = (day: Date) => {
-    return events.filter(event => isSameDay(new Date(event.eventDate), day));
+    return events.filter(event => {
+      try {
+        return isSameDay(new Date(event.eventDate), day);
+      } catch {
+        return false;
+      }
+    });
   }
 
   const getRehearsalsForDay = (day: Date) => {
-    return rehearsals.filter(rehearsal => isSameDay(new Date(rehearsal.date), day));
+    return rehearsals.filter(rehearsal => {
+      try {
+        return isSameDay(new Date(rehearsal.date), day);
+      } catch {
+        return false;
+      }
+    });
   }
 
   const handleDayClick = (day: Date) => {
@@ -88,23 +95,51 @@ export default function EventsCalendarPage() {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setSelectedDay(null);
-    fetchData(); // Refetch data when modal closes to see updates
+    fetchData();
   }
 
-  const goToPreviousMonth = () => {
-    setCurrentMonth(subMonths(currentMonth, 1))
-  }
-
-  const goToNextMonth = () => {
-    setCurrentMonth(addMonths(currentMonth, 1))
-  }
-
-  const goToToday = () => {
-    setCurrentMonth(new Date())
-  }
+  const goToPreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
+  const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+  const goToToday = () => setCurrentMonth(new Date());
 
   const selectedDayEvents = selectedDay ? getEventsForDay(selectedDay) : [];
   const selectedDayRehearsals = selectedDay ? getRehearsalsForDay(selectedDay) : [];
+
+  if (!isClient) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-80" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-10 w-20" />
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-10 w-36" />
+          </div>
+        </div>
+        <div className="grid grid-cols-7 text-center font-semibold text-xs sm:text-sm text-muted-foreground border-b">
+            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
+                <div key={day} className="py-2">{day}</div>
+            ))}
+        </div>
+        <div className="grid grid-cols-7 grid-rows-5 gap-1">
+          {Array.from({ length: 35 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+  
+  const firstDayOfCurrentMonth = startOfMonth(currentMonth);
+  const daysInMonth = eachDayOfInterval({
+    start: startOfWeek(firstDayOfCurrentMonth, { weekStartsOn: 1 }),
+    end: endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 }),
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -120,7 +155,7 @@ export default function EventsCalendarPage() {
             <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={goToToday}>Hoy</Button>
                 <Button variant="outline" size="icon" onClick={goToPreviousMonth}><ChevronLeft className="h-4 w-4" /></Button>
-                <span className="font-semibold text-lg text-center capitalize">{format(currentMonth, "MMMM yyyy", { locale: es })}</span>
+                <span className="font-semibold text-lg text-center capitalize w-32">{format(currentMonth, "MMMM yyyy", { locale: es })}</span>
                 <Button variant="outline" size="icon" onClick={goToNextMonth}><ChevronRight className="h-4 w-4" /></Button>
                  <Button asChild>
                     <Link href="/dashboard/events/new">

@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { Area, AreaChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, Cell, LineChart, Line } from "recharts"
 import {
   Card,
@@ -43,8 +43,9 @@ export default function FinancePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [entryType, setEntryType] = useState<'income' | 'expense'>('expense');
+    const [isClient, setIsClient] = useState(false);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
             const [eventsData, manualEntriesData] = await Promise.all([
@@ -58,14 +59,15 @@ export default function FinancePage() {
         } finally {
             setIsLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchData();
     }, []);
 
+    useEffect(() => {
+        setIsClient(true);
+        fetchData();
+    }, [fetchData]);
+
     const { monthlySummary, incomeHistory, eventTypeDistribution, pieChartConfig } = useMemo(() => {
-        if (isLoading) {
+        if (isLoading || !isClient) {
             return {
                 monthlySummary: { income: 0, expenses: 0, net: 0 },
                 incomeHistory: [],
@@ -79,13 +81,17 @@ export default function FinancePage() {
         const lastDay = endOfMonth(now);
 
         const monthlyEvents = events.filter(e => {
-            const eventDate = new Date(e.eventDate);
-            return eventDate >= firstDay && eventDate <= lastDay;
+            try {
+                const eventDate = new Date(e.eventDate);
+                return eventDate >= firstDay && eventDate <= lastDay;
+            } catch { return false; }
         });
 
         const monthlyManualEntries = manualEntries.filter(m => {
-            const entryDate = new Date(m.date);
-            return entryDate >= firstDay && entryDate <= lastDay;
+            try {
+                const entryDate = new Date(m.date);
+                return entryDate >= firstDay && entryDate <= lastDay;
+            } catch { return false; }
         });
 
         const income = monthlyEvents.reduce((acc, e) => acc + (e.externalGroup ? 0 : e.contractedAmount), 0) +
@@ -106,14 +112,18 @@ export default function FinancePage() {
 
             const monthIncome = events
                 .filter(e => {
-                    const eventDate = new Date(e.eventDate);
-                    return !e.externalGroup && eventDate >= monthStart && eventDate <= monthEnd;
+                    try {
+                        const eventDate = new Date(e.eventDate);
+                        return !e.externalGroup && eventDate >= monthStart && eventDate <= monthEnd;
+                    } catch { return false; }
                 })
                 .reduce((sum, e) => sum + e.contractedAmount, 0) +
                 manualEntries
                 .filter(m => {
-                     const entryDate = new Date(m.date);
-                     return m.type === 'income' && entryDate >= monthStart && entryDate <= monthEnd
+                    try {
+                        const entryDate = new Date(m.date);
+                        return m.type === 'income' && entryDate >= monthStart && entryDate <= monthEnd
+                    } catch { return false; }
                 })
                 .reduce((sum, m) => sum + m.amount, 0);
 
@@ -157,7 +167,7 @@ export default function FinancePage() {
         
         return { monthlySummary, incomeHistory, eventTypeDistribution, pieChartConfig };
 
-    }, [events, manualEntries, isLoading]);
+    }, [events, manualEntries, isLoading, isClient]);
 
     const handleSuccess = () => {
         setIsDialogOpen(false);
@@ -168,6 +178,8 @@ export default function FinancePage() {
         setEntryType(type);
         setIsDialogOpen(true);
     }
+    
+    const showSkeleton = isLoading || !isClient;
 
   return (
     <div className="flex flex-col gap-6">
@@ -200,7 +212,7 @@ export default function FinancePage() {
                     <TrendingUp className="h-5 w-5 text-green-500" />
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(monthlySummary.income)}</div>}
+                    {showSkeleton ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(monthlySummary.income)}</div>}
                     <p className="text-xs text-muted-foreground">Total de ingresos este mes</p>
                 </CardContent>
             </Card>
@@ -210,7 +222,7 @@ export default function FinancePage() {
                     <TrendingDown className="h-5 w-5 text-red-500" />
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(monthlySummary.expenses)}</div>}
+                    {showSkeleton ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(monthlySummary.expenses)}</div>}
                     <p className="text-xs text-muted-foreground">Total de egresos este mes</p>
                 </CardContent>
             </Card>
@@ -220,7 +232,7 @@ export default function FinancePage() {
                     <Equal className="h-5 w-5 text-blue-500" />
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? <Skeleton className="h-8 w-3/4" /> : <div className={`text-2xl font-bold ${monthlySummary.net < 0 ? 'text-destructive' : ''}`}>{formatCurrency(monthlySummary.net)}</div>}
+                    {showSkeleton ? <Skeleton className="h-8 w-3/4" /> : <div className={`text-2xl font-bold ${monthlySummary.net < 0 ? 'text-destructive' : ''}`}>{formatCurrency(monthlySummary.net)}</div>}
                     <p className="text-xs text-muted-foreground">Ingresos - Egresos</p>
                 </CardContent>
             </Card>
@@ -232,35 +244,37 @@ export default function FinancePage() {
                     <CardTitle>Evolución de los ingresos a lo largo de los meses.</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ChartContainer config={{
-                        Ingresos: {
-                            label: "Ingresos",
-                            color: "hsl(var(--chart-4))",
-                        },
-                    }} className="h-[250px] w-full">
-                        <LineChart
-                            data={incomeHistory}
-                            margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                        >
-                            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
-                            <YAxis 
-                                stroke="hsl(var(--muted-foreground))" 
-                                fontSize={12} 
-                                tickLine={false} 
-                                axisLine={false} 
-                                tickFormatter={(value) => formatCurrency(value as number)} 
-                            />
-                            <ChartTooltip
-                                cursor={true}
-                                content={<ChartTooltipContent
-                                    formatter={(value) => formatCurrency(value as number).replace('.00', '')}
-                                    indicator="dot"
-                                />}
-                            />
-                            <Legend content={<ChartLegendContent />} />
-                            <Line type="monotone" dataKey="Ingresos" strokeWidth={2} stroke="var(--color-Ingresos)" dot={true} />
-                        </LineChart>
-                    </ChartContainer>
+                    {showSkeleton ? <Skeleton className="h-[250px] w-full" /> : (
+                        <ChartContainer config={{
+                            Ingresos: {
+                                label: "Ingresos",
+                                color: "hsl(var(--chart-4))",
+                            },
+                        }} className="h-[250px] w-full">
+                            <LineChart
+                                data={incomeHistory}
+                                margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                            >
+                                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
+                                <YAxis 
+                                    stroke="hsl(var(--muted-foreground))" 
+                                    fontSize={12} 
+                                    tickLine={false} 
+                                    axisLine={false} 
+                                    tickFormatter={(value) => formatCurrency(value as number)} 
+                                />
+                                <ChartTooltip
+                                    cursor={true}
+                                    content={<ChartTooltipContent
+                                        formatter={(value) => formatCurrency(value as number).replace('.00', '')}
+                                        indicator="dot"
+                                    />}
+                                />
+                                <Legend content={<ChartLegendContent />} />
+                                <Line type="monotone" dataKey="Ingresos" strokeWidth={2} stroke="var(--color-Ingresos)" dot={true} />
+                            </LineChart>
+                        </ChartContainer>
+                    )}
                 </CardContent>
             </Card>
              <Card className="lg:col-span-2">
@@ -269,44 +283,46 @@ export default function FinancePage() {
                     <CardDescription>Cantidad de eventos realizados por cada tipo.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {eventTypeDistribution.length > 0 ? (
-                        <ChartContainer config={pieChartConfig} className="h-[250px] w-full">
-                            <PieChart>
-                                <ChartTooltip
-                                    cursor={false}
-                                    content={<ChartTooltipContent
-                                        formatter={(value, name) => `${value} evento(s)`}
-                                        nameKey="name"
-                                        indicator="dot"
-                                    />}
-                                />
-                                <Pie 
-                                    data={eventTypeDistribution} 
-                                    dataKey="value" 
-                                    nameKey="name" 
-                                    innerRadius={50} 
-                                    outerRadius={80} 
-                                    paddingAngle={2} 
-                                >
-                                    {eventTypeDistribution.map((entry) => (
-                                      <Cell
-                                        key={`cell-${entry.name}`}
-                                        fill={`var(--color-${slugify(entry.name)})`}
-                                      />
-                                    ))}
-                                </Pie>
-                                <ChartLegend 
-                                    content={<ChartLegendContent nameKey="name" />}
-                                    iconType="square" 
-                                    layout="horizontal" 
-                                    verticalAlign="bottom" 
-                                    align="center"
-                                    wrapperStyle={{paddingTop: '20px'}} 
-                                />
-                            </PieChart>
-                        </ChartContainer>
-                    ) : (
-                        <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">No hay datos de eventos para mostrar.</div>
+                    {showSkeleton ? <Skeleton className="h-[250px] w-full" /> : (
+                        eventTypeDistribution.length > 0 ? (
+                            <ChartContainer config={pieChartConfig} className="h-[250px] w-full">
+                                <PieChart>
+                                    <ChartTooltip
+                                        cursor={false}
+                                        content={<ChartTooltipContent
+                                            formatter={(value, name) => `${value} evento(s)`}
+                                            nameKey="name"
+                                            indicator="dot"
+                                        />}
+                                    />
+                                    <Pie 
+                                        data={eventTypeDistribution} 
+                                        dataKey="value" 
+                                        nameKey="name" 
+                                        innerRadius={50} 
+                                        outerRadius={80} 
+                                        paddingAngle={2} 
+                                    >
+                                        {eventTypeDistribution.map((entry) => (
+                                          <Cell
+                                            key={`cell-${entry.name}`}
+                                            fill={`var(--color-${slugify(entry.name)})`}
+                                          />
+                                        ))}
+                                    </Pie>
+                                    <ChartLegend 
+                                        content={<ChartLegendContent nameKey="name" />}
+                                        iconType="square" 
+                                        layout="horizontal" 
+                                        verticalAlign="bottom" 
+                                        align="center"
+                                        wrapperStyle={{paddingTop: '20px'}} 
+                                    />
+                                </PieChart>
+                            </ChartContainer>
+                        ) : (
+                            <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">No hay datos de eventos para mostrar.</div>
+                        )
                     )}
                 </CardContent>
             </Card>
