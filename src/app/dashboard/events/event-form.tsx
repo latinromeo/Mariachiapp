@@ -349,7 +349,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                   render={({ field }) => (
                                       <FormItem>
                                           <FormLabel className="flex items-center gap-2"><Mic className="h-4 w-4 text-muted-foreground"/>Tipo de Evento</FormLabel>
-                                          <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                                          <Select onValueChange={field.onChange} value={field.value}>
                                               <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger></FormControl>
                                               <SelectContent>
                                                 {EVENT_TYPES.map(type => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
@@ -365,7 +365,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                   render={({ field }) => (
                                       <FormItem>
                                           <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground"/>Plan Contratado</FormLabel>
-                                           <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                                           <Select onValueChange={field.onChange} value={field.value}>
                                               <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar plan..." /></SelectTrigger></FormControl>
                                               <SelectContent>
                                                   {EVENT_PLANS.map(plan => <SelectItem key={plan.value} value={plan.value}>{plan.label}</SelectItem>)}
@@ -394,7 +394,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground"/>Hora</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                                            <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar hora..." /></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                     {timeOptions.map((time) => (<SelectItem key={time} value={time}>{time}</SelectItem>))}
@@ -431,7 +431,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Seleccionar Contacto Externo</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                                                <Select onValueChange={field.onChange} value={field.value}>
                                                     <FormControl><SelectTrigger><SelectValue placeholder="-- Seleccione un contacto --" /></SelectTrigger></FormControl>
                                                     <SelectContent>
                                                         {EXTERNAL_CONTACTS.map(contact => <SelectItem key={contact.value} value={contact.value}>{contact.label}</SelectItem>)}
@@ -506,7 +506,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                               render={({ field }) => (
                                   <FormItem>
                                       <FormLabel>Método de Pago</FormLabel>
-                                      <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                                      <Select onValueChange={field.onChange} value={field.value}>
                                           <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar método..." /></SelectTrigger></FormControl>
                                           <SelectContent>
                                              {PAYMENT_METHODS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
