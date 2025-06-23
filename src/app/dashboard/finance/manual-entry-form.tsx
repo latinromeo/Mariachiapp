@@ -127,7 +127,7 @@ export function ManualEntryForm({ onSuccess, defaultType = "expense" }: ManualEn
                 name="description"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="flex items-center gap-2"><Edit className="h-4 w-4" />Descripción</FormLabel>
+                        <FormLabel className="flex items-center gap-2"><Edit className="h-4 w-4 text-muted-foreground" />Descripción</FormLabel>
                         <FormControl><Input placeholder="Ej: Compra de cuerdas" {...field} /></FormControl>
                         <FormMessage />
                     </FormItem>
@@ -138,7 +138,7 @@ export function ManualEntryForm({ onSuccess, defaultType = "expense" }: ManualEn
                 name="amount"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="flex items-center gap-2"><DollarSign className="h-4 w-4" />Monto</FormLabel>
+                        <FormLabel className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-muted-foreground" />Monto</FormLabel>
                         <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl>
                         <FormMessage />
                     </FormItem>
@@ -150,7 +150,7 @@ export function ManualEntryForm({ onSuccess, defaultType = "expense" }: ManualEn
                     name="date"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4" />Fecha</FormLabel>
+                            <FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" />Fecha</FormLabel>
                             <FormControl><Input type="date" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
@@ -181,3 +181,5 @@ export function ManualEntryForm({ onSuccess, defaultType = "expense" }: ManualEn
     </Form>
   )
 }
+
+    

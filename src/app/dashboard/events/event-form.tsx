@@ -271,7 +271,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
               <div className="lg:col-span-2 space-y-6">
                   <Card>
                       <CardHeader>
-                          <CardTitle className="font-headline text-2xl flex items-center gap-2"><Info className="h-6 w-6" /> Detalles del Evento</CardTitle>
+                          <CardTitle className="font-headline text-2xl flex items-center gap-2"><Info className="h-6 w-6 text-primary" /> Detalles del Evento</CardTitle>
                           <CardDescription>Complete la información principal del evento y del cliente.</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -281,7 +281,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                 name="clientName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><User className="h-4 w-4" />Nombre del Cliente</FormLabel>
+                                        <FormLabel className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" />Nombre del Cliente</FormLabel>
                                         <FormControl><Input placeholder="Ej: Familia Pérez" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -292,7 +292,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                 name="clientPhone"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><Phone className="h-4 w-4" />Teléfono del Cliente</FormLabel>
+                                        <FormLabel className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />Teléfono del Cliente</FormLabel>
                                         <div className="relative">
                                           <FormControl><Input type="tel" placeholder="Ej: 5551234567" {...field} /></FormControl>
                                           {isCheckingClient && <Loader2 className="absolute right-2 top-2.5 h-5 w-5 animate-spin text-muted-foreground" />}
@@ -308,7 +308,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                   name="eventType"
                                   render={({ field }) => (
                                       <FormItem>
-                                          <FormLabel className="flex items-center gap-2"><Mic className="h-4 w-4"/>Tipo de Evento</FormLabel>
+                                          <FormLabel className="flex items-center gap-2"><Mic className="h-4 w-4 text-muted-foreground"/>Tipo de Evento</FormLabel>
                                           <Select onValueChange={field.onChange} value={field.value} defaultValue="">
                                               <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger></FormControl>
                                               <SelectContent>
@@ -324,7 +324,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                   name="plan"
                                   render={({ field }) => (
                                       <FormItem>
-                                          <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4"/>Plan Contratado</FormLabel>
+                                          <FormLabel className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground"/>Plan Contratado</FormLabel>
                                            <Select onValueChange={field.onChange} value={field.value} defaultValue="">
                                               <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar plan..." /></SelectTrigger></FormControl>
                                               <SelectContent>
@@ -342,7 +342,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                     name="eventDate"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4"/>Fecha</FormLabel>
+                                            <FormLabel className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground"/>Fecha</FormLabel>
                                             <FormControl><Input type="date" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -353,7 +353,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                     name="eventTime"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4"/>Hora</FormLabel>
+                                            <FormLabel className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground"/>Hora</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value} defaultValue="">
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar hora..." /></SelectTrigger></FormControl>
                                                 <SelectContent>
@@ -371,7 +371,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                     name="location"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="flex items-center gap-2"><MapPin className="h-4 w-4"/>Dirección</FormLabel>
+                                            <FormLabel className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground"/>Dirección</FormLabel>
                                             <FormControl><Input placeholder="Ej: Salón La Candelaria" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -406,7 +406,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
 
               <div className="lg:col-span-1 space-y-6">
                   <Card>
-                      <CardHeader><CardTitle className="font-headline text-2xl flex items-center gap-2"><DollarSign className="h-6 w-6"/>Finanzas</CardTitle></CardHeader>
+                      <CardHeader><CardTitle className="font-headline text-2xl flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary"/>Finanzas</CardTitle></CardHeader>
                       <CardContent className="space-y-4">
                            <FormField
                               control={form.control}
@@ -570,7 +570,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                     <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                                 </FormControl>
                                 <div className="space-y-1 leading-none">
-                                    <FormLabel className="flex items-center gap-2"><ExternalLink className="h-4 w-4"/>¿Grupo Externo?</FormLabel>
+                                    <FormLabel className="flex items-center gap-2"><ExternalLink className="h-4 w-4 text-muted-foreground"/>¿Grupo Externo?</FormLabel>
                                     <p className="text-sm text-muted-foreground">Marcar si el evento lo realiza otro grupo.</p>
                                 </div>
                                 </FormItem>
@@ -635,4 +635,5 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
   )
 }
 
+    
     
