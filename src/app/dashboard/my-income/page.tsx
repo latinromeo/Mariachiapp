@@ -39,12 +39,13 @@ const months = Array.from({ length: 12 }, (_, i) => ({
 // Helper robusto para tratar 'YYYY-MM-DD' como una fecha local para evitar problemas de zona horaria.
 const robustParseDate = (dateString: string): Date => {
     if (!dateString) return new Date(0);
-    // Handles both 'YYYY-MM-DD' and ISO strings without timezone shift for date part
+    // Maneja tanto 'YYYY-MM-DD' como strings ISO sin cambio de zona horaria para la parte de la fecha
     const datePart = dateString.split('T')[0];
     try {
+        // Usar parse de date-fns para interpretar la fecha como local
         return parse(datePart, 'yyyy-MM-dd', new Date());
     } catch {
-        return new Date(0);
+        return new Date(0); // Devuelve fecha inválida si el formato es incorrecto
     }
 };
 
@@ -153,14 +154,14 @@ export default function MyIncomePage() {
             const years = new Set<number>();
             
             eventsData.forEach(e => {
-                if (e.eventDate && e.eventDate.length >=4) {
-                    const year = parseInt(e.eventDate.substring(0, 4), 10);
+                if (e.eventDate) {
+                    const year = getYear(robustParseDate(e.eventDate));
                     if (year > 1970) years.add(year);
                 }
             });
             expensesData.forEach(e => {
-                if (e.date && e.date.length >= 4) {
-                    const year = parseInt(e.date.substring(0, 4), 10);
+                if (e.date) {
+                    const year = getYear(robustParseDate(e.date));
                     if (year > 1970) years.add(year);
                 }
             });
@@ -188,17 +189,16 @@ export default function MyIncomePage() {
         netBalance,
         filteredExpenses
     } = useMemo(() => {
-        const filterByMonthAndYear = (item: { date: string } | { eventDate: string }) => {
-            const dateStr = 'date' in item ? item.date : item.eventDate;
-            if (!dateStr || dateStr.length < 10) return false;
-            const itemYear = parseInt(dateStr.substring(0, 4), 10);
-            const itemMonth = parseInt(dateStr.substring(5, 7), 10) - 1; // JS months are 0-indexed
-            return itemYear === selectedYear && itemMonth === selectedMonth;
+        const filterByMonthAndYear = (dateString: string) => {
+            if (!dateString) return false;
+            const itemDate = robustParseDate(dateString);
+            if (getYear(itemDate) < 1971) return false; // Filtrar fechas inválidas
+            return getYear(itemDate) === selectedYear && getMonth(itemDate) === selectedMonth;
         };
 
-        const currentFilteredEvents = events.filter(e => filterByMonthAndYear({ eventDate: e.eventDate }));
-        const currentFilteredIncomes = incomes.filter(i => filterByMonthAndYear({ date: i.date }));
-        const currentFilteredExpenses = expenses.filter(e => filterByMonthAndYear({ date: e.date }));
+        const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
+        const currentFilteredIncomes = incomes.filter(i => filterByMonthAndYear(i.date));
+        const currentFilteredExpenses = expenses.filter(e => filterByMonthAndYear(e.date));
 
         const totalIncome = currentFilteredIncomes.reduce((sum, income) => sum + income.amount, 0);
         const totalExpenses = currentFilteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
