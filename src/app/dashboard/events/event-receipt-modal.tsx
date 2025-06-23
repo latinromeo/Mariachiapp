@@ -33,7 +33,7 @@ const formatCurrency = (value: number | undefined) => {
 };
 
 // This component contains the actual content of the receipt.
-// It is now a forwardRef component to ensure the ref is passed correctly.
+// It is a forwardRef component to ensure the ref is passed correctly.
 const ReceiptBody = React.forwardRef<HTMLDivElement, {
   eventData: Partial<EventData>;
   eventTypeLabel: string;
@@ -190,40 +190,34 @@ Gracias por confiar en Mariachi Reyes de México. ¡Será un honor acompañarlos
   const receiptContentProps = { eventData, eventTypeLabel, planLabel, paymentMethodLabel };
 
   return (
-    <>
-      {/* This component is hidden from view but is used for printing */}
-      <div className="hidden">
-        <ReceiptBody ref={receiptRef} {...receiptContentProps} />
-      </div>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-2xl p-0">
-          <DialogHeader className="p-6 pb-2">
-            <DialogTitle>Evento Creado Exitosamente - Recibo</DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[70vh] overflow-y-auto px-1">
-             {/* This is the visible component, without the ref */}
-             <ReceiptBody {...receiptContentProps} />
-          </div>
-           <DialogFooter className="p-6 border-t bg-background flex-col gap-2">
-              <div className="flex flex-col sm:flex-row gap-2 justify-end">
-                  <Button onClick={handlePrint} variant="outline" className="w-full sm:w-auto">
-                      <Printer className="mr-2 h-4 w-4" />
-                      Imprimir / Guardar PDF
-                  </Button>
-                  <Button onClick={handleWhatsAppShare} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      Enviar Resumen por WhatsApp
-                  </Button>
-                  <DialogClose asChild>
-                      <Button variant="secondary" className="w-full sm:w-auto">Cerrar</Button>
-                  </DialogClose>
-              </div>
-              <p className="text-xs text-muted-foreground text-center sm:text-right mt-2">
-                  Para enviar el PDF, primero guárdelo en su dispositivo y luego adjúntelo en WhatsApp.
-              </p>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl p-0">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle>Evento Creado Exitosamente - Recibo</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[70vh] overflow-y-auto px-1">
+           {/* This is the visible component, now with the ref */}
+           <ReceiptBody ref={receiptRef} {...receiptContentProps} />
+        </div>
+         <DialogFooter className="p-6 border-t bg-background flex-col gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                <Button onClick={handlePrint} variant="outline" className="w-full sm:w-auto">
+                    <Printer className="mr-2 h-4 w-4" />
+                    Imprimir / Guardar PDF
+                </Button>
+                <Button onClick={handleWhatsAppShare} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Enviar Resumen por WhatsApp
+                </Button>
+                <DialogClose asChild>
+                    <Button variant="secondary" className="w-full sm:w-auto">Cerrar</Button>
+                </DialogClose>
+            </div>
+            <p className="text-xs text-muted-foreground text-center sm:text-right mt-2">
+                Para enviar el PDF, primero guárdelo en su dispositivo y luego adjúntelo en WhatsApp.
+            </p>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
