@@ -91,10 +91,11 @@ export default function MediaPage() {
                         <Input id="invoice-file-input" type="file" className="hidden" onChange={handleFileChange} />
                       </div>
                     </div>
-                    <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white w-full">
+                    <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white w-full" disabled>
                       <Upload className="mr-2 h-4 w-4" />
                       Subir Factura
                     </Button>
+                     <p className="text-xs text-muted-foreground text-center">Nota: La subida de archivos a la nube no está implementada. Esto es solo para diseño visual.</p>
                   </div>
                 </div>
               </CardContent>
