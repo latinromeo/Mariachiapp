@@ -4,7 +4,7 @@
 import Link from "next/link"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { Calendar, Clock, MapPin, Music, PlusCircle, ListMusic, FileText, Video, Phone, DollarSign, CheckCircle, Edit } from "lucide-react"
+import { Calendar, Clock, MapPin, Music, PlusCircle, ListMusic, FileText, Video, Phone, DollarSign, CheckCircle, Edit, XCircle } from "lucide-react"
 
 import { type EventData, type RehearsalData } from "@/services/eventService"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 
 interface DayDetailModalProps {
   isOpen: boolean
@@ -30,6 +31,45 @@ const formatCurrency = (value: number | undefined) => {
         return "RD$0.00";
     }
     return `RD$${(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const statusConfig = {
+    completed: {
+        badgeVariant: 'secondary' as const,
+        badgeText: 'Completado',
+        borderColor: 'border-l-green-600',
+        iconColor: 'text-green-600',
+    },
+    pending: {
+        badgeVariant: 'secondary' as const,
+        badgeText: 'Pendiente',
+        borderColor: 'border-l-yellow-500',
+        iconColor: 'text-yellow-500',
+    },
+    confirmed: {
+        badgeVariant: 'default' as const,
+        badgeText: 'Confirmado',
+        borderColor: 'border-l-blue-500',
+        iconColor: 'text-blue-500',
+    },
+    external: {
+        badgeVariant: 'outline' as const,
+        badgeText: 'Externo',
+        borderColor: 'border-l-purple-500',
+        iconColor: 'text-purple-500',
+    },
+    cancelled: {
+        badgeVariant: 'destructive' as const,
+        badgeText: 'Cancelado',
+        borderColor: 'border-l-red-600',
+        iconColor: 'text-red-600',
+    },
+    default: {
+        badgeVariant: 'destructive' as const,
+        badgeText: 'Evento',
+        borderColor: 'border-l-destructive',
+        iconColor: 'text-destructive',
+    }
 };
 
 
@@ -53,12 +93,15 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                 </div>
             ) : (
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                    {events.map(event => (
-                        <div key={event.id} className="relative p-4 rounded-lg bg-muted/30 border border-border border-l-4 border-l-destructive">
-                            <Badge variant="destructive" className="absolute top-4 right-4">Evento</Badge>
+                    {events.map(event => {
+                        const config = statusConfig[event.status as keyof typeof statusConfig] || statusConfig.default;
+                        
+                        return (
+                        <div key={event.id} className={cn("relative p-4 rounded-lg bg-muted/30 border border-border border-l-4", config.borderColor)}>
+                            <Badge variant={config.badgeVariant} className="absolute top-4 right-4">{config.badgeText}</Badge>
                             <div className="space-y-3">
-                                <p className="flex items-center gap-2 text-foreground font-semibold text-base pr-20">
-                                    <Calendar className="h-5 w-5 text-destructive"/> {event.eventTime} - {event.eventType} {event.clientName}
+                                <p className={cn("flex items-center gap-2 text-foreground font-semibold text-base pr-20", config.iconColor)}>
+                                    <Calendar className="h-5 w-5"/> {event.eventTime} - {event.eventType} {event.clientName}
                                 </p>
                                 <div className="text-sm space-y-2">
                                     <p className="flex items-center gap-2 text-foreground">
@@ -86,9 +129,10 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                                     </div>
                                 </div>
 
-                                {event.status === 'completed' && (
-                                     <p className="flex items-center gap-2 text-sm font-medium text-green-600 pt-2">
-                                        <CheckCircle className="h-4 w-4"/> Completado
+                                {(event.status === 'completed' || event.status === 'cancelled') && (
+                                     <p className={cn("flex items-center gap-2 text-sm font-medium pt-2", config.iconColor)}>
+                                        {event.status === 'completed' ? <CheckCircle className="h-4 w-4"/> : <XCircle className="h-4 w-4"/>}
+                                        <span className="capitalize">{config.badgeText}</span>
                                     </p>
                                 )}
                             </div>
@@ -96,7 +140,7 @@ export function DayDetailModal({ isOpen, onClose, date, events, rehearsals }: Da
                                 Ver / Editar <Edit className="h-3 w-3"/>
                             </Link>
                         </div>
-                    ))}
+                    )})}
                     {rehearsals.map(rehearsal => (
                          <div key={rehearsal.id} className="p-4 rounded-lg border bg-muted/30 border-l-4 border-l-primary">
                             <div className="flex justify-between items-start">
