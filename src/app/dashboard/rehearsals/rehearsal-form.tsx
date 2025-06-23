@@ -276,17 +276,25 @@ export function RehearsalForm({ initialData, rehearsalId }: RehearsalFormProps) 
                                     </FormItem>
                                 )}
                             />
-                             <FormField
-                                control={form.control}
-                                name={`songs.${index}.sheetMusicUrl`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4" />Enlace Partitura (Opcional)</FormLabel>
-                                        <FormControl><Input type="url" placeholder="https://..." {...field} value={field.value ?? ""} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                             <FormItem>
+                                <FormLabel className="flex items-center gap-2"><FileText className="h-4 w-4" />Partitura (PDF/Imagen, Opcional)</FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Input 
+                                      type="file" 
+                                      id={`sheet-music-upload-${field.id}`}
+                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                      // onChange handler would be needed for a full implementation
+                                    />
+                                    <label htmlFor={`sheet-music-upload-${field.id}`} className="flex items-center justify-between w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                      <span className="text-muted-foreground">Ningún archivo seleccionado</span>
+                                      <div className="px-3 py-1 bg-secondary text-secondary-foreground rounded-sm text-sm font-medium">Seleccionar archivo</div>
+                                    </label>
+                                  </div>
+                                </FormControl>
+                                <p className="text-xs text-muted-foreground">La subida de archivos se implementará en un paso futuro.</p>
+                                <FormMessage />
+                            </FormItem>
                            </div>
                         ))}
                         <Button type="button" variant="secondary" onClick={() => append({ name: "", artist: "", key: "", youtubeUrl: "", sheetMusicUrl: "" })}>
