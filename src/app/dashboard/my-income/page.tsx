@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExpenseForm } from "./expense-form"
-import { format, getYear, getMonth, parseISO } from "date-fns"
+import { format, getYear, getMonth, parse } from "date-fns"
 import { es } from "date-fns/locale"
 import { useUser } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -35,6 +35,21 @@ const months = Array.from({ length: 12 }, (_, i) => ({
   value: i,
   label: format(new Date(2000, i), "MMMM", { locale: es }),
 }));
+
+/**
+ * Parses a date string ('YYYY-MM-DD' or ISO) into a local Date object reliably.
+ * This prevents timezone issues by explicitly parsing the date part only.
+ */
+const robustParseDate = (dateString: string): Date | null => {
+  if (typeof dateString !== 'string') return null;
+  const datePart = dateString.split('T')[0];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+    return null;
+  }
+  // Using parse from date-fns ensures the date is interpreted in the local timezone at midnight.
+  return parse(datePart, 'yyyy-MM-dd', new Date());
+};
+
 
 function IncomeEntryPopover({ event, onIncomeSet }: { event: EventData, onIncomeSet: () => void }) {
     const { user } = useUser();
@@ -139,18 +154,15 @@ export default function MyIncomePage() {
 
             const years = new Set<number>();
             
-            const addYearFromDateString = (dateString: string) => {
-                 if (typeof dateString === 'string' && /^\d{4}/.test(dateString)) {
-                    const year = parseInt(dateString.substring(0, 4), 10);
-                    if (!isNaN(year)) {
-                        years.add(year);
-                    }
+            const addYearFromDate = (date: Date | null) => {
+                 if (date) {
+                    years.add(getYear(date));
                 }
             };
             
-            eventsData.forEach(e => addYearFromDateString(e.eventDate));
-            expensesData.forEach(e => addYearFromDateString(e.date));
-            incomesData.forEach(i => addYearFromDateString(i.date));
+            eventsData.forEach(e => addYearFromDate(robustParseDate(e.eventDate)));
+            expensesData.forEach(e => addYearFromDate(robustParseDate(e.date)));
+            incomesData.forEach(i => addYearFromDate(robustParseDate(i.date)));
 
             const currentYear = getYear(new Date());
             if (!years.has(currentYear)) years.add(currentYear);
@@ -176,13 +188,9 @@ export default function MyIncomePage() {
         filteredExpenses
     } = useMemo(() => {
          const filterByMonthAndYear = (dateString: string) => {
-            if (typeof dateString !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
-                return false;
-            }
-            const year = parseInt(dateString.substring(0, 4), 10);
-            const month = parseInt(dateString.substring(5, 7), 10) - 1;
-            
-            return year === selectedYear && month === selectedMonth;
+            const date = robustParseDate(dateString);
+            if (!date) return false;
+            return getYear(date) === selectedYear && getMonth(date) === selectedMonth;
         };
 
         const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
@@ -306,13 +314,14 @@ export default function MyIncomePage() {
                 {filteredEvents.length > 0 ? filteredEvents.map(event => {
                     const income = incomes.find(i => i.eventId === event.id);
                     const isCompleted = !!income;
+                    const eventDate = robustParseDate(event.eventDate);
                     return (
                         <div key={event.id} className={cn("flex justify-between items-center p-3 rounded-md border", isCompleted ? "bg-green-50 dark:bg-green-950/30 border-green-200" : "bg-muted/50")}>
                             <div>
                                 <p className="font-semibold capitalize">{event.eventType} - {event.clientName}</p>
                                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                                     <Calendar className="h-3 w-3" />
-                                    {format(parseISO(event.eventDate), 'dd/MM/yyyy')} @ {event.sector}
+                                    {eventDate ? format(eventDate, 'dd/MM/yyyy') : 'Fecha inválida'} @ {event.sector}
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -351,18 +360,21 @@ export default function MyIncomePage() {
                 </Dialog>
             </CardHeader>
             <CardContent className="space-y-2">
-                 {filteredExpenses.length > 0 ? filteredExpenses.map(expense => (
-                    <div key={expense.id} className="flex justify-between items-center p-3 rounded-md border bg-muted/50">
-                        <div>
-                            <p className="font-semibold capitalize">{expense.description}</p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-2">
-                                <Calendar className="h-3 w-3" />
-                                {format(parseISO(expense.date), 'dd/MM/yyyy')}
-                            </p>
+                 {filteredExpenses.length > 0 ? filteredExpenses.map(expense => {
+                    const expenseDate = robustParseDate(expense.date);
+                    return (
+                        <div key={expense.id} className="flex justify-between items-center p-3 rounded-md border bg-muted/50">
+                            <div>
+                                <p className="font-semibold capitalize">{expense.description}</p>
+                                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                    <Calendar className="h-3 w-3" />
+                                    {expenseDate ? format(expenseDate, 'dd/MM/yyyy') : 'Fecha inválida'}
+                                </p>
+                            </div>
+                            <span className="font-bold text-red-600">{formatCurrency(expense.amount)}</span>
                         </div>
-                        <span className="font-bold text-red-600">{formatCurrency(expense.amount)}</span>
-                    </div>
-                )) : (
+                    )
+                 }) : (
                      <p className="text-sm text-muted-foreground text-center py-4">No hay egresos personales registrados para el período seleccionado.</p>
                 )}
             </CardContent>
@@ -370,6 +382,5 @@ export default function MyIncomePage() {
     </div>
   );
 }
-
 
     
