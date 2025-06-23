@@ -1,4 +1,3 @@
-
 // src/services/eventService.ts
 'use server';
 
@@ -91,6 +90,7 @@ export interface SongDetail {
   notes?: string;
   sheetMusicUrl?: string;
   youtubeUrl?: string;
+  audioUrl?: string;
   createdAt: string;
 }
 

@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState, useMemo } from "react";
@@ -6,6 +5,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -125,8 +125,8 @@ export default function RepertoirePage() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {(songsByCategory[category] || []).length > 0 ? (
                   songsByCategory[category].map((song) => (
-                    <Card key={song.id}>
-                      <CardHeader>
+                    <Card key={song.id} className="flex flex-col">
+                      <CardHeader className="flex-1">
                         <CardTitle className="flex items-center justify-between">
                             <span className="flex items-center gap-2">
                                 <Music className="h-5 w-5 text-primary" />
@@ -155,6 +155,13 @@ export default function RepertoirePage() {
                             <Badge key={tag} variant="secondary" className="capitalize flex items-center gap-1"><Star className="h-3 w-3" /> {tag}</Badge>
                           ))}
                       </CardContent>
+                      {song.audioUrl && (
+                          <CardFooter className="p-4 pt-2">
+                              <audio controls src={song.audioUrl} className="w-full h-10">
+                                  Tu navegador no soporta el elemento de audio.
+                              </audio>
+                          </CardFooter>
+                      )}
                     </Card>
                   ))
                 ) : (
