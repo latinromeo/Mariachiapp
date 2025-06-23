@@ -28,11 +28,11 @@ body {
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
     --ring: 221 83% 53%;
-    --chart-1: 336 71% 68%;
-    --chart-2: 45 93% 62%;
-    --chart-3: 195 93% 62%;
-    --chart-4: 221 83% 53%;
-    --chart-5: 142 61% 41%;
+    --chart-1: 336 71% 68%; /* Pinkish */
+    --chart-2: 45 93% 62%;  /* Yellow */
+    --chart-3: 195 93% 62%; /* Cyan */
+    --chart-4: 221 83% 53%; /* Blue */
+    --chart-5: 122 61% 41%; /* Green */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
     --sidebar-border: 0 0% 92%;
@@ -68,7 +68,7 @@ body {
     --chart-2: 45 93% 68%;
     --chart-3: 195 93% 68%;
     --chart-4: 221 83% 63%;
-    --chart-5: 142 61% 51%;
+    --chart-5: 122 61% 51%;
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-border: 240 5% 20%;

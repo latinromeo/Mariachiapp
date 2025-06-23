@@ -2,7 +2,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { Area, AreaChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, Cell } from "recharts"
+import { Area, AreaChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, Cell, LineChart, Line } from "recharts"
 import {
   Card,
   CardContent,
@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { DollarSign, TrendingUp, TrendingDown, Equal, PlusCircle, LineChart as LineChartIcon, PieChart as PieChartIcon } from "lucide-react"
+import { DollarSign, TrendingUp, TrendingDown, Equal, PlusCircle, Clock } from "lucide-react"
 import { type EventData, type ManualFinanceEntry, getEvents, getManualFinanceEntries } from "@/services/eventService"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -129,11 +129,11 @@ export default function FinancePage() {
         }, {} as Record<string, string>)
         
         const eventTypeColorMap: Record<string, string> = {
-            'Boda': 'var(--chart-1)',
             'Cumpleaños': 'var(--chart-2)',
-            'Serenata': 'var(--chart-3)',
-            'Corporativo': 'var(--chart-4)',
-            'Otro': 'var(--chart-5)',
+            'Boda': 'var(--chart-4)',
+            'Serenata': 'var(--chart-5)',
+            'Corporativo': 'var(--chart-1)',
+            'Otro': 'var(--chart-3)',
         };
         
         const eventTypeCounts = events.reduce((acc, event) => {
@@ -226,26 +226,19 @@ export default function FinancePage() {
         <div className="grid gap-6 lg:grid-cols-5">
             <Card className="lg:col-span-3">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><LineChartIcon className="h-5 w-5" />Desglose de Ingresos</CardTitle>
-                    <CardDescription>Evolución de los ingresos en los últimos 6 meses.</CardDescription>
+                    <CardTitle>Evolución de los ingresos a lo largo de los meses.</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={{
                         Ingresos: {
                             label: "Ingresos",
-                            color: "hsl(var(--chart-1))",
+                            color: "hsl(var(--chart-4))",
                         },
                     }} className="h-[250px] w-full">
-                        <AreaChart
+                        <LineChart
                             data={chartsData.incomeHistory}
                             margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
                         >
-                             <defs>
-                                <linearGradient id="fillIngresos" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="var(--color-Ingresos)" stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor="var(--color-Ingresos)" stopOpacity={0.1}/>
-                                </linearGradient>
-                            </defs>
                             <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} className="capitalize" />
                             <YAxis 
                                 stroke="hsl(var(--muted-foreground))" 
@@ -262,15 +255,15 @@ export default function FinancePage() {
                                 />}
                             />
                             <Legend content={<ChartLegendContent />} />
-                            <Area type="monotone" dataKey="Ingresos" strokeWidth={2} stroke="var(--color-Ingresos)" fill="url(#fillIngresos)" />
-                        </AreaChart>
+                            <Line type="monotone" dataKey="Ingresos" strokeWidth={2} stroke="var(--color-Ingresos)" dot={true} />
+                        </LineChart>
                     </ChartContainer>
                 </CardContent>
             </Card>
              <Card className="lg:col-span-2">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><PieChartIcon className="h-5 w-5"/>Tipos de Eventos</CardTitle>
-                    <CardDescription>Distribución de los tipos de evento realizados.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5"/>Distribución de Ingresos por Tipo de Evento</CardTitle>
+                    <CardDescription>Cantidad de eventos realizados por cada tipo.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {chartsData.eventTypeDistribution.length > 0 ? (
