@@ -175,8 +175,11 @@ export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 
 export async function askAssistant(input: AssistantInput): Promise<string> {
   try {
+    const currentDate = new Date().toISOString().split('T')[0];
+    const systemPromptWithDate = `${masterPrompt}\n\nINFORMACIÓN ADICIONAL:\n- La fecha de hoy es ${currentDate}. Utiliza esta fecha como referencia para cualquier consulta relativa al tiempo (ej: "hoy", "mañana", "este mes").`;
+
     const { text } = await ai.generate({
-      system: masterPrompt,
+      system: systemPromptWithDate,
       prompt: input.message,
       history: input.history as MessageData[],
       tools: [listEvents, listClients, createNewEvent, createFinanceEntry],

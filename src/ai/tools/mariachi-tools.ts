@@ -8,12 +8,13 @@ import {
     createEvent, 
     createManualFinanceEntry,
 } from '@/services/eventService';
+import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
 // Tool to list events
 export const listEvents = ai.defineTool(
   {
     name: 'listEvents',
-    description: 'Obtiene una lista de los próximos eventos, opcionalmente filtrados por un rango de fechas.',
+    description: 'Obtiene una lista de los eventos. Puede filtrarse opcionalmente por un rango de fechas. La IA debe inferir las fechas a partir de lenguaje natural (ej: "este mes", "mañana", "próxima semana"). Si no se especifica un rango, devuelve todos los eventos.',
     inputSchema: z.object({
         startDate: z.string().optional().describe('Fecha de inicio en formato YYYY-MM-DD.'),
         endDate: z.string().optional().describe('Fecha de fin en formato YYYY-MM-DD.'),
@@ -30,7 +31,33 @@ export const listEvents = ai.defineTool(
   },
   async (input) => {
     const events = await getEvents();
-    // TODO: Implement date filtering based on input
+    
+    if (input.startDate || input.endDate) {
+        const interval = {
+            start: input.startDate ? startOfDay(parseISO(input.startDate)) : new Date(0),
+            end: input.endDate ? endOfDay(parseISO(input.endDate)) : new Date(8640000000000000),
+        };
+
+        const filteredEvents = events.filter(e => {
+            try {
+                const eventDate = parseISO(e.eventDate);
+                return isWithinInterval(eventDate, interval);
+            } catch {
+                return false;
+            }
+        });
+
+        return filteredEvents.map(e => ({ 
+            id: e.id, 
+            clientName: e.clientName, 
+            eventType: e.eventType, 
+            eventDate: e.eventDate,
+            eventTime: e.eventTime,
+            location: e.location,
+            status: e.status
+        }));
+    }
+    
     return events.map(e => ({ 
         id: e.id, 
         clientName: e.clientName, 
