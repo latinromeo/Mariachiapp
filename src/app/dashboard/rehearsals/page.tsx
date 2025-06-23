@@ -8,27 +8,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, PlusCircle, Search, Loader2, Trash2 } from "lucide-react";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuTrigger,
-  } from "@/components/ui/dropdown-menu"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -41,9 +21,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { type RehearsalData, getRehearsals, deleteRehearsal } from "@/services/eventService";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { es } from 'date-fns/locale';
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { 
+    Calendar, 
+    Edit, 
+    Loader2, 
+    PlusCircle, 
+    Search, 
+    Trash2,
+    Youtube
+} from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function RehearsalsPage() {
   const [allRehearsals, setAllRehearsals] = useState<RehearsalData[]>([]);
@@ -58,6 +51,7 @@ export default function RehearsalsPage() {
     setIsLoading(true);
     try {
       const data = await getRehearsals();
+      data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setAllRehearsals(data);
     } catch (error) {
       console.error("Failed to fetch rehearsals", error);
@@ -102,6 +96,16 @@ export default function RehearsalsPage() {
     setIsDeleting(false);
     setRehearsalToDelete(null);
   };
+  
+  const parseDate = (dateString: string) => {
+    try {
+      return parseISO(dateString);
+    } catch (e) {
+      const parts = dateString.split('T')[0].split('-').map(Number);
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+  }
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,79 +131,100 @@ export default function RehearsalsPage() {
                 </Link>
             </Button>
         </div>
-       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Calendario de Ensayos</CardTitle>
-          <CardDescription>
-            Planea y sigue las sesiones de práctica de tu banda.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Hora</TableHead>
-                <TableHead>Lugar</TableHead>
-                <TableHead>Tema</TableHead>
-                <TableHead className="text-center">Canciones</TableHead>
-                <TableHead>
-                  <span className="sr-only">Acciones</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                  Array.from({ length: 4 }).map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-28" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
-                    </TableRow>
-                  ))
-              ) : filteredRehearsals.length > 0 ? (
-                filteredRehearsals.map((rehearsal) => (
-                  <TableRow key={rehearsal.id}>
-                    <TableCell className="font-medium">{format(new Date(rehearsal.date), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>{rehearsal.time}</TableCell>
-                    <TableCell>{rehearsal.location}</TableCell>
-                    <TableCell>{rehearsal.focus}</TableCell>
-                    <TableCell className="text-center">
-                        <Badge variant="secondary">{rehearsal.songs?.length || 0}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem onSelect={() => router.push(`/dashboard/rehearsals/${rehearsal.id}/edit`)}>Editar</DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => setRehearsalToDelete(rehearsal)} className="text-destructive focus:text-destructive">Eliminar</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                        {searchTerm ? "No se encontraron ensayos con ese criterio." : "No se encontraron ensayos."}
-                    </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-      <AlertDialog open={!!rehearsalToDelete} onOpenChange={(isOpen) => !isOpen && setRehearsalToDelete(null)}>
+      </div>
+      
+      <div className="space-y-4">
+        {isLoading ? (
+            Array.from({ length: 3 }).map((_, index) => (
+                <Card key={index} className="p-4">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="space-y-2"><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-20" /></div>
+                        <Skeleton className="h-5 w-40" />
+                    </div>
+                    <Separator/>
+                    <div className="mt-4 space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-16 w-full" />
+                    </div>
+                </Card>
+            ))
+        ) : filteredRehearsals.length > 0 ? (
+            filteredRehearsals.map((rehearsal) => {
+                const date = parseDate(rehearsal.date);
+                const formattedDateTime = format(date, "EEE, d MMM", { locale: es }) + `, ${rehearsal.time}`;
+                const songCount = rehearsal.songs?.length || 0;
+
+                return (
+                    <Card key={rehearsal.id}>
+                        <div className="p-4 space-y-4">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-primary capitalize">{rehearsal.focus}</h2>
+                                    <p className="text-sm text-muted-foreground">{songCount} canci&oacute;n/{songCount !== 1 ? 'es' : ''}</p>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Calendar className="h-4 w-4" />
+                                    <span className="capitalize">{formattedDateTime}</span>
+                                </div>
+                            </div>
+                            <Separator />
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-medium">Canciones:</h3>
+                                {songCount > 0 && rehearsal.songs ? (
+                                    <div className="space-y-2">
+                                        {rehearsal.songs.map((song, i) => (
+                                            <div key={i} className="bg-muted/50 p-3 rounded-md">
+                                                <p className="font-semibold">{song.name}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {song.artist && `Artista: ${song.artist}`}
+                                                    {song.artist && song.key && ' · '}
+                                                    {song.key && `Tono: ${song.key}`}
+                                                </p>
+                                                {song.youtubeUrl && (
+                                                     <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-red-600 hover:underline text-sm mt-1">
+                                                        <Youtube className="h-4 w-4" /> YouTube
+                                                     </a>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No hay canciones listadas para este ensayo.</p>
+                                )}
+                            </div>
+                             <Separator />
+                             <div className="flex justify-between items-center">
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox id={`complete-${rehearsal.id}`} />
+                                    <Label htmlFor={`complete-${rehearsal.id}`} className="text-sm font-medium text-muted-foreground">
+                                        Marcar Completo
+                                    </Label>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                     <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/rehearsals/${rehearsal.id}/edit`)}>
+                                        <Edit className="h-4 w-4" />
+                                        <span className="sr-only">Editar Ensayo</span>
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setRehearsalToDelete(rehearsal)}>
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Eliminar Ensayo</span>
+                                    </Button>
+                                </div>
+                             </div>
+                        </div>
+                    </Card>
+                )
+            })
+        ) : (
+            <Card>
+                <CardContent className="h-24 text-center flex items-center justify-center p-6">
+                    <p>{searchTerm ? "No se encontraron ensayos con ese criterio." : "No hay ensayos programados."}</p>
+                </CardContent>
+            </Card>
+        )}
+      </div>
+
+        <AlertDialog open={!!rehearsalToDelete} onOpenChange={(isOpen) => !isOpen && setRehearsalToDelete(null)}>
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>¿Estás seguro de que quieres eliminar este ensayo?</AlertDialogTitle>
