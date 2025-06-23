@@ -9,18 +9,12 @@ export const EVENT_TYPES = [
 ];
 
 export const EVENT_PLANS = [
-    { value: "servicio_express", label: "Servicio Express (1-5 canciones)" },
-    { value: "hora_completa", label: "Hora Completa" },
-    { value: "evento_premium", label: "Evento Premium (2 horas + equipo)" },
-    { value: "personalizado", label: "Personalizado" },
-];
-
-export const EVENT_DURATIONS = [
-  { value: "30_min", label: "30 Minutos" },
-  { value: "1_hora", label: "1 Hora" },
-  { value: "2_horas", label: "2 Horas" },
-  { value: "3_horas", label: "3 Horas" },
-  { value: "otro", label: "Personalizada" },
+    { value: "personalizado", label: "Personalizado / Otro", price: 0 },
+    { value: "express", label: "Servicio Express (1-5 canciones)", price: 2500 },
+    { value: "30_min", label: "Servicio 30 Minutos", price: 3500 },
+    { value: "1_hora", label: "Servicio 1 Hora", price: 6000 },
+    { value: "1_5_horas", label: "Servicio 1.5 Horas", price: 8500 },
+    { value: "2_horas", label: "Servicio 2 Horas", price: 10000 },
 ];
 
 export const PAYMENT_METHODS = [

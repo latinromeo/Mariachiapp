@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useEffect, useState, useMemo, useCallback } from "react"
 import { CalendarIcon, Clock, DollarSign, ExternalLink, Hash, Info, Loader2, MapPin, Mic, Phone, User, Trash2 } from "lucide-react"
-import { EVENT_DURATIONS, EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
+import { EVENT_PLANS, EVENT_TYPES, PAYMENT_METHODS } from "@/lib/constants"
 import { createEvent, findClientByPhone, updateEvent, type EventData, deleteEvent } from "@/services/eventService"
 import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
@@ -44,7 +44,6 @@ const formSchema = z.object({
   eventDate: z.string().min(1, { message: "La fecha es obligatoria." }),
   eventTime: z.string().min(1, { message: "La hora es obligatoria." }),
   plan: z.string({ required_error: "Debe seleccionar un plan." }),
-  duration: z.string({ required_error: "Debe seleccionar una duración." }),
   paymentMethod: z.string({ required_error: "Debe seleccionar un método de pago." }),
   location: z.string().min(2, { message: "La ubicación es obligatoria." }),
   sector: z.string().min(2, { message: "El sector es obligatorio." }),
@@ -90,7 +89,6 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
       eventDate: dateFromQuery || "",
       eventTime: "",
       plan: "",
-      duration: "",
       paymentMethod: "",
       location: "",
       sector: "",
@@ -102,7 +100,9 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
     },
   })
 
-  const { watch, setValue } = form
+  const { watch, setValue, getValues } = form
+  const planValue = watch("plan")
+  const isCustomPlan = planValue === 'personalizado';
   const contractedAmount = watch("contractedAmount")
   const amountPaid = watch("amountPaid")
   const musiciansPay = watch("musiciansPay")
@@ -111,6 +111,15 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
 
   const [pendingBalance, setPendingBalance] = useState(0)
   const [profit, setProfit] = useState(0)
+
+  useEffect(() => {
+    const selectedPlan = EVENT_PLANS.find(p => p.value === planValue);
+    if (selectedPlan && selectedPlan.value !== 'personalizado') {
+        if (getValues('contractedAmount') !== selectedPlan.price) {
+            setValue('contractedAmount', selectedPlan.price, { shouldValidate: true });
+        }
+    }
+  }, [planValue, setValue, getValues]);
 
   const timeOptions = useMemo(() => {
     const options = [];
@@ -299,7 +308,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                   )}
                               />
                           </div>
-                          <div className="grid sm:grid-cols-3 gap-4">
+                          <div className="grid sm:grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="eventDate"
@@ -327,22 +336,6 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                                         </FormItem>
                                     )}
                                 />
-                                <FormField
-                                  control={form.control}
-                                  name="duration"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                          <FormLabel>Duración</FormLabel>
-                                           <Select onValueChange={field.onChange} value={field.value} defaultValue="">
-                                              <FormControl><SelectTrigger><SelectValue placeholder="Duración..." /></SelectTrigger></FormControl>
-                                              <SelectContent>
-                                                  {EVENT_DURATIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
-                                              </SelectContent>
-                                          </Select>
-                                          <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
                           </div>
                           <div className="grid sm:grid-cols-2 gap-4">
                                 <FormField
@@ -409,7 +402,7 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Monto Contratado</FormLabel>
-                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl>
+                                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} disabled={!isCustomPlan} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}

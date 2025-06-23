@@ -43,7 +43,6 @@ export interface EventData {
   eventDate: string; // Stored as 'YYYY-MM-DD'
   eventTime: string;
   plan: string;
-  duration: string;
   paymentMethod: string;
   location: string;
   sector: string;
