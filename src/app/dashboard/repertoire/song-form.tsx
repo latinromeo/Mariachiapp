@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Form,
   FormControl,
@@ -16,12 +16,24 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { useState } from "react"
-import { Loader2, Music, User, KeyRound, Link, FileText, Plus, Type, StickyNote } from "lucide-react"
-import { createSong } from "@/services/eventService"
+import { useState, useEffect } from "react"
+import { Loader2, Music, User, KeyRound, Link, FileText, Plus, Type, StickyNote, Trash2 } from "lucide-react"
+import { createSong, updateSong, deleteSong, type SongDetail } from "@/services/eventService"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SONG_CATEGORIES, MUSICAL_KEYS } from "@/lib/constants"
 import { DialogFooter } from "@/components/ui/dialog"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 
 const formSchema = z.object({
   title: z.string().min(2, { message: "El título es obligatorio." }),
@@ -38,17 +50,20 @@ const formSchema = z.object({
 interface SongFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
+  initialData?: SongDetail | null;
 }
 
-export function SongForm({ onSuccess, onCancel }: SongFormProps) {
+export function SongForm({ onSuccess, onCancel, initialData }: SongFormProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [sheetMusicFileName, setSheetMusicFileName] = useState("");
   const [audioFileName, setAudioFileName] = useState("");
+  const isEditMode = !!initialData?.id;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: initialData || {
       title: "",
       artist: "",
       youtubeUrl: "",
@@ -61,29 +76,58 @@ export function SongForm({ onSuccess, onCancel }: SongFormProps) {
     },
   })
 
+  useEffect(() => {
+    if (initialData) {
+      form.reset(initialData);
+    } else {
+      form.reset({
+        title: "",
+        artist: "",
+        youtubeUrl: "",
+        sheetMusicUrl: "",
+        audioUrl: "",
+        category: "",
+        key: "",
+        lyrics: "",
+        notes: "",
+      });
+    }
+  }, [initialData, form]);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-    // Note: File upload logic is not implemented here. 
-    // This form currently only saves the URLs and text data.
-    // If a local blob URL is present for audio, it will be cleared.
     const submissionValues = {...values};
     if (submissionValues.audioUrl?.startsWith('blob:')) {
-      submissionValues.audioUrl = '';
+      submissionValues.audioUrl = initialData?.audioUrl || '';
     }
 
     try {
-        const result = await createSong(submissionValues);
+        let result;
+        if (isEditMode && initialData.id) {
+            result = await updateSong(initialData.id, submissionValues);
+            if (result.success) {
+                toast({
+                    title: "¡Canción Actualizada!",
+                    description: "Los cambios se han guardado exitosamente.",
+                });
+            }
+        } else {
+            result = await createSong(submissionValues);
+            if (result.success) {
+                toast({
+                    title: "¡Canción Guardada!",
+                    description: "La nueva canción ha sido añadida al repertorio.",
+                });
+            }
+        }
+        
         if (result.success) {
-            toast({
-                title: "¡Canción Guardada!",
-                description: "La nueva canción ha sido añadida al repertorio.",
-            });
             form.reset();
             onSuccess?.();
         } else {
              toast({
                 variant: "destructive",
-                title: "Error al guardar la canción",
+                title: `Error al ${isEditMode ? 'actualizar' : 'guardar'} la canción`,
                 description: result.error || "Hubo un problema al guardar. Inténtalo de nuevo.",
             });
         }
@@ -98,6 +142,33 @@ export function SongForm({ onSuccess, onCancel }: SongFormProps) {
         setIsSubmitting(false);
     }
   }
+
+  async function handleDelete() {
+    if (!initialData?.id) return;
+    setIsDeleting(true);
+    try {
+        const result = await deleteSong(initialData.id);
+        if (result.success) {
+            toast({
+                title: "¡Canción Eliminada!",
+                description: "La canción ha sido eliminada del repertorio.",
+            });
+            onSuccess?.();
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Error al eliminar",
+                description: result.error || "No se pudo eliminar la canción.",
+            });
+        }
+    } catch (error) {
+        toast({ variant: "destructive", title: "Error de Red", description: "No se pudo conectar con el servidor." });
+        console.error(error);
+    } finally {
+        setIsDeleting(false);
+    }
+  }
+
 
   return (
     <Form {...form}>
@@ -252,13 +323,42 @@ export function SongForm({ onSuccess, onCancel }: SongFormProps) {
                 )}
             />
         </div>
-        <DialogFooter className="pt-4">
-             {onCancel && <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>}
-             <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <Music className="mr-2 h-4 w-4" />
-                {isSubmitting ? "Guardando..." : "Guardar Canción"}
-            </Button>
+        <DialogFooter className="pt-4 flex justify-between w-full">
+            <div>
+             {isEditMode && (
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button type="button" variant="destructive" disabled={isSubmitting || isDeleting}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Se eliminará permanentemente la canción "{initialData?.title}" del repertorio.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
+                                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Sí, eliminar
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
+            </div>
+            <div className="flex gap-2">
+                {onCancel && <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancelar</Button>}
+                <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Music className="mr-2 h-4 w-4" />
+                    {isSubmitting ? "Guardando..." : (isEditMode ? "Guardar Cambios" : "Guardar Canción")}
+                </Button>
+            </div>
         </DialogFooter>
       </form>
     </Form>

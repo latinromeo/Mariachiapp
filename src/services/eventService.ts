@@ -94,6 +94,7 @@ export interface SongDetail {
   youtubeUrl?: string;
   audioUrl?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface MediaFile {
@@ -130,7 +131,7 @@ type EventInputData = Omit<EventData, 'id'|'pendingBalance'|'profit'|'createdAt'
 type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;
 type RehearsalInputData = Omit<RehearsalData, 'id'|'createdAt'|'updatedAt'|'status'>;
 type ManualFinanceEntryInputData = Omit<ManualFinanceEntry, 'id'|'createdBy'|'createdAt'>;
-type SongInputData = Omit<SongDetail, 'id' | 'createdAt' | 'suggestedEvents'>;
+type SongInputData = Omit<SongDetail, 'id' | 'createdAt' | 'updatedAt' | 'suggestedEvents'>;
 
 
 // --- HELPER FUNCTIONS ---
@@ -531,7 +532,7 @@ export async function createManualFinanceEntry(data: ManualFinanceEntryInputData
 
 // --- REPERTOIRE & MEDIA SERVICE FUNCTIONS ---
 
-const initialSongs: Omit<SongDetail, 'id' | 'createdAt'>[] = [
+const initialSongs: Omit<SongDetail, 'id' | 'createdAt' | 'updatedAt'>[] = [
     { title: 'Las Mañanitas', artist: 'Tradicional', category: 'Cumpleaños' },
     { title: 'En Tu Día', artist: 'Tradicional', category: 'Cumpleaños' },
     { title: 'Que Dios Te Bendiga', artist: 'Peter Manjarrés', category: 'Cumpleaños' },
@@ -594,12 +595,38 @@ export async function createSong(data: SongInputData): Promise<{ success: boolea
     const docRef = await addDoc(collection(db, "songs"), {
         ...data,
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
     });
     return { success: true, songId: docRef.id };
   } catch (error) {
      console.error("Error creating song:", error);
      return { success: false, error: "Failed to create song in database." };
   }
+}
+
+export async function updateSong(id: string, data: Partial<SongInputData>): Promise<{ success: boolean; error?: string }> {
+    const songRef = doc(db, "songs", id);
+    try {
+        await updateDoc(songRef, {
+            ...data,
+            updatedAt: serverTimestamp(),
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating song:", error);
+        return { success: false, error: "Failed to update song in database." };
+    }
+}
+
+export async function deleteSong(id: string): Promise<{ success: boolean; error?: string }> {
+    const songRef = doc(db, "songs", id);
+    try {
+        await deleteDoc(songRef);
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting song:", error);
+        return { success: false, error: "Failed to delete song from database." };
+    }
 }
 
 

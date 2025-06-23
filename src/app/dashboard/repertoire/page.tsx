@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState, useMemo } from "react";
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Music, KeyRound, Star, PlusCircle, Link as LinkIcon, FileText, Video } from "lucide-react";
+import { Search, Music, KeyRound, Star, PlusCircle, Link as LinkIcon, FileText, Video, Edit } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSongs, type SongDetail } from "@/services/eventService";
 import { SONG_CATEGORIES } from "@/lib/constants";
@@ -25,6 +26,7 @@ export default function RepertoirePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [songToEdit, setSongToEdit] = useState<SongDetail | null>(null);
 
   const fetchSongs = async () => {
     setIsLoading(true);
@@ -60,8 +62,14 @@ export default function RepertoirePage() {
     }, {} as Record<string, SongDetail[]>);
   }, [filteredSongs]);
 
+  const handleOpenDialog = (song: SongDetail | null = null) => {
+    setSongToEdit(song);
+    setIsDialogOpen(true);
+  };
+
   const handleSuccess = () => {
     setIsDialogOpen(false);
+    setSongToEdit(null);
     fetchSongs();
   }
 
@@ -76,23 +84,10 @@ export default function RepertoirePage() {
             Explora y gestiona el catálogo de canciones de tu banda.
             </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-                <Button>
-                    <PlusCircle className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Añadir Canción</span>
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><Music className="h-5 w-5"/>Añadir Nueva Canción al Repertorio</DialogTitle>
-                    <DialogDescription>
-                        Completa la información para registrar una nueva canción.
-                    </DialogDescription>
-                </DialogHeader>
-                <SongForm onSuccess={handleSuccess} />
-            </DialogContent>
-        </Dialog>
+        <Button onClick={() => handleOpenDialog()}>
+            <PlusCircle className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Añadir Canción</span>
+        </Button>
       </div>
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -143,6 +138,10 @@ export default function RepertoirePage() {
                                       <FileText className="h-4 w-4" />
                                   </a>
                               )}
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleOpenDialog(song)}>
+                                 <Edit className="h-4 w-4" />
+                                 <span className="sr-only">Editar</span>
+                              </Button>
                             </div>
                         </CardTitle>
                         {song.artist && <CardDescription>{song.artist}</CardDescription>}
@@ -172,6 +171,21 @@ export default function RepertoirePage() {
           ))}
         </Tabs>
       )}
+       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><Music className="h-5 w-5"/>{songToEdit ? 'Editar Canción' : 'Añadir Nueva Canción al Repertorio'}</DialogTitle>
+                    <DialogDescription>
+                        {songToEdit ? 'Modifica los detalles de la canción existente.' : 'Completa la información para registrar una nueva canción.'}
+                    </DialogDescription>
+                </DialogHeader>
+                <SongForm 
+                    onSuccess={handleSuccess} 
+                    onCancel={() => setIsDialogOpen(false)}
+                    initialData={songToEdit}
+                />
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
