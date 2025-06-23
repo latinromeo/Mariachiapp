@@ -121,7 +121,7 @@ export interface ManualFinanceEntry {
 
 // --- FORM INPUT TYPES ---
 
-type EventInputData = Omit<EventData, 'id'|'clientId'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'>;
+type EventInputData = Omit<EventData, 'id'|'clientId'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'> & { otherExternalContact?: string };
 type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;
 type RehearsalInputData = Omit<RehearsalData, 'id'|'createdAt'|'updatedAt'>;
 type ManualFinanceEntryInputData = Omit<ManualFinanceEntry, 'id'|'createdBy'|'createdAt'>;
@@ -155,7 +155,8 @@ export async function getClients(): Promise<ClientData[]> {
         const clientsCol = collection(db, 'clients');
         const q = query(clientsCol, orderBy("createdAt", "desc"));
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => processDocTimestamps(doc) as ClientData);
+        const clients = snapshot.docs.map(processDocTimestamps).filter(Boolean);
+        return clients as ClientData[];
     } catch (error) {
         console.error("Error fetching clients:", error);
         return [];
@@ -204,7 +205,8 @@ export async function getEvents(): Promise<EventData[]> {
         const eventsCol = collection(db, "events");
         const q = query(eventsCol, orderBy("eventDate", "desc"));
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => processDocTimestamps(doc) as EventData);
+        const events = snapshot.docs.map(processDocTimestamps).filter(Boolean);
+        return events as EventData[];
     } catch (error) {
         console.error("Error fetching events:", error);
         return [];
@@ -244,8 +246,17 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
   const pendingBalance = data.contractedAmount - data.amountPaid;
   const profit = data.contractedAmount - (data.musiciansPay || 0);
 
+  let finalExternalContact = data.externalContact;
+  if (data.externalContact === 'otro' && data.otherExternalContact) {
+      finalExternalContact = data.otherExternalContact;
+  }
+
+  // Create a new object for Firestore without the temporary 'otherExternalContact' field
+  const { otherExternalContact, ...eventDataForFirestore } = data;
+
   const newEventData = {
-    ...data,
+    ...eventDataForFirestore,
+    externalContact: finalExternalContact,
     clientId,
     pendingBalance,
     profit,
@@ -280,8 +291,16 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
         const pendingBalance = contractedAmount - amountPaid;
         const profit = contractedAmount - (musiciansPay || 0);
         
+        let finalExternalContact = data.externalContact;
+        if (data.externalContact === 'otro' && data.otherExternalContact) {
+            finalExternalContact = data.otherExternalContact;
+        }
+
+        const { otherExternalContact, ...updateDataForFirestore } = data;
+
         const updateData = {
-            ...data,
+            ...updateDataForFirestore,
+            externalContact: finalExternalContact,
             pendingBalance,
             profit,
             updatedAt: serverTimestamp(),
@@ -340,10 +359,8 @@ export async function getRehearsals(): Promise<RehearsalData[]> {
     console.log("Fetching rehearsals from Firestore");
     try {
         const rehearsalsCol = collection(db, "rehearsals");
-        // Firestore can't run the complex sort logic (past desc, future asc) directly.
-        // We fetch all and sort in code. For larger datasets, this would need optimization.
-        const snapshot = await getDocs(rehearsalsCol);
-        const rehearsals = snapshot.docs.map(doc => processDocTimestamps(doc) as RehearsalData);
+        const snapshot = await getDocs(query(rehearsalsCol, orderBy("date", "desc")));
+        const rehearsals = snapshot.docs.map(processDocTimestamps).filter(Boolean) as RehearsalData[];
         
         rehearsals.sort((a, b) => {
             const dateA = new Date(a.date);
@@ -388,7 +405,8 @@ export async function getManualFinanceEntries(): Promise<ManualFinanceEntry[]> {
         const entriesCol = collection(db, "manualFinanceEntries");
         const q = query(entriesCol, orderBy("date", "desc"));
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => processDocTimestamps(doc) as ManualFinanceEntry);
+        const entries = snapshot.docs.map(processDocTimestamps).filter(Boolean);
+        return entries as ManualFinanceEntry[];
     } catch (error) {
         console.error("Error fetching manual entries:", error);
         return [];
@@ -421,7 +439,8 @@ export async function getSongs(): Promise<SongDetail[]> {
           console.log("No songs found in Firestore. The 'songs' collection might be empty.");
           return [];
         }
-        return snapshot.docs.map(doc => processDocTimestamps(doc) as SongDetail);
+        const songs = snapshot.docs.map(processDocTimestamps).filter(Boolean);
+        return songs as SongDetail[];
     } catch (error) {
         console.error("Error fetching songs:", error);
         return [];
@@ -452,7 +471,8 @@ export async function getMedia(): Promise<MediaFile[]> {
           console.log("No media found in Firestore. The 'media' collection might be empty.");
           return [];
         }
-        return snapshot.docs.map(doc => processDocTimestamps(doc) as MediaFile);
+        const media = snapshot.docs.map(processDocTimestamps).filter(Boolean);
+        return media as MediaFile[];
     } catch (error) {
         console.error("Error fetching media:", error);
         return [];
@@ -492,3 +512,5 @@ export async function getSuggestedSongs(eventType: string): Promise<SongDetail[]
 
     return suggestions;
 }
+
+    

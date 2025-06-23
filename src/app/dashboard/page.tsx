@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState, useMemo } from "react";
@@ -10,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { type EventData, getEvents, completeEvent, type RehearsalData, getRehearsals } from "@/services/eventService";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, Music, PlusCircle } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, Music, PlusCircle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { EVENT_PLANS } from "@/lib/constants";
@@ -27,9 +26,6 @@ const months = Array.from({ length: 12 }, (_, i) => ({
   label: format(new Date(2000, i), "MMMM", { locale: es }),
 }));
 
-const currentYear = getYear(new Date());
-const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
-
 export default function DashboardPage() {
   const [allEvents, setAllEvents] = useState<EventData[]>([]);
   const [allRehearsals, setAllRehearsals] = useState<RehearsalData[]>([]);
@@ -37,8 +33,13 @@ export default function DashboardPage() {
   const [isCompleting, setIsCompleting] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const [selectedMonth, setSelectedMonth] = useState(getMonth(new Date()));
-  const [selectedYear, setSelectedYear] = useState(getYear(new Date()));
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+
+  const years = useMemo(() => {
+    const currentYear = getYear(new Date());
+    return Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
+  }, []);
 
   const fetchAllData = async () => {
     setIsLoading(true);
@@ -56,41 +57,69 @@ export default function DashboardPage() {
       setIsLoading(false);
     }
   };
-
+  
   useEffect(() => {
     fetchAllData();
+    const today = new Date();
+    setSelectedMonth(getMonth(today));
+    setSelectedYear(getYear(today));
   }, []);
 
   const pendingActivities = useMemo(() => {
+    if (selectedYear === null || selectedMonth === null) {
+      return [];
+    }
     const targetDate = new Date(selectedYear, selectedMonth);
     
     const events = allEvents
       .filter(event => {
-        const eventDate = parse(event.eventDate, 'yyyy-MM-dd', new Date());
-        return (event.status === 'pending' || event.status === 'confirmed') && isSameMonth(eventDate, targetDate);
+        if (!event.eventDate) return false;
+        try {
+            const eventDate = parse(event.eventDate, 'yyyy-MM-dd', new Date());
+            return (event.status === 'pending' || event.status === 'confirmed') && isSameMonth(eventDate, targetDate);
+        } catch {
+            return false;
+        }
       })
       .map(event => ({ ...event, type: 'event' as const, date: event.eventDate }));
       
     const rehearsals = allRehearsals
       .filter(rehearsal => {
-        const rehearsalDate = parse(rehearsal.date, 'yyyy-MM-dd', new Date());
-        return isSameMonth(rehearsalDate, targetDate);
+        if (!rehearsal.date) return false;
+        try {
+            const rehearsalDate = parse(rehearsal.date, 'yyyy-MM-dd', new Date());
+            return isSameMonth(rehearsalDate, targetDate);
+        } catch {
+            return false;
+        }
       })
       .map(rehearsal => ({ ...rehearsal, type: 'rehearsal' as const }));
 
     const combined = [...events, ...rehearsals];
 
-    return combined.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return combined.sort((a, b) => {
+        try {
+            const dateA = parse(a.date, 'yyyy-MM-dd', new Date());
+            const dateB = parse(b.date, 'yyyy-MM-dd', new Date());
+            return dateA.getTime() - dateB.getTime();
+        } catch {
+            return 0;
+        }
+    });
 
   }, [allEvents, allRehearsals, selectedMonth, selectedYear]);
 
   const groupedActivities = useMemo(() => {
     return pendingActivities.reduce((acc, activity) => {
-      const dateKey = format(new Date(activity.date), "EEEE, dd MMM", { locale: es });
-      if (!acc[dateKey]) {
-        acc[dateKey] = [];
+      try {
+        const dateKey = format(parse(activity.date, 'yyyy-MM-dd', new Date()), "EEEE, dd MMM", { locale: es });
+        if (!acc[dateKey]) {
+          acc[dateKey] = [];
+        }
+        acc[dateKey].push(activity);
+      } catch (e) {
+        // Ignore activities with invalid dates
       }
-      acc[dateKey].push(activity);
       return acc;
     }, {} as Record<string, (EventData & {type: 'event'} | RehearsalData & {type: 'rehearsal'})[]>);
   }, [pendingActivities]);
@@ -119,11 +148,13 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 className="font-headline text-3xl font-bold tracking-tight">
-                Actividades Pendientes ({pendingActivities.length})
+                Actividades Pendientes ({isLoading || selectedMonth === null ? '...' : pendingActivities.length})
             </h1>
-            <p className="text-muted-foreground">
-              {`Eventos y ensayos para ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}.`}
-            </p>
+            {selectedMonth !== null && (
+               <p className="text-muted-foreground">
+                {`Eventos y ensayos para ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}.`}
+               </p>
+            )}
         </div>
         <Button asChild>
             <Link href="/dashboard/events/new">
@@ -136,7 +167,7 @@ export default function DashboardPage() {
       <div className="space-y-4">
          <div className="dark">
             <div className="flex flex-wrap items-center gap-2">
-                <Select value={String(selectedMonth)} onValueChange={(value) => setSelectedMonth(Number(value))}>
+                <Select value={selectedMonth !== null ? String(selectedMonth) : ""} onValueChange={(value) => setSelectedMonth(Number(value))}>
                 <SelectTrigger className="w-full flex-1 md:w-[150px] bg-card text-card-foreground border-border">
                     <SelectValue placeholder="Mes" />
                 </SelectTrigger>
@@ -146,7 +177,7 @@ export default function DashboardPage() {
                     ))}
                 </SelectContent>
                 </Select>
-                <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
+                <Select value={selectedYear !== null ? String(selectedYear) : ""} onValueChange={(value) => setSelectedYear(Number(value))}>
                 <SelectTrigger className="w-full flex-1 md:w-[100px] bg-card text-card-foreground border-border">
                     <SelectValue placeholder="Año" />
                 </SelectTrigger>
@@ -160,7 +191,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-6">
-            {isLoading ? (
+            {isLoading || selectedMonth === null ? (
                 <Skeleton className="h-48 w-full" />
             ) : Object.keys(groupedActivities).length > 0 ? (
                 Object.entries(groupedActivities).map(([date, activitiesOnDay]) => (
@@ -200,6 +231,17 @@ export default function DashboardPage() {
                                                     </p>
                                                 </div>
                                                 
+                                                {activity.externalGroup && activity.externalContact && (
+                                                    <div className="pl-8 pt-2">
+                                                        <div className="bg-amber-50 border border-amber-200 p-3 rounded-md text-sm text-amber-900">
+                                                            <p className="font-bold flex items-center gap-2"><ExternalLink className="h-4 w-4" /> Realizado por Grupo Externo</p>
+                                                            <Separator className="my-2 bg-amber-200" />
+                                                            <p className="font-medium">{activity.externalContact}</p>
+                                                            <a href={`https://wa.me/${activity.externalContact.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs font-semibold">Contactar (WhatsApp)</a>
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 <Separator className="my-2" />
                                 
                                                 <div className="flex justify-between items-center text-sm pt-1">
@@ -243,7 +285,7 @@ export default function DashboardPage() {
             ) : (
                 <div className="text-center text-muted-foreground py-16 border border-dashed rounded-lg">
                     <p className="font-semibold">¡Todo al día!</p>
-                    <p>No hay actividades pendientes para {months.find(m => m.value === selectedMonth)?.label} de {selectedYear}.</p>
+                    <p>No hay actividades pendientes para {selectedMonth !== null ? months.find(m => m.value === selectedMonth)?.label : ''} de {selectedYear}.</p>
                 </div>
             )}
         </div>
