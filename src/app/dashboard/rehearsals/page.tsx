@@ -19,7 +19,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { type RehearsalData, getRehearsals, deleteRehearsal } from "@/services/eventService";
+import { type RehearsalData, getRehearsals, deleteRehearsal, completeRehearsal } from "@/services/eventService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { es } from 'date-fns/locale';
@@ -32,11 +32,13 @@ import {
     PlusCircle, 
     Search, 
     Trash2,
-    Youtube
+    Youtube,
+    CheckCircle
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 export default function RehearsalsPage() {
   const [allRehearsals, setAllRehearsals] = useState<RehearsalData[]>([]);
@@ -44,6 +46,7 @@ export default function RehearsalsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [rehearsalToDelete, setRehearsalToDelete] = useState<RehearsalData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCompleting, setIsCompleting] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -97,6 +100,25 @@ export default function RehearsalsPage() {
     setRehearsalToDelete(null);
   };
   
+  const handleCompleteRehearsal = async (rehearsalId: string) => {
+    setIsCompleting(rehearsalId);
+    const result = await completeRehearsal(rehearsalId);
+    if (result.success) {
+      toast({
+        title: "¡Ensayo Completado!",
+        description: "El ensayo se ha marcado como completado.",
+      });
+      fetchRehearsals();
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: result.error || "No se pudo completar el ensayo.",
+      });
+    }
+    setIsCompleting(null);
+  };
+
   const parseDate = (dateString: string) => {
     try {
       return parseISO(dateString);
@@ -155,7 +177,7 @@ export default function RehearsalsPage() {
                 const songCount = rehearsal.songs?.length || 0;
 
                 return (
-                    <Card key={rehearsal.id}>
+                    <Card key={rehearsal.id} className={cn(rehearsal.status === 'completed' && "bg-green-50/60 dark:bg-green-950/30 border-green-200 dark:border-green-800/50")}>
                         <div className="p-4 space-y-4">
                             <div className="flex justify-between items-start">
                                 <div>
@@ -194,14 +216,25 @@ export default function RehearsalsPage() {
                             </div>
                              <Separator />
                              <div className="flex justify-between items-center">
-                                <div className="flex items-center space-x-2">
-                                    <Checkbox id={`complete-${rehearsal.id}`} />
-                                    <Label htmlFor={`complete-${rehearsal.id}`} className="text-sm font-medium text-muted-foreground">
-                                        Marcar Completo
-                                    </Label>
-                                </div>
+                                {rehearsal.status === 'completed' ? (
+                                    <div className="flex items-center gap-2 text-sm font-semibold text-green-600 dark:text-green-400">
+                                        <CheckCircle className="h-5 w-5" />
+                                        Completado
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={`complete-${rehearsal.id}`}
+                                            onCheckedChange={() => handleCompleteRehearsal(rehearsal.id)}
+                                            disabled={isCompleting === rehearsal.id}
+                                        />
+                                        <Label htmlFor={`complete-${rehearsal.id}`} className="text-sm font-medium text-muted-foreground cursor-pointer">
+                                            {isCompleting === rehearsal.id ? "Marcando..." : "Marcar Completo"}
+                                        </Label>
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-1">
-                                     <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/rehearsals/${rehearsal.id}/edit`)}>
+                                     <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/rehearsals/${rehearsal.id}/edit`)} disabled={rehearsal.status === 'completed'}>
                                         <Edit className="h-4 w-4" />
                                         <span className="sr-only">Editar Ensayo</span>
                                     </Button>

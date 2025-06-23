@@ -77,6 +77,7 @@ export interface RehearsalData {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  status: 'pending' | 'completed';
 }
 
 export interface SongDetail {
@@ -125,7 +126,7 @@ type EventInputData = Omit<EventData, 'id'|'pendingBalance'|'profit'|'createdAt'
     otherExternalContact?: string;
 };
 type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;
-type RehearsalInputData = Omit<RehearsalData, 'id'|'createdAt'|'updatedAt'>;
+type RehearsalInputData = Omit<RehearsalData, 'id'|'createdAt'|'updatedAt'|'status'>;
 type ManualFinanceEntryInputData = Omit<ManualFinanceEntry, 'id'|'createdBy'|'createdAt'>;
 type SongInputData = Omit<SongDetail, 'id' | 'createdAt' | 'suggestedEvents'>;
 
@@ -427,6 +428,7 @@ export async function createRehearsal(data: RehearsalInputData): Promise<{ succe
   try {
     const docRef = await addDoc(collection(db, "rehearsals"), {
         ...data,
+        status: 'pending',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     });
@@ -466,6 +468,20 @@ export async function updateRehearsal(id: string, data: Partial<RehearsalInputDa
     } catch (error) {
         console.error("Error updating rehearsal:", error);
         return { success: false, error: "Failed to update rehearsal in database." };
+    }
+}
+
+export async function completeRehearsal(id: string): Promise<{ success: boolean; error?: string }> {
+    const rehearsalRef = doc(db, "rehearsals", id);
+    try {
+        await updateDoc(rehearsalRef, {
+            status: 'completed',
+            updatedAt: serverTimestamp(),
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error completing rehearsal:", error);
+        return { success: false, error: "Failed to complete rehearsal in database." };
     }
 }
 
