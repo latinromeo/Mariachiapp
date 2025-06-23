@@ -3,12 +3,12 @@ import Image from "next/image";
 
 export function Logo() {
   return (
-    <div className="flex items-center justify-center p-4">
+    <div className="flex items-center justify-center">
       <Image
-        src="/logo.png?v=2"
+        src="/logo.png?v=4"
         alt="Logo de Mariachi Reyes de México"
-        width={180}
-        height={60}
+        width={120}
+        height={40}
         priority
         className="object-contain"
       />

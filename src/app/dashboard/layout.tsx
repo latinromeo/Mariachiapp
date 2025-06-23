@@ -99,12 +99,8 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarContent className="p-0 flex flex-col">
+        <SidebarContent className="p-0 flex flex-col pt-4">
           <div>
-            <SidebarHeader className="p-2 pt-4">
-              <Logo />
-            </SidebarHeader>
-            <SidebarSeparator className="mx-4 my-2" />
             <SidebarMenu className="px-4">
               <SidebarGroup>
                   <SidebarGroupLabel>PRINCIPAL</SidebarGroupLabel>
@@ -220,19 +216,10 @@ export default function DashboardLayout({
       </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
-           <div className="flex items-center gap-2">
+           <div className="flex items-center gap-4">
             <SidebarTrigger />
-            <h1 className="font-semibold text-lg">Mariachi Manager</h1>
+            <Logo />
           </div>
-           <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
-                    <Moon className="h-4 w-4" />
-                    <span className="sr-only">Toggle theme</span>
-                </Button>
-                <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">{currentUser.avatarFallback}</AvatarFallback>
-                </Avatar>
-            </div>
         </header>
         <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">{children}</main>
          {currentUser.role === 'Admin' && <AssistantChat />}
