@@ -42,7 +42,6 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
       .filter((msg: any) => msg && Array.isArray(msg.parts) && msg.parts.length > 0)
       .map((msg: any) => ({
         role: msg.role,
-        // This handles the frontend using `parts` and Genkit using `content`.
         content: msg.parts.map((part: any) => {
           if (part.text) return { text: part.text };
           if (part.toolRequest) return { toolRequest: part.toolRequest };
@@ -51,53 +50,17 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
         }),
       }));
       
-    // 2. Add the user's current message to the history.
+    // 2. Add the user's current message to the history to form the complete conversation.
     history.push({ role: 'user', content: [{ text: input.message }] });
     
-    // 3. Start the conversation loop.
-    while (true) {
-      const response = await ai.generate({
+    // 3. Let Genkit handle the tool-use loop automatically by passing the full history.
+    const response = await ai.generate({
         system: masterPrompt,
         history,
         tools,
-      });
+    });
 
-      const modelMessage = response.message;
-      history.push(modelMessage); // Add model's response to history
-
-      const toolRequest = response.part(p => p.toolRequest);
-      
-      if (!toolRequest) {
-        // No tool requested, we have the final answer.
-        return response.content();
-      }
-      
-      // A tool has been requested.
-      console.log(`AI is requesting to use tool: ${toolRequest.toolRequest.name}`);
-      let toolOutput: any;
-      
-      try {
-        const tool = tools.find(t => t.name === toolRequest.toolRequest.name);
-        if (!tool) {
-            throw new Error(`Tool '${toolRequest.toolRequest.name}' is not available.`);
-        }
-        toolOutput = await tool.fn(toolRequest.toolRequest.input);
-      } catch (e: any) {
-        console.error(`Error executing tool ${toolRequest.toolRequest.name}:`, e);
-        toolOutput = { error: `Tool execution failed: ${e.message || 'An unknown error occurred.'}` };
-      }
-      
-      // Add the tool response to history and continue the loop.
-      history.push({
-        role: 'tool',
-        content: [{
-          toolResponse: {
-            name: toolRequest.toolRequest.name,
-            output: toolOutput,
-          },
-        }],
-      });
-    }
+    return response.content();
 
   } catch (error) {
     console.error("An unexpected error occurred in the askAssistant flow:", error);
