@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, type FormEvent } from "react";
@@ -59,7 +60,6 @@ export function AssistantChat() {
     const currentInput = input.trim();
     if (!currentInput || isLoading) return;
 
-    // The user's message is always a single text part.
     const userMessage: Message = { role: "user", parts: [{ text: currentInput }] };
     
     // The history for the API is the state of messages *before* this user's turn.
