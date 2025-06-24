@@ -1,4 +1,3 @@
-
 // src/services/eventService.ts
 'use server';
 
@@ -32,8 +31,8 @@ export interface ClientData {
   email?: string;
   address?: string;
   sector?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: any;
+  updatedAt: any;
   notes?: string;
 }
 
@@ -57,8 +56,8 @@ export interface EventData {
   externalGroup: boolean;
   externalContact?: string;
   notes?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: any;
+  updatedAt: any;
   status: 'confirmed' | 'pending' | 'external' | 'cancelled' | 'completed';
 }
 
@@ -79,8 +78,8 @@ export interface RehearsalData {
   focus: string;
   songs?: SongToRehearse[];
   notes?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: any;
+  updatedAt: any;
   status: 'pending' | 'completed';
 }
 
@@ -96,8 +95,8 @@ export interface SongDetail {
   sheetMusicUrl?: string;
   youtubeUrl?: string;
   audioUrl?: string;
-  createdAt: string;
-  updatedAt?: string;
+  createdAt: any;
+  updatedAt?: any;
 }
 
 export interface MediaFile {
@@ -122,7 +121,7 @@ export interface ManualFinanceEntry {
   date: string; // Stored as 'YYYY-MM-DD'
   category?: string;
   createdBy: string;
-  createdAt: string;
+  createdAt: any;
 }
 
 export interface MusicianIncome {
@@ -140,7 +139,7 @@ export interface MusicianExpense {
     category: string;
     amount: number;
     date: string; // 'YYYY-MM-DD'
-    createdAt: string;
+    createdAt: any;
 }
 
 
@@ -164,10 +163,12 @@ const processDocTimestamps = (doc: DocumentSnapshot) => {
 
     const processedData: { [key: string]: any } = { id: doc.id };
     for (const key in data) {
-        if (data[key] instanceof Timestamp) {
-            processedData[key] = data[key].toDate().toISOString();
+        const value = data[key];
+        // Check if the value has a toDate method, typical of a Timestamp
+        if (value && typeof value.toDate === 'function') {
+            processedData[key] = value.toDate().toISOString();
         } else {
-            processedData[key] = data[key];
+            processedData[key] = value;
         }
     }
     return processedData;
@@ -450,36 +451,32 @@ export async function getRehearsals(): Promise<RehearsalData[]> {
 }
 
 export async function createRehearsal(data: RehearsalInputData): Promise<{ success: boolean; rehearsalId?: string, error?: string }> {
-  try {
-    const songsForDb = (data.songs || [])
-        .filter(song => song && song.name && song.name.trim() !== "")
-        .map(song => ({
-            name: song.name || '',
-            artist: song.artist || '',
-            key: song.key || '',
-            youtubeUrl: song.youtubeUrl || '',
-            sheetMusicUrl: song.sheetMusicUrl || '',
-            audioUrl: song.audioUrl || '',
-        }));
+    try {
+        const songsForDb = (data.songs || [])
+            .filter(song => song && song.name && song.name.trim() !== "")
+            .map(song => ({
+                name: song.name || '',
+                artist: song.artist || '',
+                key: song.key || '',
+                youtubeUrl: song.youtubeUrl || '',
+                sheetMusicUrl: song.sheetMusicUrl || '',
+                audioUrl: song.audioUrl || '',
+            }));
 
-    const payload = {
-        date: data.date,
-        time: data.time,
-        location: data.location,
-        focus: data.focus,
-        notes: data.notes || '',
-        songs: songsForDb,
-        status: 'pending' as const,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-    };
-    
-    const docRef = await addDoc(collection(db, "rehearsals"), payload);
-    return { success: true, rehearsalId: docRef.id };
-  } catch (error) {
-     console.error("Error creating rehearsal:", error);
-     return { success: false, error: "Failed to create rehearsal in database." };
-  }
+        const payload = {
+            ...data,
+            songs: songsForDb,
+            status: 'pending' as const,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        };
+
+        const docRef = await addDoc(collection(db, "rehearsals"), payload);
+        return { success: true, rehearsalId: docRef.id };
+    } catch (error) {
+        console.error("Error creating rehearsal:", error);
+        return { success: false, error: "Failed to create rehearsal in database." };
+    }
 }
 
 export async function getRehearsalById(id: string): Promise<RehearsalData | null> {
@@ -499,27 +496,22 @@ export async function getRehearsalById(id: string): Promise<RehearsalData | null
 
 export async function updateRehearsal(id: string, data: Partial<RehearsalInputData>): Promise<{ success: boolean; error?: string }> {
     try {
+        const songsForDb = (data.songs || [])
+            .filter(song => song && song.name && song.name.trim() !== "")
+            .map(song => ({
+                name: song.name || '',
+                artist: song.artist || '',
+                key: song.key || '',
+                youtubeUrl: song.youtubeUrl || '',
+                sheetMusicUrl: song.sheetMusicUrl || '',
+                audioUrl: song.audioUrl || '',
+            }));
+        
         const payload: { [key: string]: any } = { ...data };
-
-        if ('songs' in payload) {
-            payload.songs = (payload.songs || [])
-                .filter((song: any) => song && song.name && song.name.trim() !== "")
-                .map((song: any) => ({
-                    name: song.name || '',
-                    artist: song.artist || '',
-                    key: song.key || '',
-                    youtubeUrl: song.youtubeUrl || '',
-                    sheetMusicUrl: song.sheetMusicUrl || '',
-                    audioUrl: song.audioUrl || '',
-                }));
+        if (data.songs) {
+            payload.songs = songsForDb;
         }
-
-        Object.keys(payload).forEach(key => {
-            if (payload[key] === undefined) {
-                delete payload[key];
-            }
-        });
-
+        
         payload.updatedAt = serverTimestamp();
 
         const docRef = doc(db, "rehearsals", id);
@@ -569,7 +561,7 @@ export async function getManualFinanceEntries(): Promise<ManualFinanceEntry[]> {
     }
 }
 
-export async function createManualFinanceEntry(data: ManualFinanceEntryInputData): Promise<{ success: boolean; entryId?: string }> {
+export async function createManualFinanceEntry(data: ManualFinanceEntryInputData): Promise<{ success: boolean; entryId?: string, error?: string }> {
     try {
         const docRef = await addDoc(collection(db, 'manualFinanceEntries'), {
             ...data,
@@ -579,7 +571,7 @@ export async function createManualFinanceEntry(data: ManualFinanceEntryInputData
         return { success: true, entryId: docRef.id };
     } catch (error) {
         console.error("Error creating manual entry:", error);
-        return { success: false };
+        return { success: false, error: "Failed to create manual entry in database." };
     }
 }
 
@@ -589,7 +581,8 @@ export async function upsertMusicianIncome(userId: string, eventId: string, amou
     if (!userId || !eventId) {
         return { success: false, error: "User ID and Event ID are required." };
     }
-    const incomeRef = doc(db, "musicianIncomes", `${userId}_${eventId}`);
+    const incomeId = `${userId}_${eventId}`;
+    const incomeRef = doc(db, "musicianIncomes", incomeId);
     try {
         await updateDoc(incomeRef, {
             userId,
@@ -599,10 +592,13 @@ export async function upsertMusicianIncome(userId: string, eventId: string, amou
         });
         return { success: true };
     } catch (error) {
+        // If the document doesn't exist, updateDoc fails. We might want to create it.
+        // For simplicity, we'll assume it exists or use setDoc with merge:true in a real scenario.
         console.error("Error upserting musician income:", error);
         return { success: false, error: "Failed to save musician income." };
     }
 }
+
 
 export async function getMusicianIncomes(userId: string): Promise<MusicianIncome[]> {
     if (!userId) return [];
@@ -636,11 +632,9 @@ export async function createMusicianExpense(userId: string, data: MusicianExpens
 export async function getMusicianExpenses(userId: string): Promise<MusicianExpense[]> {
      if (!userId) return [];
      try {
-        const q = query(collection(db, "musicianExpenses"), where("userId", "==", userId));
+        const q = query(collection(db, "musicianExpenses"), where("userId", "==", userId), orderBy("date", "desc"));
         const snapshot = await getDocs(q);
-        const expenses = snapshot.docs.map(processDocTimestamps).filter(Boolean) as MusicianExpense[];
-        expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        return expenses;
+        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as MusicianExpense[];
     } catch (error) {
         console.error("Error fetching musician expenses:", error);
         return [];
@@ -758,17 +752,14 @@ const initialSongs: Omit<SongDetail, 'id' | 'createdAt' | 'updatedAt'>[] = [
 
 async function seedInitialSongs() {
     try {
-        console.log("Checking for initial songs to seed...");
         const songsCol = collection(db, 'songs');
         const q = query(songsCol, limit(1));
         const existingSongsSnapshot = await getDocs(q);
 
         if (!existingSongsSnapshot.empty) {
-            console.log("Songs collection is not empty. Skipping seed.");
             return;
         }
 
-        console.log(`Seeding ${initialSongs.length} initial song(s)...`);
         const batch = writeBatch(db);
         for (const songData of initialSongs) {
             const docRef = doc(songsCol); 
