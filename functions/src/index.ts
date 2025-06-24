@@ -67,11 +67,13 @@ export const chatWithAssistant = functions.https.onRequest((req, res) => {
       res.status(405).send("Method Not Allowed");
       return;
     }
+    functions.logger.info("Received chat request", {body: req.body});
 
     try {
       const {prompt, history} = req.body as RequestBody;
 
       if (!prompt) {
+        functions.logger.warn("Request received without a prompt.");
         res.status(400).json({error: "Prompt is required"});
         return;
       }
@@ -103,7 +105,7 @@ export const chatWithAssistant = functions.https.onRequest((req, res) => {
                 musiciansPay: isRehearsal ? 0 : 5000,
                 externalGroup: false,
                 notes: `Creado por AI a partir del prompt: "${prompt}"`,
-                status: 'pending',
+                status: 'pending' as const,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             };
@@ -112,7 +114,7 @@ export const chatWithAssistant = functions.https.onRequest((req, res) => {
             
             eventCreated = true;
             actionResponse = `\n\n¡Entendido! He agendado un "${eventData.eventType}" para ti.`;
-            functions.logger.info("Event created successfully from prompt:", eventData);
+            functions.logger.info("Event created successfully from prompt:", {prompt});
         } catch (e) {
           functions.logger.error("Error trying to create event from prompt:", e);
           actionResponse = "\n\nIntenté crear el evento, pero algo salió mal. Por favor, revísalo manualmente.";
@@ -130,11 +132,13 @@ export const chatWithAssistant = functions.https.onRequest((req, res) => {
         ...(history || []),
         {role: "user", content: prompt},
       ];
-
+      
+      functions.logger.info("Sending request to OpenAI with messages:", {messages: messages.length});
       const chatResponse = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: messages,
       });
+      functions.logger.info("Received response from OpenAI.");
 
       let reply = chatResponse.choices[0]?.message?.content || "No pude obtener una respuesta.";
       
