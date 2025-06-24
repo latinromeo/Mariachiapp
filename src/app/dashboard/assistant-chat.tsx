@@ -57,12 +57,12 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
         body: JSON.stringify({prompt: input, history}),
       });
 
+      const data = await res.json();
+      
       if (!res.ok) {
-         const errorData = await res.json();
-        throw new Error(errorData.error || `API error: ${res.statusText}`);
+        throw new Error(data.error || `API error: ${res.statusText}`);
       }
 
-      const data = await res.json();
       const assistantMessage: Message = {role: 'assistant', content: data.reply};
       setMessages((prev) => [...prev, assistantMessage]);
 
@@ -76,9 +76,15 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
 
     } catch (error: any) {
       console.error('Failed to fetch assistant reply:', error);
+      let displayMessage = `Lo siento, ha ocurrido un error: ${error.message || 'Por favor, inténtalo de nuevo.'}`;
+
+      if (error.message && (error.message.includes('429') || error.message.toLowerCase().includes('quota'))) {
+        displayMessage = '¡Excelente! La conexión con la IA funciona, pero parece que has excedido tu cuota de uso actual. Por favor, revisa tu plan y detalles de facturación en tu cuenta de OpenAI.';
+      }
+      
       const errorMessage: Message = {
         role: 'assistant',
-        content: `Lo siento, ha ocurrido un error: ${error.message || 'Por favor, inténtalo de nuevo.'}`,
+        content: displayMessage,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {

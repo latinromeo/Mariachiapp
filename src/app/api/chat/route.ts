@@ -16,7 +16,7 @@ const db = admin.firestore();
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: "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",
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 interface ChatMessage {
@@ -62,6 +62,13 @@ function parseDateTime(prompt: string): {eventDate: string; eventTime: string} {
 
 export async function POST(req: NextRequest) {
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        {error: 'OpenAI API key not configured'},
+        {status: 500}
+      );
+    }
+
     const {prompt, history} = (await req.json()) as RequestBody;
 
     if (!prompt) {
@@ -153,6 +160,8 @@ export async function POST(req: NextRequest) {
     if (error.message) {
       errorMessage = error.message;
     }
-    return NextResponse.json({error: errorMessage}, {status: 500});
+    // Pass status from OpenAI API if available
+    const status = error.status || 500;
+    return NextResponse.json({error: errorMessage}, {status});
   }
 }
