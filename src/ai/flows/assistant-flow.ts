@@ -20,6 +20,7 @@ const masterPrompt = `You are "Maestro Mariachi AI", a helpful virtual assistant
 - If you need more information to use a tool (like the date for an event), ask the user for it clearly.
 - Once you have enough information, call the appropriate tool.
 - After successfully calling a tool (like creating an event), always confirm to the user that the action was completed.
+- Review the conversation history to understand the context before responding. If you have just proposed an action and the user confirms (e.g., with "sí" or "procede"), execute the tool you proposed.
 `;
 
 const AssistantInputSchema = z.object({
@@ -35,26 +36,23 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
     const currentDate = new Date().toISOString().split('T')[0];
     const systemPromptWithDate = `${masterPrompt}\n\nADDITIONAL INFORMATION:\n- Today's date is ${currentDate}. Use this as a reference for any time-related queries (e.g., "today", "tomorrow", "this month").`;
 
-    // Map client-side history ({role, parts}) to Genkit's expected MessageData ({role, content})
-    // This is the key fix: the AI platform expects a 'content' property, not 'parts'.
-    const genkitHistory: MessageData[] = input.history.map(msg => ({
-      role: msg.role,
-      content: msg.parts, // Map `parts` to `content`
-    }));
-
-    // Add the new user message to the history. The message from the input is the prompt.
+    // Combine the user's latest message with the past history to form the full conversation.
+    const conversation: MessageData[] = [
+      ...input.history,
+      { role: 'user', content: [{ text: input.message }] },
+    ];
+    
+    // The history for the AI is the entire conversation log.
+    // By providing the full context in the `history` field, the AI can properly follow multi-turn conversations.
     const response = await ai.generate({
       system: systemPromptWithDate,
-      prompt: input.message,
-      history: genkitHistory,
+      history: conversation, // Send the full conversation history.
       tools: [listEvents, listClients, createNewEvent, createFinanceEntry],
     });
     
-    // Ensure we always return an array, even if the response is empty.
     return response.content || [];
   } catch (error) {
     console.error("Error calling Genkit AI:", error);
-    // Ensure the catch block returns the correct type (Part[])
     return [{ text: "Lo siento, ha ocurrido un error al contactar a la IA. Por favor, revisa la configuración y las claves de API." }];
   }
 }

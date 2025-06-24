@@ -63,10 +63,8 @@ export function AssistantChat() {
 
     const userMessage: Message = { role: "user", parts: [{ text: currentInput }] };
     
-    // The history for the API is the state of messages *before* this user's turn.
     const historyForApi = messages;
 
-    // Add the new user message to the local state for immediate display.
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
@@ -79,8 +77,6 @@ export function AssistantChat() {
 
       const responseParts: Part[] = await askAssistant(assistantInput);
 
-      // Normalize the parts from the AI response. Genkit can return a string,
-      // but our client-side Message interface expects an object.
       const normalizedParts: ClientPart[] = responseParts.map(part => {
         if (typeof part === 'string') {
           return { text: part };
@@ -103,9 +99,8 @@ export function AssistantChat() {
     }
   };
   
-  // Helper to extract displayable text from a message
   const getMessageText = (message: Message): string => {
-    if (!message.parts) return ""; // Safeguard for robustness
+    if (!message.parts) return "";
     return message.parts
       .filter(part => !!part.text)
       .map(part => part.text)
@@ -139,7 +134,7 @@ export function AssistantChat() {
               <AnimatePresence>
               {messages.map((message, index) => {
                 const textContent = getMessageText(message);
-                if (!textContent) return null; // Don't render messages with no visible text
+                if (!textContent) return null;
 
                 return (
                   <motion.div
