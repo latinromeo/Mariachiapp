@@ -37,29 +37,45 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
   const tools = [listEvents, listClients, createNewEvent, createFinanceEntry];
 
   try {
-    // 1. Transform the client-side history into the format Genkit expects.
+    // 1. **Safely** transform client-side history to Genkit's MessageData format.
     const history: MessageData[] = input.history
-      .filter((msg: any) => msg && Array.isArray(msg.parts) && msg.parts.length > 0)
-      .map((msg: any) => ({
-        role: msg.role,
-        content: msg.parts.map((part: any) => {
-          if (part.text) return { text: part.text };
-          if (part.toolRequest) return { toolRequest: part.toolRequest };
-          if (part.toolResponse) return { toolResponse: part.toolResponse };
-          return part;
-        }),
-      }));
-      
-    // 2. Let Genkit handle the tool-use loop automatically by passing the history and the new prompt.
+      .map((msg: any): MessageData | null => {
+        // Ensure the message and its parts are valid.
+        if (!msg || !msg.role || !Array.isArray(msg.parts) || msg.parts.length === 0) {
+          return null;
+        }
+
+        const content: Part[] = msg.parts
+          .map((part: any): Part | null => {
+            if (!part || typeof part !== 'object') return null;
+            // Create a valid Part object, filtering out anything extra.
+            if (part.text) return { text: part.text };
+            if (part.toolRequest) return { toolRequest: part.toolRequest };
+            if (part.toolResponse) return { toolResponse: part.toolResponse };
+            return null; // Ignore invalid or empty parts.
+          })
+          .filter((p): p is Part => p !== null); // Remove nulls from the array.
+
+        // If a message has no valid parts after filtering, discard it.
+        if (content.length === 0) {
+          return null;
+        }
+
+        return { role: msg.role, content };
+      })
+      .filter((m): m is MessageData => m !== null); // Remove null messages.
+
+    // 2. Let Genkit handle the tool-use loop automatically.
     const response = await ai.generate({
-        prompt: input.message,
-        system: masterPrompt,
-        history,
-        tools,
+      prompt: input.message,
+      system: masterPrompt,
+      history,
+      tools,
     });
 
-    // 3. Return the content. In Genkit v1.x, .content is a property, not a function.
-    return response.content;
+    // 3. Return the content, ensuring it's a valid array.
+    // If response.content is null or undefined, return an empty array to avoid client-side errors.
+    return response.content ?? [];
 
   } catch (error) {
     console.error("An unexpected error occurred in the askAssistant flow:", error);
