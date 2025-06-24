@@ -32,54 +32,76 @@ const AssistantInputSchema = z.object({
 
 export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 
-// This function will encapsulate the full logic, including tool usage.
+
 export async function askAssistant(input: AssistantInput): Promise<Part[]> {
-  const tools = [listEvents, listClients, createNewEvent, createFinanceEntry];
+    const tools = [listEvents, listClients, createNewEvent, createFinanceEntry];
+    try {
+        // 1. Transform client history and add the new message.
+        const history: MessageData[] = [
+            ...input.history.map((msg: any): MessageData | null => {
+                if (!msg || !msg.role || !Array.isArray(msg.parts)) return null;
+                const content: Part[] = msg.parts
+                    .map((part: any): Part | null => {
+                        if (!part || typeof part !== 'object') return null;
+                        if (part.text) return { text: part.text };
+                        if (part.toolRequest) return { toolRequest: part.toolRequest };
+                        if (part.toolResponse) return { toolResponse: part.toolResponse };
+                        return null;
+                    })
+                    .filter((p): p is Part => p !== null);
+                if (content.length === 0) return null;
+                return { role: msg.role, content };
+            }).filter((m): m is MessageData => m !== null),
+            { role: 'user', content: [{ text: input.message }] }
+        ];
 
-  try {
-    // 1. **Safely** transform client-side history to Genkit's MessageData format.
-    const history: MessageData[] = input.history
-      .map((msg: any): MessageData | null => {
-        // Ensure the message and its parts are valid.
-        if (!msg || !msg.role || !Array.isArray(msg.parts) || msg.parts.length === 0) {
-          return null;
+        // 2. Start the conversation loop to handle tool requests.
+        for (let i = 0; i < 5; i++) { // Add a limit to prevent infinite loops
+            const response = await ai.generate({
+                system: masterPrompt,
+                history,
+                tools,
+            });
+
+            const choice = response.candidates[0];
+            const choiceParts = choice.content?.parts ?? [];
+
+            // Add the model's response (which could be a tool request) to the history.
+            history.push({ role: 'model', content: choiceParts });
+            
+            // Find if there's a tool request.
+            const toolRequests = choiceParts.map(p => p.toolRequest).filter((tr): tr is NonNullable<typeof tr> => !!tr);
+
+            if (toolRequests.length === 0) {
+                // No tool request, this is the final text answer, so we return it.
+                return choiceParts;
+            }
+
+            // The model wants to use tools. Execute them.
+            const toolResponses: Part[] = await Promise.all(
+                toolRequests.map(async (toolRequest) => {
+                    const tool = tools.find(t => t.name === toolRequest.name);
+                    if (!tool) {
+                        return { toolResponse: { name: toolRequest.name, output: `Error: Tool '${toolRequest.name}' not found.` } };
+                    }
+                    try {
+                        const output = await tool.fn(toolRequest.input);
+                        return { toolResponse: { name: toolRequest.name, output } };
+                    } catch (e: any) {
+                        return { toolResponse: { name: toolRequest.name, output: `Error executing tool: ${e.message}` } };
+                    }
+                })
+            );
+
+            // Add the tool execution results to the history for the next turn.
+            history.push({ role: 'tool', content: toolResponses });
         }
 
-        const content: Part[] = msg.parts
-          .map((part: any): Part | null => {
-            if (!part || typeof part !== 'object') return null;
-            // Create a valid Part object, filtering out anything extra.
-            if (part.text) return { text: part.text };
-            if (part.toolRequest) return { toolRequest: part.toolRequest };
-            if (part.toolResponse) return { toolResponse: part.toolResponse };
-            return null; // Ignore invalid or empty parts.
-          })
-          .filter((p): p is Part => p !== null); // Remove nulls from the array.
+        // If the loop finishes without a final answer, return an error.
+        return [{ text: "Lo siento, la IA no pudo procesar la solicitud después de varios intentos." }];
 
-        // If a message has no valid parts after filtering, discard it.
-        if (content.length === 0) {
-          return null;
-        }
-
-        return { role: msg.role, content };
-      })
-      .filter((m): m is MessageData => m !== null); // Remove null messages.
-
-    // 2. Let Genkit handle the tool-use loop automatically.
-    const response = await ai.generate({
-      prompt: input.message,
-      system: masterPrompt,
-      history,
-      tools,
-    });
-
-    // 3. Return the content, ensuring it's a valid array.
-    // If response.content is null or undefined, return an empty array to avoid client-side errors.
-    return response.content ?? [];
-
-  } catch (error) {
-    console.error("An unexpected error occurred in the askAssistant flow:", error);
-    // Return a user-friendly error message in the expected format.
-    return [{ text: "Lo siento, ha ocurrido un error al contactar a la IA. Por favor, revisa la configuración y las claves de API." }];
-  }
+    } catch (error) {
+        console.error("An unexpected error occurred in the askAssistant flow:", error);
+        return [{ text: "Lo siento, ha ocurrido un error al contactar a la IA. Por favor, revisa la configuración y las claves de API." }];
+    }
 }
