@@ -84,6 +84,8 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
                 system: masterPrompt,
                 history,
                 tools,
+                // @ts-ignore - Tool definition generation differs between models.
+                toolChoice: "auto",
             });
 
             const choice = response.candidates[0];
@@ -118,7 +120,11 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
                     }
                     try {
                         const output = await tool.fn(toolRequest.input);
-                        return { toolResponse: { name: toolRequest.name, output } };
+                        // The output of a tool must be a JSON-serializable object.
+                        // We ensure it is by stringifying and parsing, which is a robust way
+                        // to handle various valid outputs (strings, numbers, objects, arrays).
+                        const serializableOutput = JSON.parse(JSON.stringify(output || {}));
+                        return { toolResponse: { name: toolRequest.name, output: serializableOutput } };
                     } catch (e: any) {
                         return { toolResponse: { name: toolRequest.name, output: `Error executing tool: ${e.message}` } };
                     }
@@ -134,6 +140,6 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
 
     } catch (error) {
         console.error("An unexpected error occurred in the askAssistant flow:", error);
-        return [{ text: "Lo siento, ha ocurrido un error al contactar a la IA. Por favor, revisa la configuración y las claves de API." }];
+        return [{ text: "Lo siento, ha ocurrido un error al contactar a la IA. Por favor, revisa la consola de desarrollo para más detalles." }];
     }
 }
