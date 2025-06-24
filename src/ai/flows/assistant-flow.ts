@@ -7,7 +7,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { MessageData, Part } from 'genkit';
+import { MessageData, Part, toolRequest, content } from 'genkit';
 import { z } from 'zod';
 import { listEvents, listClients, createNewEvent, createFinanceEntry } from '../tools/mariachi-tools';
 
@@ -23,78 +23,78 @@ const masterPrompt = `You are "Maestro Mariachi AI", a virtual assistant for a m
 const AssistantInputSchema = z.object({
   // The user's most recent message.
   message: z.string(),
-  // The conversation history from the client, which we will map to the correct format.
+  // The conversation history from the client.
   history: z.array(z.any()),
 });
 
 export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 
+// This function will encapsulate the full logic, including tool usage.
 export async function askAssistant(input: AssistantInput): Promise<Part[]> {
   try {
-    // 1. Prepare the initial history from the client-side data.
-    const initialHistory: MessageData[] = input.history
-      .filter((msg: any) => msg && Array.isArray(msg.parts))
+    // 1. Transform the client-side history into the format Genkit expects.
+    const history: MessageData[] = input.history
+      .filter((msg: any) => msg && Array.isArray(msg.parts) && msg.parts.length > 0)
       .map((msg: any) => ({
         role: msg.role,
         content: msg.parts,
       }));
 
-    // 2. Make the first call to the model to get a response or a tool request.
-    const response = await ai.generate({
+    // Define the available tools for the model.
+    const tools = [listEvents, listClients, createNewEvent, createFinanceEntry];
+
+    // 2. Call the AI model with the prompt, history, and available tools.
+    let response = await ai.generate({
       system: masterPrompt,
       prompt: input.message,
-      history: initialHistory,
-      tools: [listEvents, listClients, createNewEvent, createFinanceEntry],
+      history,
+      tools,
     });
 
-    const modelResponseContent = response.content;
+    while (true) {
+        const toolRequestPart = response.part(p => p.toolRequest);
+        if (!toolRequestPart) {
+            // If no tool is requested, we have our final answer.
+            return response.content();
+        }
 
-    // 3. Check if the model is requesting to use a tool.
-    const toolRequestPart = modelResponseContent.find(part => part.toolRequest);
-    if (!toolRequestPart || !toolRequestPart.toolRequest) {
-      // If no tool is requested, we have our final answer.
-      return modelResponseContent || [];
+        // 4. A tool has been requested. Execute it.
+        console.log(`AI is requesting to use tool: ${toolRequestPart.toolRequest.name}`);
+        let toolOutput: any;
+
+        try {
+            const tool = tools.find(t => t.name === toolRequestPart.toolRequest.name);
+            if (!tool) {
+                throw new Error(`Tool '${toolRequestPart.toolRequest.name}' is not available.`);
+            }
+            toolOutput = await tool.fn(toolRequestPart.toolRequest.input);
+        } catch (e: any) {
+            console.error(`Error executing tool ${toolRequestPart.toolRequest.name}:`, e);
+            toolOutput = { error: e.message || 'An unknown error occurred.' };
+        }
+        
+        const toolResponse = {
+            toolResponse: {
+                name: toolRequestPart.toolRequest.name,
+                output: toolOutput,
+            },
+        };
+
+        // 5. Call the model again, providing the tool's result.
+        response = await ai.generate({
+            system: masterPrompt,
+            history: [
+                ...history,
+                { role: 'user', content: [{ text: input.message }] },
+                response.message,
+                { role: 'tool', content: [toolResponse] },
+            ],
+            tools,
+        });
     }
-
-    // 4. A tool has been requested. We need to execute it.
-    const toolRequest = toolRequestPart.toolRequest;
-    console.log(`Executing tool: ${toolRequest.name}`);
-
-    let toolOutput: any;
-    try {
-      const allTools = { listEvents, listClients, createEvent: createNewEvent, createFinanceEntry };
-      const toolToRun = allTools[toolRequest.name as keyof typeof allTools];
-      
-      if (!toolToRun) {
-        throw new Error(`Tool '${toolRequest.name}' is not available.`);
-      }
-      
-      toolOutput = await toolToRun.fn(toolRequest.input);
-    } catch (e: any) {
-      console.error(`Error executing tool ${toolRequest.name}:`, e);
-      toolOutput = { error: e.message || 'An unknown error occurred while executing the tool.' };
-    }
-
-    // 5. We build the full conversation history for the next call.
-    const historyForSecondCall: MessageData[] = [
-      ...initialHistory, // The history before this turn
-      { role: 'user', content: [{ text: input.message }] }, // The user's message that triggered the tool
-      { role: 'model', content: modelResponseContent }, // The model's response asking to use the tool
-      { role: 'tool', content: [{ toolResponse: { name: toolRequest.name, output: toolOutput } }] }, // The result from our tool
-    ];
-
-    // 6. Call the model again, providing the tool's result. The model will use this to generate a natural language response.
-    const finalResponse = await ai.generate({
-      system: masterPrompt,
-      prompt: "", // Provide an empty prompt to signal continuation from history.
-      history: historyForSecondCall,
-      tools: [listEvents, listClients, createNewEvent, createFinanceEntry],
-    });
-
-    return finalResponse.content || [];
-
   } catch (error) {
-    console.error("Error in askAssistant flow:", error);
+    console.error("An unexpected error occurred in the askAssistant flow:", error);
+    // Return a user-friendly error message in the expected format.
     return [{ text: "Lo siento, ha ocurrido un error al contactar a la IA. Por favor, revisa la configuración y las claves de API." }];
   }
 }
