@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { format, getYear, getMonth, parse, isSameMonth } from "date-fns"
+import { format, getYear, getMonth, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 import { useUser } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -118,11 +118,8 @@ function IncomeEntryPopover({ event, onIncomeSet }: { event: EventData, onIncome
 const robustParseDate = (dateString: string): Date | null => {
   if (!dateString || typeof dateString !== 'string') return null;
   try {
-    // Using date-fns parse is much more reliable than new Date()
-    // It correctly handles YYYY-MM-DD without timezone issues.
-    return parse(dateString, 'yyyy-MM-dd', new Date());
+    return parseISO(dateString.split('T')[0]);
   } catch (e) {
-    // If parsing fails, try new Date as a fallback for full ISO strings
     const date = new Date(dateString);
     return isNaN(date.getTime()) ? null : date;
   }
@@ -192,16 +189,14 @@ export default function MyIncomePage() {
             return { filteredEvents: [], filteredExpenses: [], totalIncome: 0, totalExpenses: 0, netBalance: 0 };
         }
 
-        const monthFirstDay = new Date(selectedYear, selectedMonth, 1);
+        const monthString = String(selectedMonth + 1).padStart(2, '0');
+        const yearMonthPrefix = `${selectedYear}-${monthString}`;
 
         const filterByMonthAndYear = (itemDateStr: string) => {
-            if (!itemDateStr || typeof itemDateStr !== 'string') return false;
-            try {
-                const itemDate = parse(itemDateStr, 'yyyy-MM-dd', new Date());
-                return isSameMonth(itemDate, monthFirstDay);
-            } catch {
+            if (!itemDateStr || typeof itemDateStr !== 'string') {
                 return false;
             }
+            return itemDateStr.startsWith(yearMonthPrefix);
         };
 
         const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
@@ -385,16 +380,18 @@ export default function MyIncomePage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredExpenses.length > 0 ? filteredExpenses.map(expense => (
+                        {filteredExpenses.length > 0 ? filteredExpenses.map(expense => {
+                             const expenseDate = robustParseDate(expense.date);
+                            return (
                             <TableRow key={expense.id}>
-                                <TableCell>{robustParseDate(expense.date) ? format(robustParseDate(expense.date)!, 'dd/MM/yyyy') : '-'}</TableCell>
+                                <TableCell>{expenseDate ? format(expenseDate, 'dd/MM/yyyy') : '-'}</TableCell>
                                 <TableCell className="font-medium">{expense.description}</TableCell>
                                 <TableCell>
                                     <Badge variant="outline">{MUSICIAN_EXPENSE_CATEGORIES.find(c => c.value === expense.category)?.label || expense.category}</Badge>
                                 </TableCell>
                                 <TableCell className="text-right font-semibold text-red-600">{formatCurrency(expense.amount)}</TableCell>
                             </TableRow>
-                        )) : (
+                        )}) : (
                             <TableRow>
                                 <TableCell colSpan={4} className="h-24 text-center">No hay gastos registrados para este período.</TableCell>
                             </TableRow>
@@ -406,3 +403,5 @@ export default function MyIncomePage() {
     </div>
   );
 }
+
+    
