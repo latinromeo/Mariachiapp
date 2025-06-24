@@ -426,42 +426,30 @@ export async function getRehearsals(): Promise<RehearsalData[]> {
     }
 }
 
-function buildRehearsalPayload(data: Partial<RehearsalInputData>) {
-    const payload: { [key: string]: any } = {};
-
-    // Explicitly handle each field to avoid undefined
-    if (data.date !== undefined) payload.date = data.date;
-    if (data.time !== undefined) payload.time = data.time;
-    if (data.location !== undefined) payload.location = data.location;
-    if (data.focus !== undefined) payload.focus = data.focus;
-    if (data.notes !== undefined) payload.notes = data.notes;
-
-    if (data.songs && Array.isArray(data.songs)) {
-        payload.songs = data.songs
-            .filter(song => song && typeof song.name === 'string' && song.name.trim() !== "")
-            .map(song => {
-                // This ensures no undefined values are in the song object
-                return {
-                    name: song.name,
-                    artist: song.artist || '',
-                    key: song.key || '',
-                    youtubeUrl: song.youtubeUrl || '',
-                    sheetMusicUrl: song.sheetMusicUrl || '',
-                    audioUrl: song.audioUrl || '',
-                };
-            });
-    }
-
-    return payload;
-}
-
-
 export async function createRehearsal(data: RehearsalInputData): Promise<{ success: boolean; rehearsalId?: string, error?: string }> {
   try {
-    const payload = buildRehearsalPayload(data);
-    payload.status = 'pending';
-    payload.createdAt = FieldValue.serverTimestamp();
-    payload.updatedAt = FieldValue.serverTimestamp();
+    const songsForDb = (data.songs || [])
+        .filter(song => song && song.name && song.name.trim() !== "")
+        .map(song => ({
+            name: song.name || '',
+            artist: song.artist || '',
+            key: song.key || '',
+            youtubeUrl: song.youtubeUrl || '',
+            sheetMusicUrl: song.sheetMusicUrl || '',
+            audioUrl: song.audioUrl || '',
+        }));
+
+    const payload = {
+        date: data.date,
+        time: data.time,
+        location: data.location,
+        focus: data.focus,
+        notes: data.notes || '',
+        songs: songsForDb,
+        status: 'pending' as const,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+    };
     
     const docRef = await db.collection("rehearsals").add(payload);
     return { success: true, rehearsalId: docRef.id };
@@ -487,7 +475,29 @@ export async function getRehearsalById(id: string): Promise<RehearsalData | null
 
 export async function updateRehearsal(id: string, data: Partial<RehearsalInputData>): Promise<{ success: boolean; error?: string }> {
     try {
-        const payload = buildRehearsalPayload(data);
+        const payload: { [key: string]: any } = { ...data };
+
+        // Sanitize songs array if it's part of the update
+        if ('songs' in payload) {
+            payload.songs = (payload.songs || [])
+                .filter((song: any) => song && song.name && song.name.trim() !== "")
+                .map((song: any) => ({
+                    name: song.name || '',
+                    artist: song.artist || '',
+                    key: song.key || '',
+                    youtubeUrl: song.youtubeUrl || '',
+                    sheetMusicUrl: song.sheetMusicUrl || '',
+                    audioUrl: song.audioUrl || '',
+                }));
+        }
+
+        // Remove any top-level undefined properties before sending to Firestore
+        Object.keys(payload).forEach(key => {
+            if (payload[key] === undefined) {
+                delete payload[key];
+            }
+        });
+
         payload.updatedAt = FieldValue.serverTimestamp();
 
         await db.collection("rehearsals").doc(id).update(payload);
