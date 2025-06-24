@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const hasCreateIntent = createIntentKeywords.some(keyword => prompt.toLowerCase().includes(keyword));
 
     let eventCreated = false;
-    let eventCreationDetails = null;
+    let eventCreationDetails: any = null;
     if (hasCreateIntent) {
       try {
         const result = await createEventFromPrompt(prompt);
