@@ -89,11 +89,11 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
             const choice = response.candidates[0];
             
             // Handle cases where the model might not return content
-            if (!choice || !choice.content || !choice.content.parts || choice.content.parts.length === 0) {
+            if (!choice || !choice.content || choice.content.length === 0) {
                 return [{ text: "Lo siento, no he podido generar una respuesta en este momento." }];
             }
 
-            const choiceParts = choice.content.parts;
+            const choiceParts = choice.content;
 
             // Add the model's response (which could be a tool request) to the history.
             history.push({ role: 'model', content: choiceParts });
