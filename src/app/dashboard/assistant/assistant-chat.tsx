@@ -28,7 +28,7 @@ interface ClientPart {
 }
 
 interface Message {
-  role: "user" | "model";
+  role: "user" | "model" | "tool";
   parts: ClientPart[];
 }
 
@@ -63,7 +63,15 @@ export function AssistantChat() {
 
     const userMessage: Message = { role: "user", parts: [{ text: currentInput }] };
     
-    const historyForApi = messages;
+    // Pass a clean version of the history for the API call
+    const historyForApi = messages.map(msg => ({
+      role: msg.role,
+      parts: msg.parts.map(p => ({
+        text: p.text,
+        toolRequest: p.toolRequest,
+        toolResponse: p.toolResponse,
+      }))
+    }));
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
@@ -133,6 +141,8 @@ export function AssistantChat() {
             <div className="space-y-6 p-6">
               <AnimatePresence>
               {messages.map((message, index) => {
+                if (message.role === 'tool') return null; // Don't render tool responses
+
                 const textContent = getMessageText(message);
                 if (!textContent) return null;
 
