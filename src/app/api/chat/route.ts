@@ -28,11 +28,11 @@ interface RequestBody {
 }
 
 /**
- * Parses a natural language prompt to extract date, time, and location.
+ * Parses a natural language prompt to extract date, time, location, and focus.
  * @param prompt The user's input string.
- * @returns An object containing the event date, time, and location.
+ * @returns An object containing the event date, time, location, and focus.
  */
-function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: string, location: string } {
+function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: string; location: string; focus: string; } {
     const today = new Date();
     let eventDate = new Date(); // Default to today
     const lowerPrompt = prompt.toLowerCase();
@@ -85,16 +85,30 @@ function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: s
         eventTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
     }
 
-    // --- Location Parsing ---
-    const locationRegex = /en (el |la )?([^,]+)/i;
+    // --- Location Parsing (Improved & Safer) ---
+    const locationRegex = /en (?:el |la )?(.+?)(?= a las| para| con |,|$)/i;
     const locationMatch = lowerPrompt.match(locationRegex);
-    let location = locationMatch ? locationMatch[2].trim().replace(/\.$/, '') : 'Ubicación por definir';
-    location = location.charAt(0).toUpperCase() + location.slice(1);
-
+    let location = 'Ubicación por definir';
+    if (locationMatch && locationMatch[1]) {
+        location = locationMatch[1].trim().replace(/\.$/, '');
+        location = location.charAt(0).toUpperCase() + location.slice(1);
+    }
+    
+    // --- Focus Parsing (New & Safer) ---
+    const focusRegex = /(?:canciones de|tema|enfocado en) (.+?)(?= a las|,|$)/i;
+    const focusMatch = lowerPrompt.match(focusRegex);
+    let focus = 'Ensayo General';
+    if (focusMatch && focusMatch[1]) {
+        const extractedFocus = focusMatch[1].trim();
+        focus = `Canciones de ${extractedFocus}`;
+        focus = focus.charAt(0).toUpperCase() + focus.slice(1);
+    }
+    
     return {
         eventDate,
         eventTime,
         location,
+        focus,
     };
 }
 
@@ -173,52 +187,50 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
     if (intentMatch) {
         const intent = intentMatch[1]; // e.g., "crear_evento"
         
-        if (intent === 'crear_evento' || intent === 'crear_ensayo') {
-            // Parse details from the original user prompt
-            const { eventDate, eventTime, location } = parseDetailsFromPrompt(prompt); 
-            
-            try {
-                if (intent === 'crear_ensayo') {
-                    const rehearsalData = {
-                        date: format(eventDate, 'yyyy-MM-dd'),
-                        time: eventTime,
-                        location: location,
-                        focus: 'Ensayo desde AI', // A generic focus for now
-                        songs: [],
-                        notes: `Creado por AI a partir del prompt: "${prompt}"`,
-                        status: 'pending' as const,
-                        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                    };
-                    await db.collection('rehearsals').add(rehearsalData);
-                } else { // 'crear_evento'
-                    const eventData = {
-                      clientName: 'Evento por definir',
-                      clientPhone: 'N/A',
-                      eventType: 'evento',
-                      eventDate: format(eventDate, 'yyyy-MM-dd'),
-                      eventTime,
-                      location,
-                      sector: 'Sector por definir',
-                      plan: 'personalizado',
-                      paymentMethod: 'other',
-                      contractedAmount: 0,
-                      amountPaid: 0,
-                      pendingBalance: 0,
-                      musiciansPay: 5000,
-                      externalGroup: false,
-                      notes: `Creado por AI a partir del prompt: "${prompt}"`,
-                      status: 'pending' as const,
-                      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                    };
-                    await db.collection('events').add(eventData);
-                }
+        try {
+            if (intent === 'crear_ensayo') {
+                const { eventDate, eventTime, location, focus } = parseDetailsFromPrompt(prompt); 
+                const rehearsalData = {
+                    date: format(eventDate, 'yyyy-MM-dd'),
+                    time: eventTime,
+                    location: location,
+                    focus: focus,
+                    songs: [],
+                    notes: `Creado por AI a partir del prompt: "${prompt}"`,
+                    status: 'pending' as const,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                };
+                await db.collection('rehearsals').add(rehearsalData);
                 eventCreated = true;
-            } catch (e) {
-                console.error('Error trying to create from prompt:', e);
-                reply += "\n\n(Advertencia: No pude guardar la acción en la base de datos.)";
+            } else if (intent === 'crear_evento') {
+                const { eventDate, eventTime, location } = parseDetailsFromPrompt(prompt);
+                const eventData = {
+                  clientName: 'Evento por definir',
+                  clientPhone: 'N/A',
+                  eventType: 'evento',
+                  eventDate: format(eventDate, 'yyyy-MM-dd'),
+                  eventTime,
+                  location,
+                  sector: 'Sector por definir',
+                  plan: 'personalizado',
+                  paymentMethod: 'other',
+                  contractedAmount: 0,
+                  amountPaid: 0,
+                  pendingBalance: 0,
+                  musiciansPay: 5000,
+                  externalGroup: false,
+                  notes: `Creado por AI a partir del prompt: "${prompt}"`,
+                  status: 'pending' as const,
+                  createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                };
+                await db.collection('events').add(eventData);
+                eventCreated = true;
             }
+        } catch (e) {
+            console.error('Error trying to create from prompt:', e);
+            reply += "\n\n(Advertencia: No pude guardar la acción en la base de datos.)";
         }
         // Future intents like 'crear_cliente' can be handled here.
     }
