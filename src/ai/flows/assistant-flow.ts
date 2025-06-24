@@ -84,8 +84,6 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
                 system: masterPrompt,
                 history,
                 tools,
-                // @ts-ignore - Tool definition generation differs between models.
-                toolChoice: "auto",
             });
 
             const choice = response.candidates[0];
