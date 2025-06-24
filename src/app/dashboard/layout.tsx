@@ -36,7 +36,6 @@ import {
 import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { AssistantChat } from "./assistant/assistant-chat"
 import { useUser, USERS, UserContext, ROLES_CONFIG, type User } from "@/lib/auth"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
@@ -289,7 +288,6 @@ function DashboardLayoutContent({
           <UserSwitcher />
         </header>
         <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">{children}</main>
-         {user.role === 'Administrador General' && <AssistantChat />}
       </SidebarInset>
        <BottomNav />
     </>
