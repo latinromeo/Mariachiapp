@@ -7,12 +7,8 @@ import type { Day } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 // Initialize Firebase Admin SDK
-// This is a server-side file, so we can initialize here.
-// The service account credentials should ideally be stored as environment variables.
 if (!admin.apps.length) {
-  admin.initializeApp({
-    // Using default credentials from the environment
-  });
+  admin.initializeApp();
 }
 const db = admin.firestore();
 
@@ -61,7 +57,6 @@ function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: s
 
     // --- Time Parsing ---
     let eventTime = 'Hora no especificada';
-    // Matches "5", "5pm", "5 pm", "5:30", "5:30pm"
     const timeRegex = /(\d{1,2})(?::(\d{2}))?\s*(pm|am)?/i;
     let timeMatch = lowerPrompt.match(timeRegex);
     
@@ -121,72 +116,39 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt: ChatMessage = {
         role: 'system',
-        content: `Eres "Maestro Mariachi AI", el asistente virtual personal del dueño de una agrupación de mariachis. Tu función principal es ayudar a gestionar todas las operaciones del grupo de manera rápida, precisa y eficiente. Solo el administrador (yo) te da instrucciones. Los clientes no te hablan directamente. Responde siempre en español, de forma cordial y profesional. Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente humano proactivo, entendiendo lenguaje natural y ayudando a automatizar todo lo posible.`,
+        content: `Eres "Maestro Mariachi AI", el asistente virtual personal del dueño de una agrupación de mariachis. Tu función principal es ayudar a gestionar todas las operaciones del grupo de manera rápida, precisa y eficiente. Solo el administrador (yo) te da instrucciones. Los clientes no te hablan directamente.
+
+Tu comportamiento debe seguir estas reglas:
+
+1. **Comprensión flexible:** Interpreta correctamente cualquier instrucción que te dé el administrador, aunque sea escrita de forma informal, resumida o con errores gramaticales. Ejemplos válidos:
+   - "agenda ensayo mañana a las 5"
+   - "ponme algo con manuel el viernes"
+   - "haz evento para cumpleaños a las 3"
+
+2. **Toma de acción:** Si detectas que el administrador te pide crear un ensayo, evento, cliente o nota:
+   - Responde confirmando con un mensaje profesional y amable.
+   - Incluye al final una línea separada y clara: \`INTENT: crear_ensayo\`, \`INTENT: crear_evento\`, \`INTENT: crear_cliente\`, \`INTENT: agregar_nota\`, etc., según corresponda.
+
+3. **Contexto inteligente:** Si se menciona algo como "mañana", "pasado mañana", "el viernes", o "en el estudio de Luis", interpreta y convierte eso a una fecha y ubicación concreta para crear el evento.
+
+4. **Formato de hora:** Interpreta frases como "a las 5", "cinco pm", "3 de la tarde", "mediodía", y conviértelas en formato 24 horas (por ejemplo: 17:00).
+
+5. **Respuesta estructurada:** Siempre responde en español. Tu mensaje debe tener dos partes:
+   - Un mensaje natural y cordial para el administrador confirmando la acción.
+   - Una línea al final con el INTENT como comando para la lógica del sistema.
+
+6. **Ejemplo de respuesta esperada:**
+
+---
+¡Perfecto! He registrado un ensayo para mañana a las 5:00 p.m. en el estudio de Luis. Los músicos serán notificados y todo estará listo para ese día. Si deseas hacer algún ajuste, solo dímelo.
+
+INTENT: crear_ensayo
+---
+
+Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente humano proactivo, entendiendo lenguaje natural y ayudando a automatizar todo lo posible.`,
     };
 
-    // --- Intent Detection & Action ---
-    const createIntentKeywords = [
-      'crea', 'programa', 'agenda', 'ponme', 'haz', 'ensayo', 'evento'
-    ];
-    const hasCreateIntent = createIntentKeywords.some((keyword) =>
-      prompt.toLowerCase().includes(keyword)
-    );
-
-    if (hasCreateIntent) {
-        const isRehearsal = prompt.toLowerCase().includes('ensayo');
-        const { eventDate, eventTime, location } = parseDetailsFromPrompt(prompt);
-
-        try {
-            const eventData = {
-              clientName: isRehearsal ? 'Ensayo Interno' : 'Evento por definir',
-              clientPhone: 'N/A',
-              eventType: isRehearsal ? 'ensayo' : 'evento',
-              eventDate: format(eventDate, 'yyyy-MM-dd'),
-              eventTime,
-              location,
-              sector: 'Sector por definir',
-              plan: 'personalizado',
-              paymentMethod: 'other',
-              contractedAmount: 0,
-              amountPaid: 0,
-              pendingBalance: 0,
-              musiciansPay: isRehearsal ? 0 : 5000,
-              externalGroup: false,
-              notes: `Creado por AI a partir del prompt: "${prompt}"`,
-              status: 'pending' as const,
-              createdAt: admin.firestore.FieldValue.serverTimestamp(),
-              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            };
-    
-            await db.collection('events').add(eventData);
-            
-            const intentType = isRehearsal ? "crear_ensayo" : "crear_evento";
-
-            const friendlyPrompt = `Basado en esta petición: "${prompt}", confirma la creación de un "${eventData.eventType}" de forma amigable y profesional. La acción ya fue realizada. Sé breve. Por ejemplo: "¡Perfecto! He agendado el ensayo para ti." o "¡Entendido! El evento ha sido registrado en el calendario."`;
-
-            const friendlyResponse = await openai.chat.completions.create({
-                model: 'gpt-3.5-turbo',
-                messages: [systemPrompt, { role: 'user', content: friendlyPrompt }],
-                temperature: 0.5,
-            });
-
-            const friendlyMessage = friendlyResponse.choices[0]?.message?.content || `¡Entendido! He agendado un "${eventData.eventType}" para ti.`;
-
-            const finalReply = `${friendlyMessage}\n\nINTENT: ${intentType}`;
-
-            return NextResponse.json({ reply: finalReply, eventCreated: true }, { status: 200 });
-
-        } catch (e) {
-            console.error('Error trying to create event from prompt:', e);
-            const errorMessage: ChatMessage = {
-              role: 'assistant',
-              content: 'Intenté crear el evento, pero algo salió mal en el proceso. Por favor, revísalo manualmente.',
-            };
-            return NextResponse.json({ reply: errorMessage.content, eventCreated: false }, { status: 500 });
-        }
-    }
-
-    // --- Regular Chat Completion (No Action) ---
+    // --- Get AI response first ---
     const messages: ChatMessage[] = [
       systemPrompt,
       ...(history || []),
@@ -201,8 +163,54 @@ export async function POST(req: NextRequest) {
     let reply =
       chatResponse.choices[0]?.message?.content ||
       'No pude obtener una respuesta.';
+    
+    let eventCreated = false;
 
-    return NextResponse.json({reply, eventCreated: false}, {status: 200});
+    // --- Check for intent in the AI's reply and take action ---
+    const intentRegex = /INTENT:\s*(\w+)/;
+    const intentMatch = reply.match(intentRegex);
+    
+    if (intentMatch) {
+        const intent = intentMatch[1]; // e.g., "crear_evento"
+        
+        if (intent === 'crear_evento' || intent === 'crear_ensayo') {
+            const isRehearsal = intent === 'crear_ensayo';
+            // Parse details from the original user prompt
+            const { eventDate, eventTime, location } = parseDetailsFromPrompt(prompt); 
+            
+            try {
+                const eventData = {
+                  clientName: isRehearsal ? 'Ensayo Interno' : 'Evento por definir',
+                  clientPhone: 'N/A',
+                  eventType: isRehearsal ? 'ensayo' : 'evento',
+                  eventDate: format(eventDate, 'yyyy-MM-dd'),
+                  eventTime,
+                  location,
+                  sector: 'Sector por definir',
+                  plan: 'personalizado',
+                  paymentMethod: 'other',
+                  contractedAmount: 0,
+                  amountPaid: 0,
+                  pendingBalance: 0,
+                  musiciansPay: isRehearsal ? 0 : 5000,
+                  externalGroup: false,
+                  notes: `Creado por AI a partir del prompt: "${prompt}"`,
+                  status: 'pending' as const,
+                  createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                };
+        
+                await db.collection('events').add(eventData);
+                eventCreated = true;
+            } catch (e) {
+                console.error('Error trying to create event from prompt:', e);
+                reply += "\n\n(Advertencia: No pude guardar la acción en la base de datos.)";
+            }
+        }
+        // Future intents like 'crear_cliente' can be handled here.
+    }
+
+    return NextResponse.json({reply, eventCreated}, {status: 200});
 
   } catch (error: any) {
     console.error('Error in API route:', error);
