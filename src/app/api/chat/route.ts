@@ -8,7 +8,11 @@ import { es } from 'date-fns/locale';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
-  admin.initializeApp();
+  try {
+    admin.initializeApp();
+  } catch (error) {
+    console.error('Firebase admin initialization error', error);
+  }
 }
 const db = admin.firestore();
 
@@ -44,7 +48,7 @@ function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: s
 
     if (lowerPrompt.includes('pasado mañana')) {
         eventDate = add(today, { days: 2 });
-    } else if (lowerPrompt.includes('mañana')) {
+    } else if (lowerPrompt.includes('mañana') || lowerPrompt.includes('manana')) {
         eventDate = add(today, { days: 1 });
     } else {
         for (const dayName in dayMap) {
@@ -57,12 +61,23 @@ function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: s
 
     // --- Time Parsing ---
     let eventTime = 'Hora no especificada';
-    const timeRegex = /(\d{1,2})(?::(\d{2}))?\s*(pm|am)?/i;
+    const timeRegex = /(\d{1,2})(?::(\d{2}))?\s*(pm|am)/i; // Make am/pm mandatory for this regex
     let timeMatch = lowerPrompt.match(timeRegex);
-    
+
     if (lowerPrompt.includes("mediodía") || lowerPrompt.includes("12 pm")) {
         timeMatch = ['12 pm', '12', '00', 'pm'];
+    } else if (!timeMatch) {
+      // Fallback for formats like "a las 5 de la tarde"
+      const timeRegex2 = /a las (\d{1,2})/i;
+      const timeMatch2 = lowerPrompt.match(timeRegex2);
+      if (timeMatch2) {
+        timeMatch = [timeMatch2[0], timeMatch2[1], '00', ''];
+        if (lowerPrompt.includes('tarde') || lowerPrompt.includes('noche')) {
+          timeMatch[3] = 'pm';
+        }
+      }
     }
+
 
     if (timeMatch) {
         let hour = parseInt(timeMatch[1], 10);
@@ -71,37 +86,44 @@ function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: s
 
         if (!period && (lowerPrompt.includes('tarde') || lowerPrompt.includes('noche'))) {
             period = 'pm';
+        } else if (!period) {
+            // Assume PM for hours 1-7, AM for 8-12 if no period specified
+            period = (hour >= 1 && hour <= 7) ? 'pm' : 'am';
         }
 
-        if (hour >= 1 && hour <= 12) { // Handle 12-hour format
-            if (period === 'pm' && hour < 12) {
-                hour += 12;
-            }
-            if (period === 'am' && hour === 12) {
-                hour = 0; // Midnight case for 12 AM
-            }
+        if (period === 'pm' && hour < 12) {
+            hour += 12;
+        }
+        if (period === 'am' && hour === 12) {
+            hour = 0; // Midnight case
         }
         
         eventTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
     }
 
-    // --- Location Parsing (Improved & Safer) ---
-    const locationRegex = /en (?:el |la )?(.+?)(?= a las| para| con |,|$)/i;
+    // --- Location & Focus Parsing (More Robust) ---
+    // Keywords for location are 'en', 'en el', 'en la'
+    // Keywords for focus are 'canciones de', 'tema', 'enfocado en'
+    // Keywords for time are 'a las'
+    const locationRegex = /en (?:el |la )?(.+?)(?=a las|para|con|canciones de|tema|enfocado en|,|$)/i;
+    const focusRegex = /(?:canciones de|tema|enfocado en) (.+?)(?=a las|para|con|en el|en la|en|,|$)/i;
+
     const locationMatch = lowerPrompt.match(locationRegex);
     let location = 'Ubicación por definir';
     if (locationMatch && locationMatch[1]) {
-        location = locationMatch[1].trim().replace(/\.$/, '');
-        location = location.charAt(0).toUpperCase() + location.slice(1);
+        const cleanedLocation = locationMatch[1].trim().replace(/\.$/, '');
+        if(cleanedLocation) {
+          location = cleanedLocation.charAt(0).toUpperCase() + cleanedLocation.slice(1);
+        }
     }
     
-    // --- Focus Parsing (New & Safer) ---
-    const focusRegex = /(?:canciones de|tema|enfocado en) (.+?)(?= a las|,|$)/i;
     const focusMatch = lowerPrompt.match(focusRegex);
     let focus = 'Ensayo General';
     if (focusMatch && focusMatch[1]) {
         const extractedFocus = focusMatch[1].trim();
-        focus = `Canciones de ${extractedFocus}`;
-        focus = focus.charAt(0).toUpperCase() + focus.slice(1);
+        if(extractedFocus) {
+          focus = `Canciones de ${extractedFocus.charAt(0).toUpperCase() + extractedFocus.slice(1)}`;
+        }
     }
     
     return {
@@ -189,29 +211,36 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
         
         try {
             if (intent === 'crear_ensayo') {
-                const { eventDate, eventTime, location, focus } = parseDetailsFromPrompt(prompt); 
+                const parsedDetails = parseDetailsFromPrompt(prompt); 
+                console.log("Parsed rehearsal details:", parsedDetails);
+
                 const rehearsalData = {
-                    date: format(eventDate, 'yyyy-MM-dd'),
-                    time: eventTime,
-                    location: location,
-                    focus: focus,
+                    date: format(parsedDetails.eventDate, 'yyyy-MM-dd'),
+                    time: parsedDetails.eventTime,
+                    location: parsedDetails.location,
+                    focus: parsedDetails.focus,
                     songs: [],
                     notes: `Creado por AI a partir del prompt: "${prompt}"`,
                     status: 'pending' as const,
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
                 };
+                
+                console.log("Attempting to save rehearsal data:", rehearsalData);
                 await db.collection('rehearsals').add(rehearsalData);
+                console.log("Rehearsal data saved successfully.");
                 eventCreated = true;
+
             } else if (intent === 'crear_evento') {
-                const { eventDate, eventTime, location } = parseDetailsFromPrompt(prompt);
+                const parsedDetails = parseDetailsFromPrompt(prompt);
+                console.log("Parsed event details:", parsedDetails);
                 const eventData = {
                   clientName: 'Evento por definir',
                   clientPhone: 'N/A',
                   eventType: 'evento',
-                  eventDate: format(eventDate, 'yyyy-MM-dd'),
-                  eventTime,
-                  location,
+                  eventDate: format(parsedDetails.eventDate, 'yyyy-MM-dd'),
+                  eventTime: parsedDetails.eventTime,
+                  location: parsedDetails.location,
                   sector: 'Sector por definir',
                   plan: 'personalizado',
                   paymentMethod: 'other',
@@ -225,14 +254,19 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
                   createdAt: admin.firestore.FieldValue.serverTimestamp(),
                   updatedAt: admin.firestore.FieldValue.serverTimestamp(),
                 };
+
+                console.log("Attempting to save event data:", eventData);
                 await db.collection('events').add(eventData);
+                console.log("Event data saved successfully.");
                 eventCreated = true;
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error('Error trying to create from prompt:', e);
+            console.error('Error name:', e.name);
+            console.error('Error message:', e.message);
+            console.error('Error stack:', e.stack);
             reply += "\n\n(Advertencia: No pude guardar la acción en la base de datos.)";
         }
-        // Future intents like 'crear_cliente' can be handled here.
     }
 
     return NextResponse.json({reply, eventCreated}, {status: 200});
