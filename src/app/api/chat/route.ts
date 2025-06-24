@@ -52,10 +52,9 @@ function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: s
 
     // --- Time Parsing ---
     let eventTime = 'Hora no especificada';
-    // Matches "5pm", "5 pm", "5:30 pm", "17:00"
-    const timeMatch = lowerPrompt.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
     const tardeNoche = lowerPrompt.includes('tarde') || lowerPrompt.includes('noche');
     const mediodia = lowerPrompt.includes('mediodía') || lowerPrompt.includes('12 pm') || lowerPrompt.includes('12pm');
+    const timeMatch = lowerPrompt.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
 
     if (mediodia) {
         eventTime = '12:00';
@@ -64,7 +63,7 @@ function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: s
         const minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
         const period = timeMatch[3] ? timeMatch[3].toLowerCase() : '';
 
-        if ((period === 'pm' || tardeNoche) && hour < 12) {
+        if ((period === 'pm' || (tardeNoche && hour < 12)) && hour < 12) {
             hour += 12;
         }
         if (period === 'am' && hour === 12) {
@@ -85,13 +84,11 @@ function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: s
     
     // --- Focus Parsing ---
     let focus = 'Ensayo General';
-    // More specific regex to capture the theme value correctly
     const focusMatch = lowerPrompt.match(/(?:tema(?: del ensayo (?:es|son|serian|será))?|canciones de|enfocado en) (.+?)(?=a las|en |para|con|,|$)/i);
     if (focusMatch && focusMatch[1]) {
         const value = focusMatch[1].trim();
         if(value) {
             const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1);
-            // Check if the trigger was 'canciones de' to format accordingly
             if (lowerPrompt.includes('canciones de')) {
                 focus = `Canciones de ${capitalizedValue}`;
             } else {
@@ -196,8 +193,8 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
                     songs: [],
                     notes: `Creado por AI a partir del prompt: "${prompt}"`,
                     status: 'pending' as const,
-                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
                 };
                 
                 console.log("Attempting to save rehearsal data:", rehearsalData);
@@ -225,8 +222,8 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
                   externalGroup: false,
                   notes: `Creado por AI a partir del prompt: "${prompt}"`,
                   status: 'pending' as const,
-                  createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
                 };
 
                 console.log("Attempting to save event data:", eventData);

@@ -5,7 +5,7 @@
 import { add, sub, parse, format as formatDateFns } from "date-fns";
 import { es } from 'date-fns/locale';
 import { db } from '@/lib/firebase-admin'; // Usar la instancia de admin centralizada
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
 import { EVENT_PLANS } from "@/lib/constants";
 
 // --- INTERFACES ---
@@ -193,8 +193,8 @@ export async function createClient(data: ClientInputData): Promise<{ success: bo
     try {
         const docRef = await db.collection('clients').add({
             ...data,
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
         });
         return { success: true, clientId: docRef.id };
     } catch (error) {
@@ -221,7 +221,7 @@ export async function updateClient(id: string, data: Partial<ClientInputData>): 
     try {
         await db.collection("clients").doc(id).update({
             ...data,
-            updatedAt: FieldValue.serverTimestamp(),
+            updatedAt: new Date(),
         });
         return { success: true };
     } catch (error) {
@@ -311,8 +311,8 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
     pendingBalance,
     profit,
     status: data.externalGroup ? 'external' as const : 'pending' as const,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   try {
@@ -359,7 +359,7 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
             contractedAmount,
             musiciansPay,
             amountPaid,
-            updatedAt: FieldValue.serverTimestamp(),
+            updatedAt: new Date(),
         };
 
         if (data.externalGroup !== undefined) {
@@ -393,7 +393,7 @@ export async function completeEvent(eventId: string): Promise<{ success: boolean
       status: 'completed',
       amountPaid: contractedAmount,
       pendingBalance: 0,
-      updatedAt: FieldValue.serverTimestamp(),
+      updatedAt: new Date(),
     });
 
     return { success: true };
@@ -447,8 +447,8 @@ export async function createRehearsal(data: RehearsalInputData): Promise<{ succe
         notes: data.notes || '',
         songs: songsForDb,
         status: 'pending' as const,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
     };
     
     const docRef = await db.collection("rehearsals").add(payload);
@@ -477,7 +477,6 @@ export async function updateRehearsal(id: string, data: Partial<RehearsalInputDa
     try {
         const payload: { [key: string]: any } = { ...data };
 
-        // Sanitize songs array if it's part of the update
         if ('songs' in payload) {
             payload.songs = (payload.songs || [])
                 .filter((song: any) => song && song.name && song.name.trim() !== "")
@@ -491,14 +490,13 @@ export async function updateRehearsal(id: string, data: Partial<RehearsalInputDa
                 }));
         }
 
-        // Remove any top-level undefined properties before sending to Firestore
         Object.keys(payload).forEach(key => {
             if (payload[key] === undefined) {
                 delete payload[key];
             }
         });
 
-        payload.updatedAt = FieldValue.serverTimestamp();
+        payload.updatedAt = new Date();
 
         await db.collection("rehearsals").doc(id).update(payload);
         return { success: true };
@@ -512,7 +510,7 @@ export async function completeRehearsal(id: string): Promise<{ success: boolean;
     try {
         await db.collection("rehearsals").doc(id).update({
             status: 'completed',
-            updatedAt: FieldValue.serverTimestamp(),
+            updatedAt: new Date(),
         });
         return { success: true };
     } catch (error) {
@@ -617,7 +615,7 @@ export async function createManualFinanceEntry(data: ManualFinanceEntryInputData
         const docRef = await db.collection('manualFinanceEntries').add({
             ...data,
             createdBy: 'admin', // Hardcoded for now
-            createdAt: FieldValue.serverTimestamp(),
+            createdAt: new Date(),
         });
         return { success: true, entryId: docRef.id };
     } catch (error) {
@@ -666,7 +664,7 @@ export async function createMusicianExpense(userId: string, data: MusicianExpens
         const docRef = await db.collection("musicianExpenses").add({
             ...data,
             userId,
-            createdAt: FieldValue.serverTimestamp()
+            createdAt: new Date()
         });
         return { success: true, expenseId: docRef.id };
     } catch (error) {
@@ -813,7 +811,7 @@ async function seedInitialSongs() {
         const docRef = songsCol.doc(); 
         batch.set(docRef, {
             ...songData,
-            createdAt: FieldValue.serverTimestamp()
+            createdAt: new Date()
         });
     }
     await batch.commit();
@@ -835,8 +833,8 @@ export async function createSong(data: SongInputData): Promise<{ success: boolea
   try {
     const docRef = await db.collection("songs").add({
         ...data,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
     });
     return { success: true, songId: docRef.id };
   } catch (error) {
@@ -849,7 +847,7 @@ export async function updateSong(id: string, data: Partial<SongInputData>): Prom
     try {
         await db.collection("songs").doc(id).update({
             ...data,
-            updatedAt: FieldValue.serverTimestamp(),
+            updatedAt: new Date(),
         });
         return { success: true };
     } catch (error) {
