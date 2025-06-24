@@ -1,3 +1,4 @@
+
 'use client';
 
 import {useState, useRef, useEffect, type FormEvent} from 'react';
@@ -50,14 +51,15 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
       // Pass the previous messages as history for context
       const history = messages.map(({role, content}) => ({role, content}));
 
-      const res = await fetch('/api/chat', {
+      const res = await fetch('/api/chat', { // This path will be proxied by firebase.json
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({prompt: input, history}),
       });
 
       if (!res.ok) {
-        throw new Error(`API error: ${res.statusText}`);
+         const errorData = await res.json();
+        throw new Error(errorData.error || `API error: ${res.statusText}`);
       }
 
       const data = await res.json();
@@ -69,13 +71,14 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
           title: "¡Evento Creado!",
           description: "El asistente ha agendado un nuevo evento en tu calendario.",
         });
+        // You might want to refresh the calendar or events list here
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch assistant reply:', error);
       const errorMessage: Message = {
         role: 'assistant',
-        content: 'Lo siento, ha ocurrido un error al contactar a la IA. Por favor, inténtalo de nuevo.',
+        content: `Lo siento, ha ocurrido un error: ${error.message || 'Por favor, inténtalo de nuevo.'}`,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
