@@ -36,17 +36,22 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
     const currentDate = new Date().toISOString().split('T')[0];
     const systemPromptWithDate = `${masterPrompt}\n\nADDITIONAL INFORMATION:\n- Today's date is ${currentDate}. Use this as a reference for any time-related queries (e.g., "today", "tomorrow", "this month").`;
 
-    // Combine the user's latest message with the past history to form the full conversation.
+    // Map the client-side history to the format Genkit expects (MessageData[]).
+    // The key is to rename `parts` to `content`.
+    const mappedHistory: MessageData[] = input.history.map((message: any) => ({
+      role: message.role,
+      content: message.parts,
+    }));
+
+    // The entire conversation, including the latest user message.
     const conversation: MessageData[] = [
-      ...input.history,
+      ...mappedHistory,
       { role: 'user', content: [{ text: input.message }] },
     ];
     
-    // The history for the AI is the entire conversation log.
-    // By providing the full context in the `history` field, the AI can properly follow multi-turn conversations.
     const response = await ai.generate({
       system: systemPromptWithDate,
-      history: conversation, // Send the full conversation history.
+      history: conversation, // Send the full, correctly formatted conversation history.
       tools: [listEvents, listClients, createNewEvent, createFinanceEntry],
     });
     
