@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState, useMemo, useCallback } from "react"
@@ -15,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { format, getYear, getMonth, parse } from "date-fns"
+import { format, getYear, getMonth, parse, isSameMonth } from "date-fns"
 import { es } from "date-fns/locale"
 import { useUser } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -116,18 +117,15 @@ function IncomeEntryPopover({ event, onIncomeSet }: { event: EventData, onIncome
 
 const robustParseDate = (dateString: string): Date | null => {
   if (!dateString || typeof dateString !== 'string') return null;
-  // This will handle 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
-  const date = new Date(dateString);
-  // Check if the date is valid
-  if (isNaN(date.getTime())) {
-    try {
-        // Fallback for 'YYYY-MM-DD' specifically to avoid timezone issues on some browsers
-        return parse(dateString, 'yyyy-MM-dd', new Date());
-    } catch {
-        return null;
-    }
+  try {
+    // Using date-fns parse is much more reliable than new Date()
+    // It correctly handles YYYY-MM-DD without timezone issues.
+    return parse(dateString, 'yyyy-MM-dd', new Date());
+  } catch (e) {
+    // If parsing fails, try new Date as a fallback for full ISO strings
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? null : date;
   }
-  return date;
 };
 
 
@@ -190,15 +188,21 @@ export default function MyIncomePage() {
         totalExpenses,
         netBalance
     } = useMemo(() => {
-        const date = new Date(selectedYear, selectedMonth, 1);
-        const currentMonthStr = (date.getMonth() + 1).toString().padStart(2, '0');
-        const currentYearStr = date.getFullYear().toString();
+        if (typeof selectedYear === 'undefined' || typeof selectedMonth === 'undefined') {
+            return { filteredEvents: [], filteredExpenses: [], totalIncome: 0, totalExpenses: 0, netBalance: 0 };
+        }
+
+        const monthFirstDay = new Date(selectedYear, selectedMonth, 1);
 
         const filterByMonthAndYear = (itemDateStr: string) => {
-             if (!itemDateStr || typeof itemDateStr !== 'string') return false;
-            const [year, month] = itemDateStr.split('-');
-            return year === currentYearStr && month === currentMonthStr;
-        }
+            if (!itemDateStr || typeof itemDateStr !== 'string') return false;
+            try {
+                const itemDate = parse(itemDateStr, 'yyyy-MM-dd', new Date());
+                return isSameMonth(itemDate, monthFirstDay);
+            } catch {
+                return false;
+            }
+        };
 
         const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
         const currentFilteredIncomes = incomes.filter(i => filterByMonthAndYear(i.date));
