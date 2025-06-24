@@ -50,17 +50,15 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
         }),
       }));
       
-    // 2. Add the user's current message to the history to form the complete conversation.
-    history.push({ role: 'user', content: [{ text: input.message }] });
-    
-    // 3. Let Genkit handle the tool-use loop automatically by passing the full history.
+    // 2. Let Genkit handle the tool-use loop automatically by passing the history and the new prompt.
     const response = await ai.generate({
+        prompt: input.message,
         system: masterPrompt,
         history,
         tools,
     });
 
-    // 4. Return the content. In Genkit v1.x, .content is a property, not a function.
+    // 3. Return the content. In Genkit v1.x, .content is a property, not a function.
     return response.content;
 
   } catch (error) {
