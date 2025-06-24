@@ -426,16 +426,42 @@ export async function getRehearsals(): Promise<RehearsalData[]> {
     }
 }
 
+function buildRehearsalPayload(data: Partial<RehearsalInputData>) {
+    const payload: any = {};
+    if (data.date) payload.date = data.date;
+    if (data.time) payload.time = data.time;
+    if (data.location) payload.location = data.location;
+    if (data.focus) payload.focus = data.focus;
+    if (data.notes) payload.notes = data.notes; else payload.notes = "";
+
+    if (data.songs && Array.isArray(data.songs)) {
+        payload.songs = data.songs
+            .filter(song => song && typeof song.name === 'string' && song.name.trim() !== "")
+            .map(song => {
+                const newSong: any = { name: song.name };
+                if (song.artist) newSong.artist = song.artist;
+                if (song.key) newSong.key = song.key;
+                if (song.youtubeUrl) newSong.youtubeUrl = song.youtubeUrl;
+                if (song.sheetMusicUrl) newSong.sheetMusicUrl = song.sheetMusicUrl;
+                if (song.audioUrl) newSong.audioUrl = song.audioUrl;
+                return newSong;
+            });
+    } else {
+        payload.songs = [];
+    }
+    
+    return payload;
+}
+
+
 export async function createRehearsal(data: RehearsalInputData): Promise<{ success: boolean; rehearsalId?: string, error?: string }> {
   try {
-    // Sanitize data to remove 'undefined' values, which Firestore rejects.
-    const sanitizedData = JSON.parse(JSON.stringify(data));
-    const docRef = await db.collection("rehearsals").add({
-        ...sanitizedData,
-        status: 'pending',
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-    });
+    const payload = buildRehearsalPayload(data);
+    payload.status = 'pending';
+    payload.createdAt = FieldValue.serverTimestamp();
+    payload.updatedAt = FieldValue.serverTimestamp();
+    
+    const docRef = await db.collection("rehearsals").add(payload);
     return { success: true, rehearsalId: docRef.id };
   } catch (error) {
      console.error("Error creating rehearsal:", error);
@@ -459,12 +485,10 @@ export async function getRehearsalById(id: string): Promise<RehearsalData | null
 
 export async function updateRehearsal(id: string, data: Partial<RehearsalInputData>): Promise<{ success: boolean; error?: string }> {
     try {
-        // Sanitize data to remove 'undefined' values, which Firestore rejects.
-        const sanitizedData = JSON.parse(JSON.stringify(data));
-        await db.collection("rehearsals").doc(id).update({
-            ...sanitizedData,
-            updatedAt: FieldValue.serverTimestamp(),
-        });
+        const payload = buildRehearsalPayload(data);
+        payload.updatedAt = FieldValue.serverTimestamp();
+
+        await db.collection("rehearsals").doc(id).update(payload);
         return { success: true };
     } catch (error) {
         console.error("Error updating rehearsal:", error);
