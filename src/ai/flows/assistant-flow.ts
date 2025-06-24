@@ -8,7 +8,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { MessageData, Part } from 'genkit';
+import { MessageData, Part, ToolRequestPart } from 'genkit';
 import { z } from 'zod';
 import { listEvents, listClients, createNewEvent, createFinanceEntry, createNewRehearsal } from '../tools/mariachi-tools';
 
@@ -35,46 +35,52 @@ export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 
 export async function askAssistant(input: AssistantInput): Promise<Part[]> {
     const tools = [listEvents, listClients, createNewEvent, createFinanceEntry, createNewRehearsal];
+    
     try {
         // 1. Transform client history and add the new message.
-        const history: MessageData[] = [
-            ...input.history.map((msg: any): MessageData | null => {
-                if (!msg || !msg.role || !Array.isArray(msg.parts)) return null;
-                const content: Part[] = msg.parts
-                    .map((part: any): Part | null => {
-                        if (!part || typeof part !== 'object') return null;
-                        if (part.text) return { text: part.text };
-                        if (part.toolRequest) return { toolRequest: part.toolRequest };
-                        if (part.toolResponse) return { toolResponse: part.toolResponse };
-                        return null;
-                    })
-                    .filter((p): p is Part => p !== null);
-                if (content.length === 0) return null;
-                return { role: msg.role, content };
-            }).filter((m): m is MessageData => m !== null),
-            { role: 'user', content: [{ text: input.message }] }
-        ];
+        // The client 'parts' property needs to be renamed to 'content'.
+        const history: MessageData[] = input.history.map((msg: any): MessageData => ({
+            role: msg.role,
+            content: msg.parts.map((part: any) => {
+                if (part.text) return { text: part.text };
+                if (part.toolRequest) return { toolRequest: part.toolRequest };
+                if (part.toolResponse) return { toolResponse: part.toolResponse };
+                return part;
+            })
+        }));
+        
+        // Add the new user message to the history
+        history.push({ role: 'user', content: [{ text: input.message }] });
 
         // 2. Start the conversation loop to handle tool requests.
         for (let i = 0; i < 5; i++) { // Add a limit to prevent infinite loops
             const response = await ai.generate({
+                model: 'googleai/gemini-1.5-flash-latest',
                 system: masterPrompt,
                 history,
                 tools,
             });
 
             const choice = response.candidates[0];
-            const choiceParts = choice.content?.parts ?? [];
+            
+            // Handle cases where the model might not return content
+            if (!choice.content || !choice.content.parts) {
+                return [{ text: "Lo siento, no he podido generar una respuesta en este momento." }];
+            }
+
+            const choiceParts = choice.content.parts;
 
             // Add the model's response (which could be a tool request) to the history.
             history.push({ role: 'model', content: choiceParts });
             
             // Find if there's a tool request.
-            const toolRequests = choiceParts.map(p => p.toolRequest).filter((tr): tr is NonNullable<typeof tr> => !!tr);
+            const toolRequests = choiceParts
+              .map(p => p.toolRequest)
+              .filter((tr): tr is ToolRequestPart => !!tr);
 
             if (toolRequests.length === 0) {
                 // No tool request, this is the final text answer, so we return it.
-                return choiceParts;
+                return choiceParts.filter(p => typeof p.text === 'string');
             }
 
             // The model wants to use tools. Execute them.
