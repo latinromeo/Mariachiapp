@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExpenseForm } from "./expense-form"
-import { format, getYear, getMonth, parse, parseISO } from "date-fns"
+import { format, getYear, getMonth, parse, parseISO, startOfMonth, endOfMonth, isWithinInterval } from "date-fns"
 import { es } from "date-fns/locale"
 import { useUser } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -112,18 +112,22 @@ function IncomeEntryPopover({ event, onIncomeSet }: { event: EventData, onIncome
 }
 
 const robustParseDate = (dateString: string): Date | null => {
-    try {
-        // This handles 'YYYY-MM-DD' correctly by treating it as local time, not UTC.
-        return parse(dateString, 'yyyy-MM-dd', new Date());
-    } catch {
-        try {
-            // Fallback for full ISO strings
-            return parseISO(dateString);
-        } catch {
-            return null;
-        }
-    }
+  if (!dateString) return null;
+  // Prioritize parsing 'yyyy-MM-dd' as it's the most common format here and avoids timezone issues with parseISO.
+  // new Date() is passed to ensure if only time is provided, it defaults to today.
+  try {
+      return parse(dateString, 'yyyy-MM-dd', new Date());
+  } catch (error) {
+      // Fallback for full ISO strings if the first parse fails
+      try {
+          return parseISO(dateString);
+      } catch (isoError) {
+          console.error(`Failed to parse date: ${dateString}`, isoError);
+          return null;
+      }
+  }
 };
+
 
 export default function MyIncomePage() {
     const { user } = useUser();
@@ -152,12 +156,9 @@ export default function MyIncomePage() {
             setExpenses(expensesData);
 
             const years = new Set<number>();
-            
             const addYearFromString = (dateString: string) => {
                 const date = robustParseDate(dateString);
-                if (date) {
-                    years.add(getYear(date));
-                }
+                if (date) years.add(getYear(date));
             };
             
             eventsData.forEach(e => addYearFromString(e.eventDate));
@@ -187,15 +188,20 @@ export default function MyIncomePage() {
         netBalance,
         filteredExpenses
     } = useMemo(() => {
-        const filterByMonthAndYear = (itemDate: string) => {
-            const date = robustParseDate(itemDate);
+        const monthDate = new Date(selectedYear, selectedMonth);
+        const monthStart = startOfMonth(monthDate);
+        const monthEnd = endOfMonth(monthDate);
+        const monthInterval = { start: monthStart, end: monthEnd };
+
+        const filterByInterval = (itemDateStr: string) => {
+            const date = robustParseDate(itemDateStr);
             if (!date) return false;
-            return getYear(date) === selectedYear && getMonth(date) === selectedMonth;
+            return isWithinInterval(date, monthInterval);
         };
 
-        const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
-        const currentFilteredIncomes = incomes.filter(i => filterByMonthAndYear(i.date));
-        const currentFilteredExpenses = expenses.filter(e => filterByMonthAndYear(e.date));
+        const currentFilteredEvents = events.filter(e => filterByInterval(e.eventDate));
+        const currentFilteredIncomes = incomes.filter(i => filterByInterval(i.date));
+        const currentFilteredExpenses = expenses.filter(e => filterByInterval(e.date));
 
         const totalIncome = currentFilteredIncomes.reduce((sum, income) => sum + income.amount, 0);
         const totalExpenses = currentFilteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);

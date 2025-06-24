@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useForm } from "react-hook-form"
@@ -15,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
-import { Loader2, DollarSign, Edit } from "lucide-react"
+import { Loader2, DollarSign, Edit, Calendar } from "lucide-react"
 import { createMusicianExpense } from "@/services/eventService"
 import { MUSICIAN_EXPENSE_CATEGORIES } from "@/lib/constants"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -26,6 +27,7 @@ const formSchema = z.object({
   description: z.string().min(3, { message: "La descripción es obligatoria." }),
   category: z.string({ required_error: "Debe seleccionar una categoría." }),
   amount: z.coerce.number().positive({ message: "El monto debe ser un número positivo." }),
+  date: z.string().min(1, { message: "La fecha es obligatoria." }),
 })
 
 interface ExpenseFormProps {
@@ -43,17 +45,14 @@ export function ExpenseForm({ onSuccess }: ExpenseFormProps) {
       description: "",
       category: "",
       amount: 0,
+      date: new Date().toISOString().split('T')[0],
     },
   })
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-        const valuesWithDate = {
-            ...values,
-            date: new Date().toISOString().split('T')[0]
-        };
-        const result = await createMusicianExpense(user.id, valuesWithDate);
+        const result = await createMusicianExpense(user.id, values);
 
         if (result.success) {
             toast({
@@ -111,18 +110,30 @@ export function ExpenseForm({ onSuccess }: ExpenseFormProps) {
                     </FormItem>
                 )}
             />
-             <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-muted-foreground" />Monto</FormLabel>
-                        <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <p className="text-xs text-center text-muted-foreground">El gasto se registrará con la fecha de hoy.</p>
+             <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-muted-foreground" />Monto</FormLabel>
+                            <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="date"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" />Fecha</FormLabel>
+                            <FormControl><Input type="date" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
         <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isSubmitting ? "Guardando..." : "Guardar Gasto"}
