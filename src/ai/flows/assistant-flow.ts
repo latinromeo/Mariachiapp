@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A virtual assistant AI agent for the Mariachi app.
@@ -83,6 +84,7 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
         // 5. Call the model again, providing the tool's result.
         response = await ai.generate({
             system: masterPrompt,
+            prompt: '', // The prompt is required, even if empty. The model will use the history.
             history: [
                 ...history,
                 { role: 'user', content: [{ text: input.message }] },
