@@ -23,6 +23,11 @@ interface ChatMessage {
   content: string;
 }
 
+interface RequestBody {
+  prompt: string;
+  history: ChatMessage[];
+}
+
 // A simplified function to extract details from a prompt.
 function parseDateTime(prompt: string): { eventDate: string; eventTime: string } {
     const today = new Date();
@@ -64,7 +69,7 @@ export const chatWithAssistant = functions.https.onRequest((req, res) => {
     }
 
     try {
-      const {prompt, history} = req.body as {prompt: string; history: ChatMessage[]};
+      const {prompt, history} = req.body as RequestBody;
 
       if (!prompt) {
         res.status(400).json({error: "Prompt is required"});
@@ -110,7 +115,7 @@ export const chatWithAssistant = functions.https.onRequest((req, res) => {
             functions.logger.info("Event created successfully from prompt:", eventData);
         } catch (e) {
           functions.logger.error("Error trying to create event from prompt:", e);
-          actionResponse = "\n\nIntenté crear el evento, pero algo salió mal. Por favor, revísalo manually.";
+          actionResponse = "\n\nIntenté crear el evento, pero algo salió mal. Por favor, revísalo manualmente.";
         }
       }
 
