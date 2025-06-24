@@ -14,13 +14,20 @@ import {
   SheetFooter
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { askAssistant } from "@/ai/flows/assistant-flow";
 import { cn } from "@/lib/utils";
 
+// Local type definition that is compatible with Genkit's Part
+interface ClientPart {
+  text?: string;
+  toolRequest?: any;
+  toolResponse?: any;
+}
+
 interface Message {
   role: "user" | "model";
-  content: string;
+  parts: ClientPart[];
 }
 
 export function AssistantChat() {
@@ -36,7 +43,7 @@ export function AssistantChat() {
         setMessages([
           {
             role: "model",
-            content: "¡Hola! Soy Maestro Mariachi AI. Estoy a tu disposición para ayudarte a gestionar todo lo relacionado con el mariachi. ¿En qué puedo asistirte hoy?",
+            parts: [{ text: "¡Hola! Soy Maestro Mariachi AI. Estoy a tu disposición para ayudarte a gestionar todo lo relacionado con el mariachi. ¿En qué puedo asistirte hoy?" }],
           },
         ]);
       }, 300);
@@ -52,34 +59,45 @@ export function AssistantChat() {
     const currentInput = input.trim();
     if (!currentInput || isLoading) return;
 
-    const userMessage: Message = { role: "user", content: currentInput };
+    // The user's message is always a single text part.
+    const userMessage: Message = { role: "user", parts: [{ text: currentInput }] };
     
-    const historyForApi = messages.map((msg) => ({
-      role: msg.role,
-      parts: [{ text: msg.content }],
-    }));
+    // The history for the API is the state of messages *before* this user's turn.
+    const historyForApi = messages;
 
+    // Add the new user message to the local state for immediate display.
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
     try {
-      const response = await askAssistant({
+      // Call the assistant with the current message and the previous history
+      const responseParts = await askAssistant({
         message: currentInput,
         history: historyForApi,
       });
-      const assistantMessage: Message = { role: "model", content: response };
+
+      // The AI response can have multiple parts (text, tool call, etc.)
+      const assistantMessage: Message = { role: "model", parts: responseParts };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error(error);
       const errorMessage: Message = {
         role: "model",
-        content: "Lo siento, tuve un problema para procesar tu solicitud. Revisa la consola para más detalles.",
+        parts: [{ text: "Lo siento, tuve un problema para procesar tu solicitud. Revisa la consola para más detalles." }],
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Helper to extract displayable text from a message
+  const getMessageText = (message: Message): string => {
+    return message.parts
+      .filter(part => !!part.text)
+      .map(part => part.text)
+      .join("\n");
   };
 
   return (
@@ -107,41 +125,46 @@ export function AssistantChat() {
           <ScrollArea className="flex-1">
             <div className="space-y-6 p-6">
               <AnimatePresence>
-              {messages.map((message, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className={cn(
-                    "flex items-start gap-3",
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  )}
-                >
-                  {message.role === "model" && (
-                    <Avatar className="h-9 w-9 border">
-                      <AvatarFallback className="bg-primary text-primary-foreground"><Bot className="h-5 w-5"/></AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div
+              {messages.map((message, index) => {
+                const textContent = getMessageText(message);
+                if (!textContent) return null; // Don't render messages with no visible text
+
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
                     className={cn(
-                      "rounded-xl p-3 max-w-[90%] shadow-sm",
-                      "whitespace-pre-wrap leading-relaxed",
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
+                      "flex items-start gap-3",
+                      message.role === "user" ? "justify-end" : "justify-start"
                     )}
                   >
-                    {message.content}
-                  </div>
-                  {message.role === "user" && (
-                     <Avatar className="h-9 w-9 border">
-                        <AvatarFallback><User className="h-5 w-5"/></AvatarFallback>
-                    </Avatar>
-                  )}
-                </motion.div>
-              ))}
+                    {message.role === "model" && (
+                      <Avatar className="h-9 w-9 border">
+                        <AvatarFallback className="bg-primary text-primary-foreground"><Bot className="h-5 w-5"/></AvatarFallback>
+                      </Avatar>
+                    )}
+                    <div
+                      className={cn(
+                        "rounded-xl p-3 max-w-[90%] shadow-sm",
+                        "whitespace-pre-wrap leading-relaxed",
+                        message.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
+                      )}
+                    >
+                      {textContent}
+                    </div>
+                    {message.role === "user" && (
+                       <Avatar className="h-9 w-9 border">
+                          <AvatarFallback><User className="h-5 w-5"/></AvatarFallback>
+                      </Avatar>
+                    )}
+                  </motion.div>
+                )
+              })}
               </AnimatePresence>
               {isLoading && (
                 <motion.div 
