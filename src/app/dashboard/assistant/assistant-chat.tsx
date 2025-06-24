@@ -16,10 +16,11 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { askAssistant } from "@/ai/flows/assistant-flow";
+import { askAssistant, type AssistantInput } from "@/ai/flows/assistant-flow";
 import { cn } from "@/lib/utils";
+import type { Part } from "genkit";
 
-// Local type definition that is compatible with Genkit's Part
+// Local type definition that is compatible with Genkit's Part object structure.
 interface ClientPart {
   text?: string;
   toolRequest?: any;
@@ -71,15 +72,25 @@ export function AssistantChat() {
     setIsLoading(true);
 
     try {
-      // Call the assistant with the current message and the previous history
-      const responseParts = await askAssistant({
+      const assistantInput: AssistantInput = {
         message: currentInput,
         history: historyForApi,
-      });
+      };
 
-      // The AI response can have multiple parts (text, tool call, etc.)
-      const assistantMessage: Message = { role: "model", parts: responseParts };
+      const responseParts: Part[] = await askAssistant(assistantInput);
+
+      // Normalize the parts from the AI response. Genkit can return a string,
+      // but our client-side Message interface expects an object.
+      const normalizedParts: ClientPart[] = responseParts.map(part => {
+        if (typeof part === 'string') {
+          return { text: part };
+        }
+        return part;
+      });
+      
+      const assistantMessage: Message = { role: "model", parts: normalizedParts };
       setMessages((prev) => [...prev, assistantMessage]);
+
     } catch (error) {
       console.error(error);
       const errorMessage: Message = {
@@ -94,6 +105,7 @@ export function AssistantChat() {
   
   // Helper to extract displayable text from a message
   const getMessageText = (message: Message): string => {
+    if (!message.parts) return ""; // Safeguard for robustness
     return message.parts
       .filter(part => !!part.text)
       .map(part => part.text)
