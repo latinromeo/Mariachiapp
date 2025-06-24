@@ -428,8 +428,10 @@ export async function getRehearsals(): Promise<RehearsalData[]> {
 
 export async function createRehearsal(data: RehearsalInputData): Promise<{ success: boolean; rehearsalId?: string, error?: string }> {
   try {
+    // Sanitize data to remove 'undefined' values, which Firestore rejects.
+    const sanitizedData = JSON.parse(JSON.stringify(data));
     const docRef = await db.collection("rehearsals").add({
-        ...data,
+        ...sanitizedData,
         status: 'pending',
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -457,8 +459,10 @@ export async function getRehearsalById(id: string): Promise<RehearsalData | null
 
 export async function updateRehearsal(id: string, data: Partial<RehearsalInputData>): Promise<{ success: boolean; error?: string }> {
     try {
+        // Sanitize data to remove 'undefined' values, which Firestore rejects.
+        const sanitizedData = JSON.parse(JSON.stringify(data));
         await db.collection("rehearsals").doc(id).update({
-            ...data,
+            ...sanitizedData,
             updatedAt: FieldValue.serverTimestamp(),
         });
         return { success: true };
