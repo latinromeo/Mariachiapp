@@ -37,19 +37,44 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
     const tools = [listEvents, listClients, createNewEvent, createFinanceEntry, createNewRehearsal];
     
     try {
-        // 1. Transform client history and add the new message.
-        // The client 'parts' property needs to be renamed to 'content'.
-        const history: MessageData[] = input.history.map((msg: any): MessageData => ({
-            role: msg.role,
-            content: msg.parts.map((part: any) => {
-                if (part.text) return { text: part.text };
-                if (part.toolRequest) return { toolRequest: part.toolRequest };
-                if (part.toolResponse) return { toolResponse: part.toolResponse };
-                return part;
+        // 1. Sanitize and transform the incoming history from the client.
+        const history: MessageData[] = input.history
+            .map((msg: any): MessageData | null => {
+                // Basic validation for message structure
+                if (!msg.role || !Array.isArray(msg.parts)) {
+                    return null;
+                }
+
+                // Sanitize and filter parts within the message
+                const content: Part[] = msg.parts
+                    .map((part: any): Part | null => {
+                        if (part && typeof part.text === 'string' && part.text.trim() !== '') {
+                            return { text: part.text };
+                        }
+                        if (part && part.toolRequest) {
+                            return { toolRequest: part.toolRequest };
+                        }
+                        if (part && part.toolResponse) {
+                            return { toolResponse: part.toolResponse };
+                        }
+                        // Ignore any other malformed or empty parts
+                        return null;
+                    })
+                    .filter((p): p is Part => p !== null);
+
+                // If a message has no valid parts after filtering, discard it
+                if (content.length === 0) {
+                    return null;
+                }
+
+                return {
+                    role: msg.role,
+                    content,
+                };
             })
-        }));
+            .filter((m): m is MessageData => m !== null);
         
-        // Add the new user message to the history
+        // Add the new user message to the sanitized history
         history.push({ role: 'user', content: [{ text: input.message }] });
 
         // 2. Start the conversation loop to handle tool requests.
@@ -64,7 +89,7 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
             const choice = response.candidates[0];
             
             // Handle cases where the model might not return content
-            if (!choice.content || !choice.content.parts) {
+            if (!choice || !choice.content || !choice.content.parts || choice.content.parts.length === 0) {
                 return [{ text: "Lo siento, no he podido generar una respuesta en este momento." }];
             }
 
@@ -80,6 +105,7 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
 
             if (toolRequests.length === 0) {
                 // No tool request, this is the final text answer, so we return it.
+                // Filter for parts that have a 'text' property.
                 return choiceParts.filter(p => typeof p.text === 'string');
             }
 
