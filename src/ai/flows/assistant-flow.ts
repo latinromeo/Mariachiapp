@@ -7,7 +7,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { MessageData, Part, ToolResponsePart } from 'genkit';
+import { MessageData, Part } from 'genkit';
 import { z } from 'zod';
 import { listEvents, listClients, createNewEvent, createFinanceEntry } from '../tools/mariachi-tools';
 
@@ -86,6 +86,7 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
     // 6. Call the model again, providing the tool's result. The model will use this to generate a natural language response.
     const finalResponse = await ai.generate({
       system: masterPrompt,
+      prompt: "", // Provide an empty prompt to signal continuation from history.
       history: historyForSecondCall,
       tools: [listEvents, listClients, createNewEvent, createFinanceEntry],
     });
