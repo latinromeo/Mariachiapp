@@ -1,13 +1,12 @@
 
 import {NextRequest, NextResponse} from 'next/server';
-import * as admin from 'firebase-admin';
 import OpenAI from 'openai';
 import { add, format, nextDay } from 'date-fns';
 import type { Day } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { db } from '@/lib/firebase-admin'; // Usar la instancia de admin centralizada
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-// Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -22,17 +21,11 @@ interface RequestBody {
   history: ChatMessage[];
 }
 
-/**
- * Parses a natural language prompt to extract date, time, location, and focus.
- * @param prompt The user's input string.
- * @returns An object containing the event date, time, location, and focus.
- */
 function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: string; location: string; focus: string; } {
     const today = new Date();
-    let eventDate = new Date(); // Default to today
+    let eventDate = new Date();
     const lowerPrompt = prompt.toLowerCase();
 
-    // --- Date Parsing ---
     const dayMap: { [key: string]: number } = {
         'domingo': 0, 'lunes': 1, 'martes': 2, 'miércoles': 3, 'miercoles': 3, 'jueves': 4, 'viernes': 5, 'sábado': 6, 'sabado': 6
     };
@@ -50,7 +43,6 @@ function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: s
         }
     }
 
-    // --- Time Parsing ---
     let eventTime = 'Hora no especificada';
     const tardeNoche = lowerPrompt.includes('tarde') || lowerPrompt.includes('noche');
     const mediodia = lowerPrompt.includes('mediodía') || lowerPrompt.includes('12 pm') || lowerPrompt.includes('12pm');
@@ -67,12 +59,11 @@ function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: s
             hour += 12;
         }
         if (period === 'am' && hour === 12) {
-            hour = 0; // Midnight case
+            hour = 0;
         }
         eventTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
     }
 
-    // --- Location Parsing ---
     let location = 'Ubicación por definir';
     const locationMatch = lowerPrompt.match(/en (?:el |la )?(.+?)(?=a las|para|con|canciones de|tema|enfocado|,|$)/i);
     if (locationMatch && locationMatch[1]) {
@@ -82,7 +73,6 @@ function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: s
         }
     }
     
-    // --- Focus Parsing ---
     let focus = 'Ensayo General';
     const focusMatch = lowerPrompt.match(/(?:tema(?: del ensayo (?:es|son|serian|será))?|canciones de|enfocado en) (.+?)(?=a las|en |para|con|,|$)/i);
     if (focusMatch && focusMatch[1]) {
@@ -155,7 +145,6 @@ INTENT: crear_ensayo
 Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente humano proactivo, entendiendo lenguaje natural y ayudando a automatizar todo lo posible.`,
     };
 
-    // --- Get AI response first ---
     const messages: ChatMessage[] = [
       systemPrompt,
       ...(history || []),
@@ -173,17 +162,15 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
     
     let eventCreated = false;
 
-    // --- Check for intent in the AI's reply and take action ---
     const intentRegex = /INTENT:\s*(\w+)/;
     const intentMatch = reply.match(intentRegex);
     
     if (intentMatch) {
-        const intent = intentMatch[1]; // e.g., "crear_evento"
+        const intent = intentMatch[1];
         
         try {
             if (intent === 'crear_ensayo') {
                 const parsedDetails = parseDetailsFromPrompt(prompt); 
-                console.log("Parsed rehearsal details:", parsedDetails);
 
                 const rehearsalData = {
                     date: format(parsedDetails.eventDate, 'yyyy-MM-dd'),
@@ -193,18 +180,15 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
                     songs: [],
                     notes: `Creado por AI a partir del prompt: "${prompt}"`,
                     status: 'pending' as const,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
                 };
                 
-                console.log("Attempting to save rehearsal data:", rehearsalData);
-                await db.collection('rehearsals').add(rehearsalData);
-                console.log("Rehearsal data saved successfully.");
+                await addDoc(collection(db, 'rehearsals'), rehearsalData);
                 eventCreated = true;
 
             } else if (intent === 'crear_evento') {
                 const parsedDetails = parseDetailsFromPrompt(prompt);
-                console.log("Parsed event details:", parsedDetails);
                 const eventData = {
                   clientName: 'Evento por definir',
                   clientPhone: 'N/A',
@@ -222,13 +206,11 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
                   externalGroup: false,
                   notes: `Creado por AI a partir del prompt: "${prompt}"`,
                   status: 'pending' as const,
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
+                  createdAt: serverTimestamp(),
+                  updatedAt: serverTimestamp(),
                 };
 
-                console.log("Attempting to save event data:", eventData);
-                await db.collection('events').add(eventData);
-                console.log("Event data saved successfully.");
+                await addDoc(collection(db, 'events'), eventData);
                 eventCreated = true;
             }
         } catch (e: any) {
