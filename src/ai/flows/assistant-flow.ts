@@ -12,20 +12,19 @@ import { MessageData, Part } from 'genkit';
 import { z } from 'zod';
 import { listEvents, listClients, createNewEvent, createFinanceEntry } from '../tools/mariachi-tools';
 
-const masterPrompt = `You are "Maestro Mariachi AI", a helpful virtual assistant for managing a mariachi band.
-- You are an expert in mariachi logistics, finance, and music.
-- Always be helpful, proactive, and professional.
+// A simple, clear set of instructions for the AI.
+const masterPrompt = `You are "Maestro Mariachi AI", a virtual assistant for a mariachi band.
+- Your goal is to be helpful and professional.
 - Your responses MUST be in Spanish.
-- Use the available tools to answer questions and perform actions. For example, if the user asks to see events, use the 'listEvents' tool. If they ask to create an event, use the 'createEvent' tool.
-- If you need more information to use a tool (like the date for an event), ask the user for it clearly.
-- Once you have enough information, call the appropriate tool.
-- After successfully calling a tool (like creating an event), always confirm to the user that the action was completed.
-- Review the conversation history to understand the context before responding. If you have just proposed an action and the user confirms (e.g., with "sí" or "procede"), execute the tool you proposed.
-`;
+- Use the provided tools to answer questions. For example, to see events, use 'listEvents'. To create one, use 'createEvent'.
+- If you need more information to use a tool (like a date or time), ask the user for it.
+- After a user confirms an action (e.g., with "sí" or "claro"), use the tool you previously suggested by reviewing the conversation history.
+- Today's date is ${new Date().toISOString().split('T')[0]}. Use it as a reference for any date-related questions.`;
 
 const AssistantInputSchema = z.object({
+  // The user's most recent message.
   message: z.string(),
-  // The history from the client uses `parts`, so we accept `any` and map it.
+  // The conversation history from the client, which we will map to the correct format.
   history: z.array(z.any()),
 });
 
@@ -33,36 +32,30 @@ export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 
 export async function askAssistant(input: AssistantInput): Promise<Part[]> {
   try {
-    const currentDate = new Date().toISOString().split('T')[0];
-    const systemPromptWithDate = `${masterPrompt}\n\nADDITIONAL INFORMATION:\n- Today's date is ${currentDate}. Use this as a reference for any time-related queries (e.g., "today", "tomorrow", "this month").`;
-
     // Map the client-side history to the format Genkit expects (MessageData[]).
-    // The key is to rename `parts` to `content`.
-    // We also filter out any messages that might be malformed (e.g., no `parts` array).
+    // The key is to rename the 'parts' property to 'content'.
+    // We also filter out any malformed messages to prevent errors.
     const mappedHistory: MessageData[] = input.history
-      .filter((message: any) => Array.isArray(message.parts))
-      .map((message: any) => ({
-        role: message.role,
-        content: message.parts,
+      .filter((msg: any) => msg && Array.isArray(msg.parts))
+      .map((msg: any) => ({
+        role: msg.role,
+        content: msg.parts,
       }));
 
-    // The entire conversation, including the latest user message.
-    const conversation: MessageData[] = [
-      ...mappedHistory,
-      { role: 'user', content: [{ text: input.message }] },
-    ];
-    
+    // The main call to the AI model.
     const response = await ai.generate({
-      system: systemPromptWithDate,
-      history: conversation, // Send the full, correctly formatted conversation history.
+      system: masterPrompt,
+      prompt: input.message, // The latest user message.
+      history: mappedHistory, // The preceding conversation.
       tools: [listEvents, listClients, createNewEvent, createFinanceEntry],
     });
-    
-    // Ensure we always return an array, even if the response has no content.
+
+    // Return the response content. If there's no content, return an empty array to prevent crashes.
     return response.content || [];
+
   } catch (error) {
-    console.error("Error calling Genkit AI:", error);
-    // Return a valid Part[] array with the error message.
+    console.error("Error in askAssistant flow:", error);
+    // Return a structured error message that the frontend can display.
     return [{ text: "Lo siento, ha ocurrido un error al contactar a la IA. Por favor, revisa la configuración y las claves de API." }];
   }
 }
