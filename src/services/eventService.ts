@@ -427,29 +427,31 @@ export async function getRehearsals(): Promise<RehearsalData[]> {
 }
 
 function buildRehearsalPayload(data: Partial<RehearsalInputData>) {
-    const payload: any = {};
-    if (data.date) payload.date = data.date;
-    if (data.time) payload.time = data.time;
-    if (data.location) payload.location = data.location;
-    if (data.focus) payload.focus = data.focus;
-    if (data.notes) payload.notes = data.notes; else payload.notes = "";
+    const payload: { [key: string]: any } = {};
+
+    // Explicitly handle each field to avoid undefined
+    if (data.date !== undefined) payload.date = data.date;
+    if (data.time !== undefined) payload.time = data.time;
+    if (data.location !== undefined) payload.location = data.location;
+    if (data.focus !== undefined) payload.focus = data.focus;
+    if (data.notes !== undefined) payload.notes = data.notes;
 
     if (data.songs && Array.isArray(data.songs)) {
         payload.songs = data.songs
             .filter(song => song && typeof song.name === 'string' && song.name.trim() !== "")
             .map(song => {
-                const newSong: any = { name: song.name };
-                if (song.artist) newSong.artist = song.artist;
-                if (song.key) newSong.key = song.key;
-                if (song.youtubeUrl) newSong.youtubeUrl = song.youtubeUrl;
-                if (song.sheetMusicUrl) newSong.sheetMusicUrl = song.sheetMusicUrl;
-                if (song.audioUrl) newSong.audioUrl = song.audioUrl;
-                return newSong;
+                // This ensures no undefined values are in the song object
+                return {
+                    name: song.name,
+                    artist: song.artist || '',
+                    key: song.key || '',
+                    youtubeUrl: song.youtubeUrl || '',
+                    sheetMusicUrl: song.sheetMusicUrl || '',
+                    audioUrl: song.audioUrl || '',
+                };
             });
-    } else {
-        payload.songs = [];
     }
-    
+
     return payload;
 }
 
