@@ -14,7 +14,6 @@ const corsHandler = cors({origin: true});
 
 // Initialize OpenAI client with the provided API key
 // For production, it's highly recommended to store the key in a secret manager.
-// For example: functions.config().openai.key
 const openai = new OpenAI({
   apiKey: "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",
 });
@@ -25,7 +24,6 @@ interface ChatMessage {
 }
 
 // A simplified function to extract details from a prompt.
-// This would be replaced by a more robust NLP or function calling in a real app.
 function parseDateTime(prompt: string): { eventDate: string; eventTime: string } {
     const today = new Date();
     let eventDate = new Date();
@@ -77,7 +75,6 @@ export const chatWithAssistant = functions.https.onRequest((req, res) => {
       const createIntentKeywords = ["crea", "programa", "agenda", "ensayo", "evento"];
       const hasCreateIntent = createIntentKeywords.some((keyword) => prompt.toLowerCase().includes(keyword));
       let eventCreated = false;
-      let eventCreationDetails: any = null;
       let actionResponse = "";
 
       if (hasCreateIntent) {
@@ -109,12 +106,11 @@ export const chatWithAssistant = functions.https.onRequest((req, res) => {
             await db.collection("events").add(eventData);
             
             eventCreated = true;
-            eventCreationDetails = eventData;
             actionResponse = `\n\n¡Entendido! He agendado un "${eventData.eventType}" para ti.`;
-            functions.logger.info("Event created successfully from prompt:", eventCreationDetails);
+            functions.logger.info("Event created successfully from prompt:", eventData);
         } catch (e) {
           functions.logger.error("Error trying to create event from prompt:", e);
-          actionResponse = "\n\nIntenté crear el evento, pero algo salió mal. Por favor, revísalo manualmente.";
+          actionResponse = "\n\nIntenté crear el evento, pero algo salió mal. Por favor, revísalo manually.";
         }
       }
 

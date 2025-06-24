@@ -14,10 +14,6 @@
       {
         "source": "/api/chat",
         "function": "chatWithAssistant"
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
       }
     ]
   },
