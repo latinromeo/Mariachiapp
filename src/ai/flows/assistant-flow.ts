@@ -10,13 +10,13 @@
 import { ai } from '@/ai/genkit';
 import { MessageData, Part } from 'genkit';
 import { z } from 'zod';
-import { listEvents, listClients, createNewEvent, createFinanceEntry } from '../tools/mariachi-tools';
+import { listEvents, listClients, createNewEvent, createFinanceEntry, createNewRehearsal } from '../tools/mariachi-tools';
 
 // A simple, clear set of instructions for the AI.
 const masterPrompt = `You are "Maestro Mariachi AI", a virtual assistant for a mariachi band.
 - Your goal is to be helpful and professional.
 - Your responses MUST be in Spanish.
-- Use the provided tools to answer questions. For example, to see events, use 'listEvents'. To create one, use 'createEvent'.
+- Use the provided tools to answer questions. For example, to see events, use 'listEvents'. To create an event, use 'createEvent'. To schedule a rehearsal, use 'createRehearsal'.
 - If you need more information to use a tool (like a date or time), ask the user for it.
 - After a user confirms an action (e.g., with "sí" or "claro"), use the tool you previously suggested by reviewing the conversation history.
 - Today's date is ${new Date().toISOString().split('T')[0]}. Use it as a reference for any date-related questions.
@@ -34,7 +34,7 @@ export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 
 
 export async function askAssistant(input: AssistantInput): Promise<Part[]> {
-    const tools = [listEvents, listClients, createNewEvent, createFinanceEntry];
+    const tools = [listEvents, listClients, createNewEvent, createFinanceEntry, createNewRehearsal];
     try {
         // 1. Transform client history and add the new message.
         const history: MessageData[] = [

@@ -8,6 +8,7 @@ import {
     getClients, 
     createEvent, 
     createManualFinanceEntry,
+    createRehearsal,
 } from '@/services/eventService';
 import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
@@ -152,6 +153,36 @@ export const createFinanceEntry = ai.defineTool(
     },
     async (input) => {
         const result = await createManualFinanceEntry(input);
+        return result;
+    }
+);
+
+// Tool to create a rehearsal
+const CreateRehearsalInputSchema = z.object({
+    date: z.string().describe("Fecha del ensayo en formato YYYY-MM-DD. Este campo es obligatorio."),
+    time: z.string().describe("Hora del ensayo (ej: 5:00 PM). Este campo es obligatorio."),
+    location: z.string().describe("Lugar o estudio del ensayo. Este campo es obligatorio."),
+    focus: z.string().describe("Tema principal, canciones o enfoque del ensayo (ej: canciones de Ana Gabriel, repertorio de bodas). Este campo es obligatorio."),
+    songs: z.array(z.object({
+        name: z.string().describe("Nombre de la canción a ensayar."),
+        artist: z.string().optional().describe("Artista original de la canción."),
+    })).optional().describe("Lista de canciones específicas a ensayar si se pueden identificar."),
+    notes: z.string().optional().describe("Notas adicionales sobre el ensayo."),
+});
+
+export const createNewRehearsal = ai.defineTool(
+    {
+        name: 'createRehearsal',
+        description: 'Programa un nuevo ensayo para la banda. Recopila la información necesaria y la guarda.',
+        inputSchema: CreateRehearsalInputSchema,
+        outputSchema: z.object({
+            success: z.boolean(),
+            rehearsalId: z.string().optional(),
+            error: z.string().optional(),
+        }),
+    },
+    async (input) => {
+        const result = await createRehearsal(input);
         return result;
     }
 );
