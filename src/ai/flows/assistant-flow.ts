@@ -38,10 +38,13 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
 
     // Map the client-side history to the format Genkit expects (MessageData[]).
     // The key is to rename `parts` to `content`.
-    const mappedHistory: MessageData[] = input.history.map((message: any) => ({
-      role: message.role,
-      content: message.parts,
-    }));
+    // We also filter out any messages that might be malformed (e.g., no `parts` array).
+    const mappedHistory: MessageData[] = input.history
+      .filter((message: any) => Array.isArray(message.parts))
+      .map((message: any) => ({
+        role: message.role,
+        content: message.parts,
+      }));
 
     // The entire conversation, including the latest user message.
     const conversation: MessageData[] = [
@@ -55,9 +58,11 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
       tools: [listEvents, listClients, createNewEvent, createFinanceEntry],
     });
     
+    // Ensure we always return an array, even if the response has no content.
     return response.content || [];
   } catch (error) {
     console.error("Error calling Genkit AI:", error);
+    // Return a valid Part[] array with the error message.
     return [{ text: "Lo siento, ha ocurrido un error al contactar a la IA. Por favor, revisa la configuración y las claves de API." }];
   }
 }
