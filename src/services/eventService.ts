@@ -2,7 +2,8 @@
 // src/services/eventService.ts
 'use server';
 
-import { add, sub, isBefore, startOfToday, limit } from "date-fns";
+import { add, sub, isBefore, startOfToday, limit, parse, format as formatDateFns } from "date-fns";
+import { es } from 'date-fns/locale';
 import { 
     collection, 
     getDocs, 
@@ -533,6 +534,76 @@ export async function deleteRehearsal(id: string): Promise<{ success: boolean; e
     } catch (error) {
         console.error("Error deleting rehearsal:", error);
         return { success: false, error: "Failed to delete rehearsal from database." };
+    }
+}
+
+
+// --- AI ASSISTANT FUNCTIONS ---
+
+// A simplified function to extract details from a prompt.
+function parseDateTime(prompt: string): { eventDate: string; eventTime: string } {
+    const today = new Date();
+    let eventDate = new Date();
+    
+    if (prompt.toLowerCase().includes('mañana')) {
+        eventDate = add(today, { days: 1 });
+    }
+
+    const timeRegex = /(\d{1,2})\s*([ap]m)/i;
+    const timeMatch = prompt.toLowerCase().match(timeRegex);
+    let eventTime = 'Hora no especificada';
+
+    if (timeMatch) {
+        let hour = parseInt(timeMatch[1], 10);
+        const period = timeMatch[2].toLowerCase();
+        if (period === 'pm' && hour < 12) {
+            hour += 12;
+        }
+        if (period === 'am' && hour === 12) {
+            hour = 0; // Midnight case
+        }
+        eventTime = `${hour}:00`; // Basic time format
+    }
+    
+    return {
+        eventDate: formatDateFns(eventDate, 'yyyy-MM-dd'),
+        eventTime: eventTime
+    };
+}
+
+
+export async function createEventFromPrompt(prompt: string): Promise<{ success: boolean; details?: Partial<EventData>; error?: string }> {
+    try {
+        const isRehearsal = prompt.toLowerCase().includes('ensayo');
+        const { eventDate, eventTime } = parseDateTime(prompt);
+
+        // Simulated data for fields not in the prompt
+        const eventDetails = {
+            clientName: isRehearsal ? "Ensayo Interno" : "Cliente desde AI",
+            clientPhone: "0000000000",
+            eventType: isRehearsal ? "ensayo" : "evento (AI)",
+            eventDate,
+            eventTime,
+            location: "Estudio (por defecto)",
+            sector: "N/A",
+            plan: "personalizado",
+            paymentMethod: "other",
+            contractedAmount: 0,
+            amountPaid: 0,
+            musiciansPay: isRehearsal ? 0 : 5000, // Example pay
+            externalGroup: false,
+        };
+
+        const result = await createEvent(eventDetails);
+
+        if (result.success) {
+            return { success: true, details: eventDetails };
+        } else {
+            return { success: false, error: result.error };
+        }
+    } catch (e) {
+        console.error("Error in createEventFromPrompt:", e);
+        return { success: false, error: "Error interno al procesar el prompt para crear evento." };
     }
 }
 

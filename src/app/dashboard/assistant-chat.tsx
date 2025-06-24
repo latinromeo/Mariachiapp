@@ -8,6 +8,7 @@ import {Input} from '@/components/ui/input';
 import {ScrollArea} from '@/components/ui/scroll-area';
 import {cn} from '@/lib/utils';
 import {Avatar, AvatarFallback} from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -24,6 +25,7 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
@@ -61,6 +63,14 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
       const data = await res.json();
       const assistantMessage: Message = {role: 'assistant', content: data.reply};
       setMessages((prev) => [...prev, assistantMessage]);
+
+      if (data.eventCreated) {
+        toast({
+          title: "¡Evento Creado!",
+          description: "El asistente ha agendado un nuevo evento en tu calendario.",
+        });
+      }
+
     } catch (error) {
       console.error('Failed to fetch assistant reply:', error);
       const errorMessage: Message = {
