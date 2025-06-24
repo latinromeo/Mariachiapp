@@ -60,7 +60,8 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
         tools,
     });
 
-    return response.content();
+    // 4. Return the content. In Genkit v1.x, .content is a property, not a function.
+    return response.content;
 
   } catch (error) {
     console.error("An unexpected error occurred in the askAssistant flow:", error);
