@@ -7,8 +7,8 @@ export function Logo() {
       <Image
         src="/logo.svg"
         alt="Logo de Mariachi Reyes de México"
-        width={120}
-        height={40}
+        width={150}
+        height={50}
         priority
         className="object-contain"
       />
