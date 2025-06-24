@@ -5,7 +5,7 @@
 import { add, sub, parse, format as formatDateFns } from "date-fns";
 import { es } from 'date-fns/locale';
 import { db } from '@/lib/firebase-admin'; // Usar la instancia de admin centralizada
-import { Timestamp } from 'firebase-admin/firestore';
+import type { DocumentSnapshot, Timestamp } from 'firebase-admin/firestore';
 import { EVENT_PLANS } from "@/lib/constants";
 
 // --- INTERFACES ---
@@ -143,13 +143,14 @@ type MusicianExpenseInput = Omit<MusicianExpense, 'id' | 'userId' | 'createdAt'>
 
 // --- HELPER FUNCTIONS ---
 
-const processDocTimestamps = (doc: FirebaseFirestore.DocumentSnapshot) => {
+const processDocTimestamps = (doc: DocumentSnapshot) => {
     const data = doc.data();
     if (!data) return null;
 
     const processedData: { [key: string]: any } = { id: doc.id };
     for (const key in data) {
-        if (data[key] instanceof Timestamp) {
+        // Check if the property is an object and has a toDate method, characteristic of a Firestore Timestamp.
+        if (data[key] && typeof data[key].toDate === 'function') {
             processedData[key] = data[key].toDate().toISOString();
         } else {
             processedData[key] = data[key];
