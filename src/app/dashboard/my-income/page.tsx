@@ -5,20 +5,17 @@ import { useEffect, useState, useMemo, useCallback } from "react"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { DollarSign, TrendingUp, TrendingDown, Landmark, PlusCircle, Calendar, Edit, Loader2, CheckCircle } from "lucide-react"
-import { type EventData, type MusicianIncome, type MusicianExpense, getEvents, getMusicianIncomes, getMusicianExpenses, upsertMusicianIncome } from "@/services/eventService"
+import { DollarSign, TrendingUp, CheckCircle, Calendar, Edit, Loader2 } from "lucide-react"
+import { type EventData, type MusicianIncome, getEvents, getMusicianIncomes, upsertMusicianIncome } from "@/services/eventService"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ExpenseForm } from "./expense-form"
-import { format, getYear, getMonth, parse, parseISO, startOfMonth, endOfMonth, isWithinInterval } from "date-fns"
+import { format, getYear, getMonth, parse } from "date-fns"
 import { es } from "date-fns/locale"
 import { useUser } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -112,20 +109,19 @@ function IncomeEntryPopover({ event, onIncomeSet }: { event: EventData, onIncome
 }
 
 const robustParseDate = (dateString: string): Date | null => {
-  if (!dateString) return null;
-  // Prioritize parsing 'yyyy-MM-dd' as it's the most common format here and avoids timezone issues with parseISO.
-  // new Date() is passed to ensure if only time is provided, it defaults to today.
-  try {
-      return parse(dateString, 'yyyy-MM-dd', new Date());
-  } catch (error) {
-      // Fallback for full ISO strings if the first parse fails
-      try {
-          return parseISO(dateString);
-      } catch (isoError) {
-          console.error(`Failed to parse date: ${dateString}`, isoError);
-          return null;
-      }
+  if (!dateString || typeof dateString !== 'string') return null;
+  // This will handle 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
+  const date = new Date(dateString);
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    try {
+        // Fallback for 'YYYY-MM-DD' specifically to avoid timezone issues on some browsers
+        return parse(dateString, 'yyyy-MM-dd', new Date());
+    } catch {
+        return null;
+    }
   }
+  return date;
 };
 
 
@@ -133,10 +129,8 @@ export default function MyIncomePage() {
     const { user } = useUser();
     const [events, setEvents] = useState<EventData[]>([]);
     const [incomes, setIncomes] = useState<MusicianIncome[]>([]);
-    const [expenses, setExpenses] = useState<MusicianExpense[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isClient, setIsClient] = useState(false);
-    const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
     
     const [selectedMonth, setSelectedMonth] = useState<number>(getMonth(new Date()));
     const [selectedYear, setSelectedYear] = useState<number>(getYear(new Date()));
@@ -146,14 +140,12 @@ export default function MyIncomePage() {
         if (!user) return;
         setIsLoading(true);
         try {
-            const [eventsData, incomesData, expensesData] = await Promise.all([
+            const [eventsData, incomesData] = await Promise.all([
                 getEvents(),
                 getMusicianIncomes(user.id),
-                getMusicianExpenses(user.id)
             ]);
             setEvents(eventsData);
             setIncomes(incomesData);
-            setExpenses(expensesData);
 
             const years = new Set<number>();
             const addYearFromString = (dateString: string) => {
@@ -162,7 +154,6 @@ export default function MyIncomePage() {
             };
             
             eventsData.forEach(e => addYearFromString(e.eventDate));
-            expensesData.forEach(e => addYearFromString(e.date));
             incomesData.forEach(i => addYearFromString(i.date));
 
             const currentYear = getYear(new Date());
@@ -183,43 +174,29 @@ export default function MyIncomePage() {
 
     const {
         filteredEvents,
-        totalIncome,
-        totalExpenses,
-        netBalance,
-        filteredExpenses
+        totalIncome
     } = useMemo(() => {
-        const monthDate = new Date(selectedYear, selectedMonth);
-        const monthStart = startOfMonth(monthDate);
-        const monthEnd = endOfMonth(monthDate);
-        const monthInterval = { start: monthStart, end: monthEnd };
+        const date = new Date(selectedYear, selectedMonth, 1);
+        const currentMonthStr = (date.getMonth() + 1).toString().padStart(2, '0');
+        const currentYearStr = date.getFullYear().toString();
 
-        const filterByInterval = (itemDateStr: string) => {
-            const date = robustParseDate(itemDateStr);
-            if (!date) return false;
-            return isWithinInterval(date, monthInterval);
-        };
+        const filterByMonthAndYear = (itemDateStr: string) => {
+             if (!itemDateStr || typeof itemDateStr !== 'string') return false;
+            const [year, month] = itemDateStr.split('-');
+            return year === currentYearStr && month === currentMonthStr;
+        }
 
-        const currentFilteredEvents = events.filter(e => filterByInterval(e.eventDate));
-        const currentFilteredIncomes = incomes.filter(i => filterByInterval(i.date));
-        const currentFilteredExpenses = expenses.filter(e => filterByInterval(e.date));
+        const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
+        const currentFilteredIncomes = incomes.filter(i => filterByMonthAndYear(i.date));
 
         const totalIncome = currentFilteredIncomes.reduce((sum, income) => sum + income.amount, 0);
-        const totalExpenses = currentFilteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-        const netBalance = totalIncome - totalExpenses;
 
         return {
             filteredEvents: currentFilteredEvents,
             totalIncome,
-            totalExpenses,
-            netBalance,
-            filteredExpenses: currentFilteredExpenses
         };
-    }, [selectedYear, selectedMonth, events, incomes, expenses]);
+    }, [selectedYear, selectedMonth, events, incomes]);
 
-    const handleSuccess = () => {
-        setIsExpenseDialogOpen(false);
-        fetchData();
-    };
 
     if (!isClient || isLoading) {
       return (
@@ -229,13 +206,10 @@ export default function MyIncomePage() {
                 <Skeleton className="h-10 w-32" />
                 <Skeleton className="h-10 w-24" />
               </div>
-              <div className="grid gap-6 md:grid-cols-3">
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-24 w-full" />
+              <div className="max-w-xs">
                   <Skeleton className="h-24 w-full" />
               </div>
               <Skeleton className="h-40 w-full" />
-              <Skeleton className="h-20 w-full" />
         </div>
       )
     }
@@ -246,10 +220,10 @@ export default function MyIncomePage() {
             <div>
                 <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
                     <DollarSign className="h-8 w-8 text-primary"/>
-                    Mis Finanzas Personales
+                    Mis Ingresos por Eventos
                 </h1>
                 <p className="text-muted-foreground">
-                    Lleva un registro de tus ingresos por eventos y tus gastos personales.
+                    Lleva un registro de tus ingresos por cada evento en el que participas.
                 </p>
             </div>
         </div>
@@ -283,39 +257,23 @@ export default function MyIncomePage() {
             </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="max-w-sm">
             <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-green-800 dark:text-green-300">Ingresos Registrados</CardTitle>
+                    <CardTitle className="text-sm font-medium text-green-800 dark:text-green-300">Ingresos Registrados (Mes)</CardTitle>
                     <TrendingUp className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold text-green-700 dark:text-green-400">{formatCurrency(totalIncome)}</div>
                 </CardContent>
             </Card>
-            <Card className="bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-red-800 dark:text-red-300">Egresos Personales</CardTitle>
-                    <TrendingDown className="h-4 w-4 text-red-600" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-red-700 dark:text-red-400">{formatCurrency(totalExpenses)}</div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Balance Neto Personal</CardTitle>
-                    <Landmark className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(netBalance)}</div>
-                </CardContent>
-            </Card>
         </div>
         <p className="text-sm text-muted-foreground text-center">Mostrando datos para: {format(new Date(selectedYear, selectedMonth), 'MMMM yyyy', { locale: es })}</p>
         
         <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-green-600"/>Ingresos por Eventos</CardTitle></CardHeader>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-green-600"/>Eventos del Mes</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-2">
                 {filteredEvents.length > 0 ? filteredEvents.map(event => {
                     const income = incomes.find(i => i.eventId === event.id);
@@ -345,46 +303,8 @@ export default function MyIncomePage() {
                 )}
             </CardContent>
         </Card>
-
-        <Card>
-            <CardHeader className="flex flex-row justify-between items-center">
-                <CardTitle className="flex items-center gap-2"><TrendingDown className="h-5 w-5 text-red-600"/>Egresos Personales</CardTitle>
-                 <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="destructive">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Registrar Egreso
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Registrar Gasto Personal</DialogTitle>
-                            <DialogDescription>Añade un nuevo gasto a tus finanzas personales.</DialogDescription>
-                        </DialogHeader>
-                        <ExpenseForm onSuccess={handleSuccess} />
-                    </DialogContent>
-                </Dialog>
-            </CardHeader>
-            <CardContent className="space-y-2">
-                 {filteredExpenses.length > 0 ? filteredExpenses.map(expense => {
-                    const expenseDate = robustParseDate(expense.date);
-                    return (
-                        <div key={expense.id} className="flex justify-between items-center p-3 rounded-md border bg-muted/50">
-                            <div>
-                                <p className="font-semibold capitalize">{expense.description}</p>
-                                <p className="text-sm text-muted-foreground flex items-center gap-2">
-                                    <Calendar className="h-3 w-3" />
-                                    {expenseDate ? format(expenseDate, 'dd/MM/yyyy') : 'Fecha inválida'}
-                                </p>
-                            </div>
-                            <span className="font-bold text-red-600">{formatCurrency(expense.amount)}</span>
-                        </div>
-                    )
-                 }) : (
-                     <p className="text-sm text-muted-foreground text-center py-4">No hay egresos personales registrados para el período seleccionado.</p>
-                )}
-            </CardContent>
-        </Card>
     </div>
   );
 }
+
+    
