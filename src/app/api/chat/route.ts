@@ -174,36 +174,49 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
         const intent = intentMatch[1]; // e.g., "crear_evento"
         
         if (intent === 'crear_evento' || intent === 'crear_ensayo') {
-            const isRehearsal = intent === 'crear_ensayo';
             // Parse details from the original user prompt
             const { eventDate, eventTime, location } = parseDetailsFromPrompt(prompt); 
             
             try {
-                const eventData = {
-                  clientName: isRehearsal ? 'Ensayo Interno' : 'Evento por definir',
-                  clientPhone: 'N/A',
-                  eventType: isRehearsal ? 'ensayo' : 'evento',
-                  eventDate: format(eventDate, 'yyyy-MM-dd'),
-                  eventTime,
-                  location,
-                  sector: 'Sector por definir',
-                  plan: 'personalizado',
-                  paymentMethod: 'other',
-                  contractedAmount: 0,
-                  amountPaid: 0,
-                  pendingBalance: 0,
-                  musiciansPay: isRehearsal ? 0 : 5000,
-                  externalGroup: false,
-                  notes: `Creado por AI a partir del prompt: "${prompt}"`,
-                  status: 'pending' as const,
-                  createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                };
-        
-                await db.collection('events').add(eventData);
+                if (intent === 'crear_ensayo') {
+                    const rehearsalData = {
+                        date: format(eventDate, 'yyyy-MM-dd'),
+                        time: eventTime,
+                        location: location,
+                        focus: 'Ensayo desde AI', // A generic focus for now
+                        songs: [],
+                        notes: `Creado por AI a partir del prompt: "${prompt}"`,
+                        status: 'pending' as const,
+                        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    };
+                    await db.collection('rehearsals').add(rehearsalData);
+                } else { // 'crear_evento'
+                    const eventData = {
+                      clientName: 'Evento por definir',
+                      clientPhone: 'N/A',
+                      eventType: 'evento',
+                      eventDate: format(eventDate, 'yyyy-MM-dd'),
+                      eventTime,
+                      location,
+                      sector: 'Sector por definir',
+                      plan: 'personalizado',
+                      paymentMethod: 'other',
+                      contractedAmount: 0,
+                      amountPaid: 0,
+                      pendingBalance: 0,
+                      musiciansPay: 5000,
+                      externalGroup: false,
+                      notes: `Creado por AI a partir del prompt: "${prompt}"`,
+                      status: 'pending' as const,
+                      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    };
+                    await db.collection('events').add(eventData);
+                }
                 eventCreated = true;
             } catch (e) {
-                console.error('Error trying to create event from prompt:', e);
+                console.error('Error trying to create from prompt:', e);
                 reply += "\n\n(Advertencia: No pude guardar la acción en la base de datos.)";
             }
         }
