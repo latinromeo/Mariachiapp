@@ -50,7 +50,8 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
       tools: [listEvents, listClients, createNewEvent, createFinanceEntry],
     });
     
-    return response.content;
+    // Ensure we always return an array, even if the response is empty.
+    return response.content || [];
   } catch (error) {
     console.error("Error calling Genkit AI:", error);
     // Ensure the catch block returns the correct type (Part[])
