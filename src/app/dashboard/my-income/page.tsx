@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState, useMemo, useCallback } from "react"
@@ -7,9 +6,10 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription
 } from "@/components/ui/card"
-import { DollarSign, TrendingUp, CheckCircle, Calendar, Edit, Loader2 } from "lucide-react"
-import { type EventData, type MusicianIncome, getEvents, getMusicianIncomes, upsertMusicianIncome } from "@/services/eventService"
+import { DollarSign, TrendingUp, CheckCircle, Calendar, Edit, Loader2, TrendingDown, Landmark, PlusCircle } from "lucide-react"
+import { type EventData, type MusicianIncome, type MusicianExpense, getEvents, getMusicianIncomes, getMusicianExpenses, upsertMusicianIncome } from "@/services/eventService"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -20,6 +20,12 @@ import { es } from "date-fns/locale"
 import { useUser } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ExpenseForm } from "./expense-form"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { MUSICIAN_EXPENSE_CATEGORIES } from "@/lib/constants"
+import { Badge } from "@/components/ui/badge"
+
 
 const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -129,8 +135,10 @@ export default function MyIncomePage() {
     const { user } = useUser();
     const [events, setEvents] = useState<EventData[]>([]);
     const [incomes, setIncomes] = useState<MusicianIncome[]>([]);
+    const [expenses, setExpenses] = useState<MusicianExpense[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isClient, setIsClient] = useState(false);
+    const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
     
     const [selectedMonth, setSelectedMonth] = useState<number>(getMonth(new Date()));
     const [selectedYear, setSelectedYear] = useState<number>(getYear(new Date()));
@@ -140,12 +148,14 @@ export default function MyIncomePage() {
         if (!user) return;
         setIsLoading(true);
         try {
-            const [eventsData, incomesData] = await Promise.all([
+            const [eventsData, incomesData, expensesData] = await Promise.all([
                 getEvents(),
                 getMusicianIncomes(user.id),
+                getMusicianExpenses(user.id),
             ]);
             setEvents(eventsData);
             setIncomes(incomesData);
+            setExpenses(expensesData);
 
             const years = new Set<number>();
             const addYearFromString = (dateString: string) => {
@@ -155,6 +165,7 @@ export default function MyIncomePage() {
             
             eventsData.forEach(e => addYearFromString(e.eventDate));
             incomesData.forEach(i => addYearFromString(i.date));
+            expensesData.forEach(e => addYearFromString(e.date));
 
             const currentYear = getYear(new Date());
             if (!years.has(currentYear)) years.add(currentYear);
@@ -174,7 +185,10 @@ export default function MyIncomePage() {
 
     const {
         filteredEvents,
-        totalIncome
+        filteredExpenses,
+        totalIncome,
+        totalExpenses,
+        netBalance
     } = useMemo(() => {
         const date = new Date(selectedYear, selectedMonth, 1);
         const currentMonthStr = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -188,14 +202,25 @@ export default function MyIncomePage() {
 
         const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
         const currentFilteredIncomes = incomes.filter(i => filterByMonthAndYear(i.date));
+        const currentFilteredExpenses = expenses.filter(e => filterByMonthAndYear(e.date));
 
         const totalIncome = currentFilteredIncomes.reduce((sum, income) => sum + income.amount, 0);
+        const totalExpenses = currentFilteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        const netBalance = totalIncome - totalExpenses;
 
         return {
             filteredEvents: currentFilteredEvents,
+            filteredExpenses: currentFilteredExpenses,
             totalIncome,
+            totalExpenses,
+            netBalance
         };
-    }, [selectedYear, selectedMonth, events, incomes]);
+    }, [selectedYear, selectedMonth, events, incomes, expenses]);
+
+    const handleExpenseSuccess = () => {
+        setIsExpenseDialogOpen(false);
+        fetchData();
+    }
 
 
     if (!isClient || isLoading) {
@@ -206,9 +231,12 @@ export default function MyIncomePage() {
                 <Skeleton className="h-10 w-32" />
                 <Skeleton className="h-10 w-24" />
               </div>
-              <div className="max-w-xs">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl">
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-24 w-full" />
                   <Skeleton className="h-24 w-full" />
               </div>
+              <Skeleton className="h-40 w-full" />
               <Skeleton className="h-40 w-full" />
         </div>
       )
@@ -220,12 +248,29 @@ export default function MyIncomePage() {
             <div>
                 <h1 className="font-headline text-3xl font-bold tracking-tight flex items-center gap-2">
                     <DollarSign className="h-8 w-8 text-primary"/>
-                    Mis Ingresos por Eventos
+                    Mis Ingresos y Gastos
                 </h1>
                 <p className="text-muted-foreground">
-                    Lleva un registro de tus ingresos por cada evento en el que participas.
+                    Lleva un registro de tus finanzas personales por cada período.
                 </p>
             </div>
+             <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Registrar Gasto
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Añadir Gasto Personal</DialogTitle>
+                        <DialogDescription>
+                           Registra un gasto para llevar un mejor control de tus finanzas.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ExpenseForm onSuccess={handleExpenseSuccess} />
+                </DialogContent>
+            </Dialog>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center">
@@ -257,14 +302,32 @@ export default function MyIncomePage() {
             </div>
         </div>
         
-        <div className="max-w-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-green-800 dark:text-green-300">Ingresos Registrados (Mes)</CardTitle>
+                    <CardTitle className="text-sm font-medium text-green-800 dark:text-green-300">Ingresos Totales (Mes)</CardTitle>
                     <TrendingUp className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold text-green-700 dark:text-green-400">{formatCurrency(totalIncome)}</div>
+                </CardContent>
+            </Card>
+             <Card className="bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-red-800 dark:text-red-300">Gastos Totales (Mes)</CardTitle>
+                    <TrendingDown className="h-4 w-4 text-red-600" />
+                </CardHeader>
+                <CardContent>
+                     <div className="text-2xl font-bold text-red-700 dark:text-red-400">{formatCurrency(totalExpenses)}</div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Balance Neto (Mes)</CardTitle>
+                    <Landmark className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className={cn("text-2xl font-bold", netBalance >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400")}>{formatCurrency(netBalance)}</div>
                 </CardContent>
             </Card>
         </div>
@@ -272,7 +335,7 @@ export default function MyIncomePage() {
         
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-green-600"/>Eventos del Mes</CardTitle>
+                <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-green-600"/>Ingresos por Eventos del Mes</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
                 {filteredEvents.length > 0 ? filteredEvents.map(event => {
@@ -303,8 +366,39 @@ export default function MyIncomePage() {
                 )}
             </CardContent>
         </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><TrendingDown className="h-5 w-5 text-red-600"/>Gastos del Mes</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Fecha</TableHead>
+                            <TableHead>Descripción</TableHead>
+                            <TableHead>Categoría</TableHead>
+                            <TableHead className="text-right">Monto</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredExpenses.length > 0 ? filteredExpenses.map(expense => (
+                            <TableRow key={expense.id}>
+                                <TableCell>{robustParseDate(expense.date) ? format(robustParseDate(expense.date)!, 'dd/MM/yyyy') : '-'}</TableCell>
+                                <TableCell className="font-medium">{expense.description}</TableCell>
+                                <TableCell>
+                                    <Badge variant="outline">{MUSICIAN_EXPENSE_CATEGORIES.find(c => c.value === expense.category)?.label || expense.category}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right font-semibold text-red-600">{formatCurrency(expense.amount)}</TableCell>
+                            </TableRow>
+                        )) : (
+                            <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center">No hay gastos registrados para este período.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
     </div>
   );
 }
-
-    
