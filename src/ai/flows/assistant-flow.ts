@@ -26,7 +26,7 @@ const masterPrompt = `You are "Maestro Mariachi AI", a virtual assistant for a m
 const AssistantInputSchema = z.object({
   // The user's most recent message.
   message: z.string(),
-  // The conversation history from the client.
+  // The conversation history from the client, expected to be in MessageData format.
   history: z.array(z.any()),
 });
 
@@ -37,47 +37,13 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
     const tools = [listEvents, listClients, createNewEvent, createFinanceEntry, createNewRehearsal];
     
     try {
-        // 1. Sanitize and transform the incoming history from the client.
-        const history: MessageData[] = input.history
-            .map((msg: any): MessageData | null => {
-                // Basic validation for message structure
-                if (!msg.role || !Array.isArray(msg.parts)) {
-                    return null;
-                }
-
-                // Sanitize and filter parts within the message
-                const content: Part[] = msg.parts
-                    .map((part: any): Part | null => {
-                        if (part && typeof part.text === 'string' && part.text.trim() !== '') {
-                            return { text: part.text };
-                        }
-                        if (part && part.toolRequest) {
-                            return { toolRequest: part.toolRequest };
-                        }
-                        if (part && part.toolResponse) {
-                            return { toolResponse: part.toolResponse };
-                        }
-                        // Ignore any other malformed or empty parts
-                        return null;
-                    })
-                    .filter((p): p is Part => p !== null);
-
-                // If a message has no valid parts after filtering, discard it
-                if (content.length === 0) {
-                    return null;
-                }
-
-                return {
-                    role: msg.role,
-                    content,
-                };
-            })
-            .filter((m): m is MessageData => m !== null);
+        // The client now sends data in the correct MessageData format, so we can use it directly.
+        const history: MessageData[] = input.history;
         
         // Add the new user message to the sanitized history
         history.push({ role: 'user', content: [{ text: input.message }] });
 
-        // 2. Start the conversation loop to handle tool requests.
+        // Start the conversation loop to handle tool requests.
         for (let i = 0; i < 5; i++) { // Add a limit to prevent infinite loops
             const response = await ai.generate({
                 model: 'googleai/gemini-1.5-flash-latest',
@@ -88,7 +54,6 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
 
             const choice = response.candidates[0];
             
-            // Handle cases where the model might not return content
             if (!choice || !choice.content || choice.content.length === 0) {
                 return [{ text: "Lo siento, no he podido generar una respuesta en este momento." }];
             }
@@ -98,14 +63,12 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
             // Add the model's response (which could be a tool request) to the history.
             history.push({ role: 'model', content: choiceParts });
             
-            // Find if there's a tool request.
             const toolRequests = choiceParts
               .map(p => p.toolRequest)
               .filter((tr): tr is ToolRequestPart => !!tr);
 
             if (toolRequests.length === 0) {
                 // No tool request, this is the final text answer, so we return it.
-                // Filter for parts that have a 'text' property.
                 return choiceParts.filter(p => typeof p.text === 'string');
             }
 
@@ -118,9 +81,6 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
                     }
                     try {
                         const output = await tool.fn(toolRequest.input);
-                        // The output of a tool must be a JSON-serializable object.
-                        // We ensure it is by stringifying and parsing, which is a robust way
-                        // to handle various valid outputs (strings, numbers, objects, arrays).
                         const serializableOutput = JSON.parse(JSON.stringify(output || {}));
                         return { toolResponse: { name: toolRequest.name, output: serializableOutput } };
                     } catch (e: any) {
@@ -136,8 +96,10 @@ export async function askAssistant(input: AssistantInput): Promise<Part[]> {
         // If the loop finishes without a final answer, return an error.
         return [{ text: "Lo siento, la IA no pudo procesar la solicitud después de varios intentos." }];
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("An unexpected error occurred in the askAssistant flow:", error);
-        return [{ text: "Lo siento, ha ocurrido un error al contactar a la IA. Por favor, revisa la consola de desarrollo para más detalles." }];
+        // Provide a more descriptive error message if possible
+        const errorMessage = error.message || "An unknown error occurred.";
+        return [{ text: `Lo siento, ha ocurrido un error al contactar a la IA. Detalles: ${errorMessage}` }];
     }
 }

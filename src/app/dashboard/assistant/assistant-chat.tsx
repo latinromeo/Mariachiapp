@@ -63,14 +63,15 @@ export function AssistantChat() {
 
     const userMessage: Message = { role: "user", parts: [{ text: currentInput }] };
     
-    // Pass a clean version of the history for the API call
+    // Convert client-side `Message[]` to Genkit's `MessageData[]` format.
+    // The key change is from `parts` to `content`.
     const historyForApi = messages.map(msg => ({
       role: msg.role,
-      parts: msg.parts.map(p => ({
+      content: msg.parts.map(p => ({
         text: p.text,
         toolRequest: p.toolRequest,
         toolResponse: p.toolResponse,
-      }))
+      })).filter(p => p.text || p.toolRequest || p.toolResponse) // Ensure no empty parts are sent
     }));
 
     setMessages((prev) => [...prev, userMessage]);
