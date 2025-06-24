@@ -2,25 +2,10 @@
 // src/services/eventService.ts
 'use server';
 
-import { add, sub, isBefore, startOfToday, limit, parse, format as formatDateFns } from "date-fns";
+import { add, sub, parse, format as formatDateFns } from "date-fns";
 import { es } from 'date-fns/locale';
-import { 
-    collection, 
-    getDocs, 
-    addDoc, 
-    query, 
-    where, 
-    serverTimestamp,
-    Timestamp,
-    DocumentSnapshot,
-    orderBy,
-    doc,
-    getDoc,
-    updateDoc,
-    deleteDoc,
-    setDoc
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from '@/lib/firebase-admin'; // Usar la instancia de admin centralizada
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { EVENT_PLANS } from "@/lib/constants";
 
 // --- INTERFACES ---
@@ -158,8 +143,7 @@ type MusicianExpenseInput = Omit<MusicianExpense, 'id' | 'userId' | 'createdAt'>
 
 // --- HELPER FUNCTIONS ---
 
-// Helper to convert Firestore timestamps to ISO strings for client-side usage
-const processDocTimestamps = (doc: DocumentSnapshot) => {
+const processDocTimestamps = (doc: FirebaseFirestore.DocumentSnapshot) => {
     const data = doc.data();
     if (!data) return null;
 
@@ -178,13 +162,11 @@ const processDocTimestamps = (doc: DocumentSnapshot) => {
 // --- CLIENT SERVICE FUNCTIONS ---
 
 export async function getClients(): Promise<ClientData[]> {
-    console.log("Fetching clients from Firestore");
+    console.log("Fetching clients from Firestore using Admin SDK");
     try {
-        const clientsCol = collection(db, 'clients');
-        const q = query(clientsCol, orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
-        const clients = snapshot.docs.map(processDocTimestamps).filter(Boolean);
-        return clients as ClientData[];
+        const snapshot = await db.collection('clients').orderBy("createdAt", "desc").get();
+        if (snapshot.empty) return [];
+        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as ClientData[];
     } catch (error) {
         console.error("Error fetching clients:", error);
         return [];
@@ -193,11 +175,8 @@ export async function getClients(): Promise<ClientData[]> {
 
 export async function findClientByPhone(phone: string): Promise<ClientData | null> {
     try {
-        const q = query(collection(db, 'clients'), where('phone', '==', phone));
-        const snapshot = await getDocs(q);
-        if (snapshot.empty) {
-            return null;
-        }
+        const snapshot = await db.collection('clients').where('phone', '==', phone).limit(1).get();
+        if (snapshot.empty) return null;
         return processDocTimestamps(snapshot.docs[0]) as ClientData;
     } catch (error) {
         console.error("Error finding client by phone:", error);
@@ -212,10 +191,10 @@ export async function createClient(data: ClientInputData): Promise<{ success: bo
     }
 
     try {
-        const docRef = await addDoc(collection(db, 'clients'), {
+        const docRef = await db.collection('clients').add({
             ...data,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
         });
         return { success: true, clientId: docRef.id };
     } catch (error) {
@@ -225,16 +204,12 @@ export async function createClient(data: ClientInputData): Promise<{ success: bo
 }
 
 export async function getClientById(id: string): Promise<ClientData | null> {
-    console.log(`Fetching client with ID: ${id}`);
     try {
-        const clientRef = doc(db, "clients", id);
-        const docSnap = await getDoc(clientRef);
-
-        if (!docSnap.exists()) {
+        const docSnap = await db.collection("clients").doc(id).get();
+        if (!docSnap.exists) {
             console.error("No such client!");
             return null;
         }
-
         return processDocTimestamps(docSnap) as ClientData;
     } catch (error) {
         console.error("Error fetching client by ID:", error);
@@ -243,11 +218,10 @@ export async function getClientById(id: string): Promise<ClientData | null> {
 }
 
 export async function updateClient(id: string, data: Partial<ClientInputData>): Promise<{ success: boolean; error?: string }> {
-    const clientRef = doc(db, "clients", id);
     try {
-        await updateDoc(clientRef, {
+        await db.collection("clients").doc(id).update({
             ...data,
-            updatedAt: serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
         });
         return { success: true };
     } catch (error) {
@@ -257,9 +231,8 @@ export async function updateClient(id: string, data: Partial<ClientInputData>): 
 }
 
 export async function deleteClient(id: string): Promise<{ success: boolean; error?: string }> {
-    const clientRef = doc(db, "clients", id);
     try {
-        await deleteDoc(clientRef);
+        await db.collection("clients").doc(id).delete();
         return { success: true };
     } catch (error) {
         console.error("Error deleting client:", error);
@@ -270,13 +243,9 @@ export async function deleteClient(id: string): Promise<{ success: boolean; erro
 // --- EVENT SERVICE FUNCTIONS ---
 
 export async function getEvents(): Promise<EventData[]> {
-    console.log("Fetching events from Firestore");
-     try {
-        const eventsCol = collection(db, "events");
-        const q = query(eventsCol, orderBy("eventDate", "desc"));
-        const snapshot = await getDocs(q);
-        const events = snapshot.docs.map(processDocTimestamps).filter(Boolean);
-        return events as EventData[];
+    try {
+        const snapshot = await db.collection("events").orderBy("eventDate", "desc").get();
+        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as EventData[];
     } catch (error) {
         console.error("Error fetching events:", error);
         return [];
@@ -284,16 +253,12 @@ export async function getEvents(): Promise<EventData[]> {
 }
 
 export async function getEventById(id: string): Promise<EventData | null> {
-    console.log(`Fetching event with ID: ${id}`);
     try {
-        const eventRef = doc(db, "events", id);
-        const docSnap = await getDoc(eventRef);
-
-        if (!docSnap.exists()) {
+        const docSnap = await db.collection("events").doc(id).get();
+        if (!docSnap.exists) {
             console.error("No such event!");
             return null;
         }
-
         return processDocTimestamps(docSnap) as EventData;
     } catch (error) {
         console.error("Error fetching event by ID:", error);
@@ -306,7 +271,7 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
 
   if (!clientId) {
     if (!data.clientPhone) {
-        return { success: false, error: "Para crear un nuevo cliente, el número de teléfono es obligatorio. Por favor, solicítalo al usuario." };
+        return { success: false, error: "Para crear un nuevo cliente, el número de teléfono es obligatorio." };
     }
     let client = await findClientByPhone(data.clientPhone);
     if (client) {
@@ -346,12 +311,12 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
     pendingBalance,
     profit,
     status: data.externalGroup ? 'external' as const : 'pending' as const,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   };
 
   try {
-    const docRef = await addDoc(collection(db, "events"), newEventData);
+    const docRef = await db.collection("events").add(newEventData);
     return { success: true, eventId: docRef.id };
   } catch (error) {
      console.error("Error creating event:", error);
@@ -360,11 +325,11 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
 }
 
 export async function updateEvent(id: string, data: Partial<EventInputData>): Promise<{ success: boolean; error?: string }> {
-    const eventRef = doc(db, "events", id);
+    const eventRef = db.collection("events").doc(id);
 
     try {
-        const eventSnap = await getDoc(eventRef);
-        if (!eventSnap.exists()) {
+        const eventSnap = await eventRef.get();
+        if (!eventSnap.exists) {
             return { success: false, error: "Event not found." };
         }
         
@@ -394,7 +359,7 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
             contractedAmount,
             musiciansPay,
             amountPaid,
-            updatedAt: serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
         };
 
         if (data.externalGroup !== undefined) {
@@ -403,7 +368,7 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
             }
         }
 
-        await updateDoc(eventRef, updatePayload);
+        await eventRef.update(updatePayload);
         return { success: true };
     } catch (error) {
         console.error("Error updating event:", error);
@@ -414,21 +379,21 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
 
 export async function completeEvent(eventId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const eventRef = doc(db, "events", eventId);
-    const eventSnap = await getDoc(eventRef);
+    const eventRef = db.collection("events").doc(eventId);
+    const eventSnap = await eventRef.get();
 
-    if (!eventSnap.exists()) {
+    if (!eventSnap.exists) {
       return { success: false, error: "Event not found." };
     }
 
     const eventData = eventSnap.data();
-    const contractedAmount = eventData.contractedAmount || 0;
+    const contractedAmount = eventData?.contractedAmount || 0;
 
-    await updateDoc(eventRef, {
+    await eventRef.update({
       status: 'completed',
       amountPaid: contractedAmount,
       pendingBalance: 0,
-      updatedAt: serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     return { success: true };
@@ -439,9 +404,8 @@ export async function completeEvent(eventId: string): Promise<{ success: boolean
 }
 
 export async function deleteEvent(id: string): Promise<{ success: boolean; error?: string }> {
-    const eventRef = doc(db, "events", id);
     try {
-        await deleteDoc(eventRef);
+        await db.collection("events").doc(id).delete();
         return { success: true };
     } catch (error) {
         console.error("Error deleting event:", error);
@@ -453,12 +417,9 @@ export async function deleteEvent(id: string): Promise<{ success: boolean; error
 // --- REHEARSAL SERVICE FUNCTIONS ---
 
 export async function getRehearsals(): Promise<RehearsalData[]> {
-    console.log("Fetching rehearsals from Firestore");
     try {
-        const rehearsalsCol = collection(db, "rehearsals");
-        const snapshot = await getDocs(query(rehearsalsCol, orderBy("date", "desc")));
-        const rehearsals = snapshot.docs.map(processDocTimestamps).filter(Boolean) as RehearsalData[];
-        return rehearsals;
+        const snapshot = await db.collection("rehearsals").orderBy("date", "desc").get();
+        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as RehearsalData[];
     } catch (error) {
         console.error("Error fetching rehearsals:", error);
         return [];
@@ -467,11 +428,11 @@ export async function getRehearsals(): Promise<RehearsalData[]> {
 
 export async function createRehearsal(data: RehearsalInputData): Promise<{ success: boolean; rehearsalId?: string, error?: string }> {
   try {
-    const docRef = await addDoc(collection(db, "rehearsals"), {
+    const docRef = await db.collection("rehearsals").add({
         ...data,
         status: 'pending',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
     });
     return { success: true, rehearsalId: docRef.id };
   } catch (error) {
@@ -481,16 +442,12 @@ export async function createRehearsal(data: RehearsalInputData): Promise<{ succe
 }
 
 export async function getRehearsalById(id: string): Promise<RehearsalData | null> {
-    console.log(`Fetching rehearsal with ID: ${id}`);
     try {
-        const rehearsalRef = doc(db, "rehearsals", id);
-        const docSnap = await getDoc(rehearsalRef);
-
-        if (!docSnap.exists()) {
+        const docSnap = await db.collection("rehearsals").doc(id).get();
+        if (!docSnap.exists) {
             console.error("No such rehearsal!");
             return null;
         }
-
         return processDocTimestamps(docSnap) as RehearsalData;
     } catch (error) {
         console.error("Error fetching rehearsal by ID:", error);
@@ -499,11 +456,10 @@ export async function getRehearsalById(id: string): Promise<RehearsalData | null
 }
 
 export async function updateRehearsal(id: string, data: Partial<RehearsalInputData>): Promise<{ success: boolean; error?: string }> {
-    const rehearsalRef = doc(db, "rehearsals", id);
     try {
-        await updateDoc(rehearsalRef, {
+        await db.collection("rehearsals").doc(id).update({
             ...data,
-            updatedAt: serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
         });
         return { success: true };
     } catch (error) {
@@ -513,11 +469,10 @@ export async function updateRehearsal(id: string, data: Partial<RehearsalInputDa
 }
 
 export async function completeRehearsal(id: string): Promise<{ success: boolean; error?: string }> {
-    const rehearsalRef = doc(db, "rehearsals", id);
     try {
-        await updateDoc(rehearsalRef, {
+        await db.collection("rehearsals").doc(id).update({
             status: 'completed',
-            updatedAt: serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
         });
         return { success: true };
     } catch (error) {
@@ -527,9 +482,8 @@ export async function completeRehearsal(id: string): Promise<{ success: boolean;
 }
 
 export async function deleteRehearsal(id: string): Promise<{ success: boolean; error?: string }> {
-    const rehearsalRef = doc(db, "rehearsals", id);
     try {
-        await deleteDoc(rehearsalRef);
+        await db.collection("rehearsals").doc(id).delete();
         return { success: true };
     } catch (error) {
         console.error("Error deleting rehearsal:", error);
@@ -540,7 +494,6 @@ export async function deleteRehearsal(id: string): Promise<{ success: boolean; e
 
 // --- AI ASSISTANT FUNCTIONS ---
 
-// A simplified function to extract details from a prompt.
 function parseDateTime(prompt: string): { eventDate: string; eventTime: string } {
     const today = new Date();
     let eventDate = new Date();
@@ -560,9 +513,9 @@ function parseDateTime(prompt: string): { eventDate: string; eventTime: string }
             hour += 12;
         }
         if (period === 'am' && hour === 12) {
-            hour = 0; // Midnight case
+            hour = 0;
         }
-        eventTime = `${hour}:00`; // Basic time format
+        eventTime = `${hour}:00`;
     }
     
     return {
@@ -577,7 +530,6 @@ export async function createEventFromPrompt(prompt: string): Promise<{ success: 
         const isRehearsal = prompt.toLowerCase().includes('ensayo');
         const { eventDate, eventTime } = parseDateTime(prompt);
 
-        // Simulated data for fields not in the prompt
         const eventDetails = {
             clientName: isRehearsal ? "Ensayo Interno" : "Cliente desde AI",
             clientPhone: "0000000000",
@@ -590,7 +542,7 @@ export async function createEventFromPrompt(prompt: string): Promise<{ success: 
             paymentMethod: "other",
             contractedAmount: 0,
             amountPaid: 0,
-            musiciansPay: isRehearsal ? 0 : 5000, // Example pay
+            musiciansPay: isRehearsal ? 0 : 5000,
             externalGroup: false,
         };
 
@@ -611,13 +563,9 @@ export async function createEventFromPrompt(prompt: string): Promise<{ success: 
 // --- MANUAL FINANCE ENTRY FUNCTIONS ---
 
 export async function getManualFinanceEntries(): Promise<ManualFinanceEntry[]> {
-    console.log("Fetching manual finance entries from Firestore");
     try {
-        const entriesCol = collection(db, "manualFinanceEntries");
-        const q = query(entriesCol, orderBy("date", "desc"));
-        const snapshot = await getDocs(q);
-        const entries = snapshot.docs.map(processDocTimestamps).filter(Boolean);
-        return entries as ManualFinanceEntry[];
+        const snapshot = await db.collection("manualFinanceEntries").orderBy("date", "desc").get();
+        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as ManualFinanceEntry[];
     } catch (error) {
         console.error("Error fetching manual entries:", error);
         return [];
@@ -626,10 +574,10 @@ export async function getManualFinanceEntries(): Promise<ManualFinanceEntry[]> {
 
 export async function createManualFinanceEntry(data: ManualFinanceEntryInputData): Promise<{ success: boolean; entryId?: string }> {
     try {
-        const docRef = await addDoc(collection(db, 'manualFinanceEntries'), {
+        const docRef = await db.collection('manualFinanceEntries').add({
             ...data,
             createdBy: 'admin', // Hardcoded for now
-            createdAt: serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
         });
         return { success: true, entryId: docRef.id };
     } catch (error) {
@@ -644,9 +592,9 @@ export async function upsertMusicianIncome(userId: string, eventId: string, amou
     if (!userId || !eventId) {
         return { success: false, error: "User ID and Event ID are required." };
     }
-    const incomeRef = doc(db, "musicianIncomes", `${userId}_${eventId}`);
+    const incomeRef = db.collection("musicianIncomes").doc(`${userId}_${eventId}`);
     try {
-        await setDoc(incomeRef, {
+        await incomeRef.set({
             userId,
             eventId,
             amount,
@@ -662,9 +610,7 @@ export async function upsertMusicianIncome(userId: string, eventId: string, amou
 export async function getMusicianIncomes(userId: string): Promise<MusicianIncome[]> {
     if (!userId) return [];
     try {
-        const incomesCol = collection(db, "musicianIncomes");
-        const q = query(incomesCol, where("userId", "==", userId));
-        const snapshot = await getDocs(q);
+        const snapshot = await db.collection("musicianIncomes").where("userId", "==", userId).get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MusicianIncome));
     } catch (error) {
         console.error("Error fetching musician incomes:", error);
@@ -677,10 +623,10 @@ export async function createMusicianExpense(userId: string, data: MusicianExpens
         return { success: false, error: "User ID is required." };
     }
     try {
-        const docRef = await addDoc(collection(db, "musicianExpenses"), {
+        const docRef = await db.collection("musicianExpenses").add({
             ...data,
             userId,
-            createdAt: serverTimestamp()
+            createdAt: FieldValue.serverTimestamp()
         });
         return { success: true, expenseId: docRef.id };
     } catch (error) {
@@ -692,12 +638,8 @@ export async function createMusicianExpense(userId: string, data: MusicianExpens
 export async function getMusicianExpenses(userId: string): Promise<MusicianExpense[]> {
      if (!userId) return [];
      try {
-        const expensesCol = collection(db, "musicianExpenses");
-        // Removed orderBy to avoid composite index requirement. Sorting will be done client-side.
-        const q = query(expensesCol, where("userId", "==", userId));
-        const snapshot = await getDocs(q);
+        const snapshot = await db.collection("musicianExpenses").where("userId", "==", userId).get();
         const expenses = snapshot.docs.map(processDocTimestamps).filter(Boolean) as MusicianExpense[];
-        // Sort expenses by date in descending order on the client side.
         expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         return expenses;
     } catch (error) {
@@ -709,6 +651,7 @@ export async function getMusicianExpenses(userId: string): Promise<MusicianExpen
 // --- REPERTOIRE & MEDIA SERVICE FUNCTIONS ---
 
 const initialSongs: Omit<SongDetail, 'id' | 'createdAt' | 'updatedAt'>[] = [
+    // ... (same song list as before)
     // Cumpleaños
     { title: 'Las Mañanitas', artist: 'Tradicional', category: 'Cumpleaños' },
     { title: 'En Tu Día', artist: 'Javier Solís', category: 'Cumpleaños' },
@@ -817,46 +760,31 @@ const initialSongs: Omit<SongDetail, 'id' | 'createdAt' | 'updatedAt'>[] = [
 
 async function seedInitialSongs() {
     console.log("Checking for initial songs to seed...");
-    const songsCol = collection(db, 'songs');
-    
-    // Fetch all existing songs to avoid duplicates.
-    const existingSongsSnapshot = await getDocs(songsCol);
-    const existingSongTitles = new Set(existingSongsSnapshot.docs.map(doc => doc.data().title));
-    
-    const songsToSeed = initialSongs.filter(song => !existingSongTitles.has(song.title));
-
-    if (songsToSeed.length === 0) {
-        console.log("All initial songs seem to be seeded already. Skipping.");
+    const songsCol = db.collection('songs');
+    const existingSongsSnapshot = await songsCol.limit(1).get();
+    if (!existingSongsSnapshot.empty) {
+        console.log("Songs collection is not empty. Skipping seed.");
         return;
     }
 
-    console.log(`Seeding ${songsToSeed.length} new initial song(s)...`);
-    for (const songData of songsToSeed) {
-        try {
-            await addDoc(songsCol, {
-                ...songData,
-                createdAt: serverTimestamp()
-            });
-        } catch (e) {
-            console.error(`Error seeding song ${songData.title}:`, e);
-        }
+    console.log(`Seeding ${initialSongs.length} initial song(s)...`);
+    const batch = db.batch();
+    for (const songData of initialSongs) {
+        const docRef = songsCol.doc(); 
+        batch.set(docRef, {
+            ...songData,
+            createdAt: FieldValue.serverTimestamp()
+        });
     }
+    await batch.commit();
 }
 
 export async function getSongs(): Promise<SongDetail[]> {
-    console.log("Fetching songs from Firestore");
     try {
         await seedInitialSongs();
-
-        const songsCol = collection(db, 'songs');
-        const q = query(songsCol, orderBy("title", "asc"));
-        const snapshot = await getDocs(q);
-        if (snapshot.empty) {
-          console.log("No songs found in Firestore. The 'songs' collection might be empty.");
-          return [];
-        }
-        const songs = snapshot.docs.map(processDocTimestamps).filter(Boolean);
-        return songs as SongDetail[];
+        const snapshot = await db.collection('songs').orderBy("title", "asc").get();
+        if (snapshot.empty) return [];
+        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as SongDetail[];
     } catch (error) {
         console.error("Error fetching songs:", error);
         return [];
@@ -865,10 +793,10 @@ export async function getSongs(): Promise<SongDetail[]> {
 
 export async function createSong(data: SongInputData): Promise<{ success: boolean; songId?: string, error?: string }> {
   try {
-    const docRef = await addDoc(collection(db, "songs"), {
+    const docRef = await db.collection("songs").add({
         ...data,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
     });
     return { success: true, songId: docRef.id };
   } catch (error) {
@@ -878,11 +806,10 @@ export async function createSong(data: SongInputData): Promise<{ success: boolea
 }
 
 export async function updateSong(id: string, data: Partial<SongInputData>): Promise<{ success: boolean; error?: string }> {
-    const songRef = doc(db, "songs", id);
     try {
-        await updateDoc(songRef, {
+        await db.collection("songs").doc(id).update({
             ...data,
-            updatedAt: serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
         });
         return { success: true };
     } catch (error) {
@@ -892,9 +819,8 @@ export async function updateSong(id: string, data: Partial<SongInputData>): Prom
 }
 
 export async function deleteSong(id: string): Promise<{ success: boolean; error?: string }> {
-    const songRef = doc(db, "songs", id);
     try {
-        await deleteDoc(songRef);
+        await db.collection("songs").doc(id).delete();
         return { success: true };
     } catch (error) {
         console.error("Error deleting song:", error);
@@ -904,63 +830,30 @@ export async function deleteSong(id: string): Promise<{ success: boolean; error?
 
 
 export async function getMedia(): Promise<MediaFile[]> {
-    console.log("Fetching media from Firestore");
     try {
-        const mediaCol = collection(db, 'media');
-        const q = query(mediaCol, orderBy("uploadedAt", "desc"));
-        const snapshot = await getDocs(q);
+        const snapshot = await db.collection('media').orderBy("uploadedAt", "desc").get();
          if (snapshot.empty) {
-          console.log("No media found in Firestore. The 'media' collection might be empty.");
-          // This is a placeholder for dummy data
           const dummyMedia: MediaFile[] = [
             {
-              id: "1",
-              name: "Boda Pérez 2024",
-              type: "image",
-              url: "https://placehold.co/600x400.png",
-              hint: "wedding mariachi",
-              size: 1200000,
-              uploadedBy: "Admin",
-              uploadedAt: new Date().toISOString(),
-              tags: ["boda", "2024"],
+              id: "1", name: "Boda Pérez 2024", type: "image", url: "https://placehold.co/600x400.png", hint: "wedding mariachi",
+              size: 1200000, uploadedBy: "Admin", uploadedAt: new Date().toISOString(), tags: ["boda", "2024"],
             },
              {
-              id: "2",
-              name: "Serenata a Mamá",
-              type: "video",
-              url: "https://placehold.co/600x400.png",
-              hint: "serenade music",
-              size: 25000000,
-              uploadedBy: "Admin",
-              uploadedAt: sub(new Date(), { days: 5 }).toISOString(),
-              tags: ["serenata", "familia"],
+              id: "2", name: "Serenata a Mamá", type: "video", url: "https://placehold.co/600x400.png", hint: "serenade music",
+              size: 25000000, uploadedBy: "Admin", uploadedAt: sub(new Date(), { days: 5 }).toISOString(), tags: ["serenata", "familia"],
             },
             {
-              id: "3",
-              name: "Cumpleaños Sr. Juan",
-              type: "image",
-              url: "https://placehold.co/600x400.png",
-              hint: "birthday party",
-              size: 980000,
-              uploadedBy: "Admin",
-              uploadedAt: sub(new Date(), { days: 10 }).toISOString(),
-              tags: ["cumpleaños"],
+              id: "3", name: "Cumpleaños Sr. Juan", type: "image", url: "https://placehold.co/600x400.png", hint: "birthday party",
+              size: 980000, uploadedBy: "Admin", uploadedAt: sub(new Date(), { days: 10 }).toISOString(), tags: ["cumpleaños"],
             },
              {
-              id: "4",
-              name: "Audio de Referencia - El Rey",
-              type: "audio",
-              url: "",
-              size: 4500000,
-              uploadedBy: "Admin",
-              uploadedAt: sub(new Date(), { months: 1 }).toISOString(),
-              tags: ["repertorio", "referencia"],
+              id: "4", name: "Audio de Referencia - El Rey", type: "audio", url: "",
+              size: 4500000, uploadedBy: "Admin", uploadedAt: sub(new Date(), { months: 1 }).toISOString(), tags: ["repertorio", "referencia"],
             }
           ];
           return dummyMedia;
         }
-        const media = snapshot.docs.map(processDocTimestamps).filter(Boolean);
-        return media as MediaFile[];
+        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as MediaFile[];
     } catch (error) {
         console.error("Error fetching media:", error);
         return [];
@@ -969,7 +862,6 @@ export async function getMedia(): Promise<MediaFile[]> {
 
 
 export async function getSuggestedSongs(eventType: string): Promise<SongDetail[]> {
-    console.log(`Getting suggested songs for event type: ${eventType}`);
     const allSongs = await getSongs();
     if (allSongs.length === 0) return [];
 

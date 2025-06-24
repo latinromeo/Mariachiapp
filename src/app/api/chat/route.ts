@@ -5,16 +5,7 @@ import OpenAI from 'openai';
 import { add, format, nextDay } from 'date-fns';
 import type { Day } from 'date-fns';
 import { es } from 'date-fns/locale';
-
-// Initialize Firebase Admin SDK
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp();
-  } catch (error) {
-    console.error('Firebase admin initialization error', error);
-  }
-}
-const db = admin.firestore();
+import { db } from '@/lib/firebase-admin'; // Usar la instancia de admin centralizada
 
 // Initialize OpenAI client
 const openai = new OpenAI({
