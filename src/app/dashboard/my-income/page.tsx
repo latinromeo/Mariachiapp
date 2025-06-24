@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExpenseForm } from "./expense-form"
-import { format, getYear, getMonth, parse } from "date-fns"
+import { format, getYear, getMonth, parse, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 import { useUser } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -111,6 +111,20 @@ function IncomeEntryPopover({ event, onIncomeSet }: { event: EventData, onIncome
     );
 }
 
+const robustParseDate = (dateString: string): Date | null => {
+    try {
+        // This handles 'YYYY-MM-DD' correctly by treating it as local time, not UTC.
+        return parse(dateString, 'yyyy-MM-dd', new Date());
+    } catch {
+        try {
+            // Fallback for full ISO strings
+            return parseISO(dateString);
+        } catch {
+            return null;
+        }
+    }
+};
+
 export default function MyIncomePage() {
     const { user } = useUser();
     const [events, setEvents] = useState<EventData[]>([]);
@@ -140,11 +154,9 @@ export default function MyIncomePage() {
             const years = new Set<number>();
             
             const addYearFromString = (dateString: string) => {
-                if (dateString && typeof dateString === 'string' && dateString.includes('-')) {
-                    const year = parseInt(dateString.split('-')[0], 10);
-                    if (!isNaN(year)) {
-                        years.add(year);
-                    }
+                const date = robustParseDate(dateString);
+                if (date) {
+                    years.add(getYear(date));
                 }
             };
             
@@ -175,15 +187,10 @@ export default function MyIncomePage() {
         netBalance,
         filteredExpenses
     } = useMemo(() => {
-         const filterByMonthAndYear = (dateString: string) => {
-            if (!dateString || typeof dateString !== 'string' || !dateString.includes('-')) {
-                return false;
-            }
-            const dateParts = dateString.split('T')[0].split('-');
-            const year = parseInt(dateParts[0], 10);
-            const month = parseInt(dateParts[1], 10) - 1; // JS months are 0-indexed
-            
-            return year === selectedYear && month === selectedMonth;
+        const filterByMonthAndYear = (itemDate: string) => {
+            const date = robustParseDate(itemDate);
+            if (!date) return false;
+            return getYear(date) === selectedYear && getMonth(date) === selectedMonth;
         };
 
         const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
@@ -307,7 +314,7 @@ export default function MyIncomePage() {
                 {filteredEvents.length > 0 ? filteredEvents.map(event => {
                     const income = incomes.find(i => i.eventId === event.id);
                     const isCompleted = !!income;
-                    const eventDate = parse(event.eventDate, "yyyy-MM-dd", new Date());
+                    const eventDate = robustParseDate(event.eventDate);
                     return (
                         <div key={event.id} className={cn("flex justify-between items-center p-3 rounded-md border", isCompleted ? "bg-green-50 dark:bg-green-950/30 border-green-200" : "bg-muted/50")}>
                             <div>
@@ -354,7 +361,7 @@ export default function MyIncomePage() {
             </CardHeader>
             <CardContent className="space-y-2">
                  {filteredExpenses.length > 0 ? filteredExpenses.map(expense => {
-                    const expenseDate = parse(expense.date, 'yyyy-MM-dd', new Date());
+                    const expenseDate = robustParseDate(expense.date);
                     return (
                         <div key={expense.id} className="flex justify-between items-center p-3 rounded-md border bg-muted/50">
                             <div>
@@ -375,7 +382,3 @@ export default function MyIncomePage() {
     </div>
   );
 }
-
-    
-
-    
