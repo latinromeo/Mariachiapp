@@ -92,12 +92,12 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     type: 'function',
     function: {
         name: 'get_schedule_for_dates',
-        description: 'Recupera una lista de eventos y ensayos para un rango de fechas específico. Úsalo para responder preguntas sobre la agenda, como "¿qué tenemos mañana?" o "¿hay algo para la próxima semana?".',
+        description: 'Recupera una lista de eventos y ensayos para un rango de fechas. Para consultas de un solo día (como "mañana" o "hoy"), solo necesitas proporcionar \'startDate\'. Para rangos (como "este mes" o "próxima semana"), debes calcular y proporcionar tanto \'startDate\' como \'endDate\'.',
         parameters: {
             type: 'object',
             properties: {
                 startDate: { type: 'string', description: 'La fecha de inicio para la búsqueda en formato YYYY-MM-DD.' },
-                endDate: { type: 'string', description: 'La fecha de fin para la búsqueda en formato YYYY-MM-DD. Si no se especifica, se usará la fecha de inicio.' }
+                endDate: { type: 'string', description: 'La fecha de fin para la búsqueda en formato YYYY-MM-DD. Obligatorio para consultas de rangos como "este mes".' }
             },
             required: ['startDate']
         }
