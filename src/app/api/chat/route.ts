@@ -102,9 +102,9 @@ Siempre pregunta al final si el usuario necesita algo más.
 Usuario: ¿Cuántos ensayos tengo este mes?
 
 Tú:
-Tienes 2 ensayos programados en junio de 2025:
-📅 4 de junio a las 7:00 PM
-📅 19 de junio a las 5:30 PM
+Tienes 2 ensayos programados para este mes:
+📅 [Fecha y hora del primer ensayo]
+📅 [Fecha y hora del segundo ensayo]
 ¿Quieres programar otro ensayo o necesitas editar alguno?
 `;
 
