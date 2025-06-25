@@ -3,12 +3,12 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { format, getYear, getMonth, isSameMonth } from "date-fns";
+import { format, getYear, getMonth, isSameMonth, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { type EventData, getEvents, completeEvent, type RehearsalData, getRehearsals } from "@/services/eventService";
+import { type EventData, getEvents, completeEvent, type RehearsalData, getRehearsals, completeRehearsal } from "@/services/eventService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, Music, PlusCircle, ExternalLink, User, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -81,16 +81,12 @@ export default function DashboardPage() {
 
     const safeParseDate = (dateInput: unknown): Date | null => {
       if (typeof dateInput !== 'string' || !dateInput) return null;
-      const dateString = dateInput.split('T')[0];
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-         return null;
+      // Try parsing as ISO string first
+      const isoDate = parseISO(dateInput);
+      if (!isNaN(isoDate.getTime())) {
+          return isoDate;
       }
-      try {
-        const [year, month, day] = dateString.split('-').map(Number);
-        return new Date(year, month - 1, day);
-      } catch {
-        return null;
-      }
+      return null;
     };
 
     const events = allEvents
@@ -156,6 +152,27 @@ export default function DashboardPage() {
     setIsCompleting(null);
   };
   
+    const handleCompleteRehearsal = async (rehearsalId: string) => {
+        setIsCompleting(rehearsalId);
+        const result = await completeRehearsal(rehearsalId);
+        if (result.success) {
+            toast({
+                title: "¡Ensayo Completado!",
+                description: "El ensayo se ha marcado como completado.",
+            });
+            const [eventsData, rehearsalsData] = await Promise.all([getEvents(), getRehearsals()]);
+            setAllEvents(eventsData);
+            setAllRehearsals(rehearsalsData);
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: result.error || "No se pudo completar el ensayo.",
+            });
+        }
+        setIsCompleting(null);
+    };
+
   if (!isClient) {
       return (
           <div className="flex flex-col gap-6">
@@ -330,10 +347,22 @@ export default function DashboardPage() {
                                             
                                             <Separator className="my-2" />
                                         
-                                            <div className="flex justify-start items-center text-sm pt-1">
+                                            <div className="flex justify-between items-center text-sm pt-1">
                                                 <Link href={`/dashboard/rehearsals/${activity.id}`} className="text-primary hover:underline font-medium flex items-center gap-1">
                                                     Ver Detalles / Gestionar
                                                 </Link>
+                                                {permissions.canCompleteRehearsals && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline"
+                                                        className="bg-green-100/50 text-green-700 border-green-300 hover:bg-green-100 font-medium"
+                                                        onClick={() => handleCompleteRehearsal(activity.id)}
+                                                        disabled={isCompleting === activity.id}
+                                                    >
+                                                        {isCompleting === activity.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
+                                                        Marcar Completo
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
                                     </Card>
