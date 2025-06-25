@@ -32,9 +32,10 @@ import {
     PlusCircle, 
     Search, 
     Trash2,
-    Youtube,
+    Video,
     CheckCircle,
-    Music
+    Music,
+    FileText
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -206,10 +207,15 @@ export default function RehearsalsPage() {
                                                     {song.artist && song.key && ' · '}
                                                     {song.key && `Tono: ${song.key}`}
                                                 </p>
-                                                <div className="flex items-center gap-4 mt-1">
+                                                <div className="flex items-center gap-4 mt-2 flex-wrap">
                                                     {song.youtubeUrl && (
                                                         <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-red-600 hover:underline text-sm">
-                                                            <Youtube className="h-4 w-4" /> YouTube
+                                                            <Video className="h-4 w-4" /> YouTube
+                                                        </a>
+                                                    )}
+                                                     {song.sheetMusicUrl && (
+                                                        <a href={song.sheetMusicUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground transition-colors hover:text-primary text-sm flex items-center gap-1" title="Ver Partitura">
+                                                            <FileText className="h-4 w-4" /> Partitura
                                                         </a>
                                                     )}
                                                     {song.audioUrl && (
