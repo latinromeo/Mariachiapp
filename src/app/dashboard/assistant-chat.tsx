@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { Bot, Loader2, Send, X, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +32,7 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesRef = useRef(messages);
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -112,11 +114,14 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
       const assistantMessage: Message = { role: 'assistant', content: data.reply };
       setMessages((prev) => [...prev, assistantMessage]);
 
+      let needsRefresh = false;
+
       if (data.eventCreated) {
         toast({
           title: "¡Evento Creado!",
           description: "El asistente ha agendado un nuevo evento en tu calendario.",
         });
+        needsRefresh = true;
       }
       
        if (data.rehearsalCreated) {
@@ -124,6 +129,27 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
           title: "¡Ensayo Creado!",
           description: "El asistente ha agendado un nuevo ensayo en tu calendario.",
         });
+        needsRefresh = true;
+      }
+
+      if (data.eventModified) {
+        toast({
+            title: "¡Evento Actualizado!",
+            description: "Un evento ha sido modificado o eliminado de tu agenda.",
+        });
+        needsRefresh = true;
+      }
+
+      if (data.rehearsalModified) {
+        toast({
+            title: "¡Ensayo Actualizado!",
+            description: "Un ensayo ha sido modificado o eliminado de tu agenda.",
+        });
+        needsRefresh = true;
+      }
+
+      if (needsRefresh) {
+        router.refresh();
       }
 
     } catch (error: any) {
