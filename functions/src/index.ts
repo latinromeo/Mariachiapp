@@ -188,23 +188,29 @@ export const onEventCompleted = onDocumentUpdated({region: "us-central1", docume
             await file.save(pdfBuffer, {
                 metadata: { contentType: "application/pdf", cacheControl: "public, max-age=31536000" },
             });
+            logger.log(`Receipt for ${eventId} uploaded to Storage at path: ${filePath}`);
 
-            // Step 3: Make the file public and get its URL.
-            await file.makePublic();
-            
-            // The public URL format is predictable for GCS.
-            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
-            logger.log(`Receipt for ${eventId} uploaded to: ${publicUrl}`);
+            // Step 3: Generate a long-lived signed URL. This is more robust than public URLs.
+            const [signedUrl] = await file.getSignedUrl({
+              action: "read",
+              expires: "01-01-2100", // A very distant future date.
+            });
+
+            logger.log(`Generated signed URL for ${eventId}: ${signedUrl}`);
             
             // Step 4: Update the event document in Firestore with the new PDF URL.
             await db.collection("events").doc(eventId).update({
-                receiptUrlPDF: publicUrl,
+                receiptUrlPDF: signedUrl,
             });
 
             logger.log(`Successfully updated event ${eventId} with receipt URL.`);
 
         } catch (error) {
             logger.error(`Failed to process receipt for event ${eventId}. Error:`, error);
+            // Optionally, update the document to indicate failure
+             await db.collection("events").doc(eventId).update({
+                receiptUrlPDF: "error", // Indicate that generation failed
+            }).catch((e) => logger.error(`Could not update event ${eventId} with error state.`, e));
         }
     }
 });

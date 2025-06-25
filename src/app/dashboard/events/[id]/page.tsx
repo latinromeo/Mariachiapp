@@ -1,10 +1,11 @@
+
 "use client"
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getEventById, type EventData, deleteEvent } from "@/services/eventService";
-import { ArrowLeft, Calendar, DollarSign, Edit, FileText, Loader2, MapPin, MoreVertical, Phone, User, Trash2 } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, Edit, FileText, Loader2, MapPin, MoreVertical, Phone, User, Trash2, XCircle } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -179,12 +180,19 @@ export default function EventDetailPage() {
                 <div className="flex gap-2 justify-end">
                      {event.status === 'completed' ? (
                         event.receiptUrlPDF ? (
-                            <Button asChild variant="secondary">
-                                <Link href={event.receiptUrlPDF} target="_blank" rel="noopener noreferrer">
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Ver Recibo PDF
-                                </Link>
-                            </Button>
+                            event.receiptUrlPDF === 'error' ? (
+                                <Button variant="destructive" disabled>
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Error al generar PDF
+                                </Button>
+                            ) : (
+                                <Button asChild variant="secondary">
+                                    <Link href={event.receiptUrlPDF} target="_blank" rel="noopener noreferrer">
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        Ver Recibo PDF
+                                    </Link>
+                                </Button>
+                            )
                         ) : (
                             <Button variant="secondary" disabled>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
