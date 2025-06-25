@@ -905,3 +905,68 @@ export async function getSuggestedSongs(eventType: string): Promise<SongDetail[]
 
     return suggestions;
 }
+
+// --- AI Assistant Read Functions ---
+
+export async function getEventsByDateRange(startDate: string, endDate: string): Promise<EventData[]> {
+    try {
+        const eventsRef = collection(db, 'events');
+        const q = query(eventsRef, where("eventDate", ">=", startDate), where("eventDate", "<=", endDate), orderBy("eventDate"), orderBy("eventTime"));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) return [];
+        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as EventData[];
+    } catch (error) {
+        console.error("Error fetching events by date range:", error);
+        return [];
+    }
+}
+
+export async function getRehearsalsByDateRange(startDate: string, endDate: string): Promise<RehearsalData[]> {
+    try {
+        const rehearsalsRef = collection(db, 'rehearsals');
+        const q = query(rehearsalsRef, where("date", ">=", startDate), where("date", "<=", endDate), orderBy("date"), orderBy("time"));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) return [];
+        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as RehearsalData[];
+    } catch (error) {
+        console.error("Error fetching rehearsals by date range:", error);
+        return [];
+    }
+}
+
+export async function getFinancialSummary(startDate: string, endDate: string) {
+    try {
+        const eventsRef = collection(db, 'events');
+        const manualEntriesRef = collection(db, 'manualFinanceEntries');
+
+        const eventsQuery = query(eventsRef, where('eventDate', '>=', startDate), where('eventDate', '<=', endDate));
+        const manualEntriesQuery = query(manualEntriesRef, where('date', '>=', startDate), where('date', '<=', endDate));
+
+        const [eventsSnapshot, manualEntriesSnapshot] = await Promise.all([
+            getDocs(eventsQuery),
+            getDocs(manualEntriesQuery)
+        ]);
+
+        const eventsData = eventsSnapshot.docs.map(processDocTimestamps).filter(Boolean) as EventData[];
+        const manualEntriesData = manualEntriesSnapshot.docs.map(processDocTimestamps).filter(Boolean) as ManualFinanceEntry[];
+
+        const income = eventsData.reduce((acc, e) => acc + (e.externalGroup ? 0 : e.contractedAmount), 0) +
+                       manualEntriesData.filter(m => m.type === 'income').reduce((acc, m) => acc + m.amount, 0);
+
+        const expenses = eventsData.reduce((acc, e) => acc + (e.externalGroup ? 0 : (e.musiciansPay || 0)), 0) +
+                         manualEntriesData.filter(m => m.type === 'expense').reduce((acc, m) => acc + m.amount, 0);
+        
+        const netBalance = income - expenses;
+
+        return {
+            totalIncome: income,
+            totalExpenses: expenses,
+            netBalance: netBalance,
+            numberOfEvents: eventsData.length,
+            numberOfTransactions: eventsData.length + manualEntriesData.length
+        };
+    } catch (error) {
+        console.error("Error fetching financial summary:", error);
+        return { totalIncome: 0, totalExpenses: 0, netBalance: 0, numberOfEvents: 0, numberOfTransactions: 0, error: "Failed to fetch financial data." };
+    }
+}

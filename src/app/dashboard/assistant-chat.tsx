@@ -117,7 +117,7 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
       </CardHeader>
       <CardContent className="flex-1 p-0">
         <ScrollArea className="h-full" ref={scrollAreaRef}>
-          <div className="space-y-4 p-4">
+          <div className="space-y-4 px-4 pt-4 pb-8">
             {messages.map((message, index) => (
               <div
                 key={index}

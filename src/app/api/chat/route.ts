@@ -2,7 +2,7 @@
 import {NextRequest, NextResponse} from 'next/server';
 import OpenAI from 'openai';
 import {type ChatCompletionMessageParam} from 'openai/resources/chat/completions';
-import {createEvent, createRehearsal} from '@/services/eventService';
+import {createEvent, createRehearsal, getEventsByDateRange, getRehearsalsByDateRange, getFinancialSummary} from '@/services/eventService';
 import {EVENT_PLANS} from '@/lib/constants';
 
 // Initialize OpenAI client
@@ -88,6 +88,36 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
         },
     },
   },
+  {
+    type: 'function',
+    function: {
+        name: 'get_schedule_for_dates',
+        description: 'Recupera una lista de eventos y ensayos para un rango de fechas específico. Úsalo para responder preguntas sobre la agenda, como "¿qué tenemos mañana?" o "¿hay algo para la próxima semana?".',
+        parameters: {
+            type: 'object',
+            properties: {
+                startDate: { type: 'string', description: 'La fecha de inicio para la búsqueda en formato YYYY-MM-DD.' },
+                endDate: { type: 'string', description: 'La fecha de fin para la búsqueda en formato YYYY-MM-DD. Si no se especifica, se usará la fecha de inicio.' }
+            },
+            required: ['startDate']
+        }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+        name: 'get_financial_summary_for_dates',
+        description: 'Proporciona un resumen financiero (ingresos, gastos, balance) para un período de tiempo determinado. Utiliza esta herramienta para responder preguntas sobre el estado financiero.',
+        parameters: {
+            type: 'object',
+            properties: {
+                startDate: { type: 'string', description: 'La fecha de inicio para el resumen en formato YYYY-MM-DD.' },
+                endDate: { type: 'string', description: 'La fecha de fin para el resumen en formato YYYY-MM-DD.' }
+            },
+            required: ['startDate', 'endDate']
+        }
+    }
+  }
 ];
 
 
@@ -107,11 +137,16 @@ export async function POST(req: NextRequest) {
   }
   
   const getToday = () => new Date().toISOString().split('T')[0];
+  const getTomorrow = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  };
 
   const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
-      content: `Eres "Maestro Mariachi AI", un asistente experto en la gestión de la agenda del grupo "Mariachi Reyes de México". Tu objetivo es ayudar a coordinar y agendar eventos y ensayos de forma eficiente. Hoy es ${new Date().toLocaleDateString('es-DO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. Utiliza la herramienta 'create_event' para agendar presentaciones para clientes. Usa la herramienta 'create_rehearsal' para programar prácticas para la banda. Nunca confundas un ensayo con un evento de cliente. Pide cualquier información que falte para usar la herramienta correcta. Siempre confirma la creación del evento o ensayo al usuario. Si el usuario dice "hoy", usa la fecha ${getToday()}. Si dice "mañana", calcula la fecha correspondiente.`,
+      content: `Eres "Maestro Mariachi AI", un asistente experto en la gestión del grupo "Mariachi Reyes de México". Hoy es ${new Date().toLocaleDateString('es-DO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. Tienes acceso de SOLO LECTURA a la agenda y las finanzas. Para responder preguntas sobre la agenda (eventos o ensayos), usa la herramienta 'get_schedule_for_dates'. Para preguntas sobre finanzas, usa 'get_financial_summary_for_dates'. Solo debes usar 'create_event' o 'create_rehearsal' cuando el usuario te pida explícitamente CREAR algo nuevo. Nunca modifiques datos a menos que te lo pidan. Si el usuario dice "hoy", usa la fecha ${getToday()}. Si dice "mañana", usa la fecha ${getTomorrow()}. Para rangos como "esta semana", calcula el rango de 7 días a partir de hoy.`,
     },
     // Add previous messages for context
     ...history,
@@ -178,9 +213,7 @@ export async function POST(req: NextRequest) {
             if (functionArgs.date.toLowerCase() === 'hoy') {
                 functionArgs.date = getToday();
             } else if (functionArgs.date.toLowerCase() === 'mañana') {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                functionArgs.date = tomorrow.toISOString().split('T')[0];
+                functionArgs.date = getTomorrow();
             }
             const result = await createRehearsal(functionArgs);
 
@@ -190,6 +223,23 @@ export async function POST(req: NextRequest) {
             } else {
                 functionResponseContent = `Hubo un error al crear el ensayo: ${result.error}. Informa al usuario del problema.`;
             }
+        } else if (functionName === 'get_schedule_for_dates') {
+            const { startDate, endDate } = functionArgs;
+            const finalEndDate = endDate || startDate;
+            const [events, rehearsals] = await Promise.all([
+                getEventsByDateRange(startDate, finalEndDate),
+                getRehearsalsByDateRange(startDate, finalEndDate)
+            ]);
+
+            if (events.length === 0 && rehearsals.length === 0) {
+                functionResponseContent = `No se encontraron eventos ni ensayos entre ${startDate} y ${finalEndDate}.`;
+            } else {
+                functionResponseContent = `Se encontraron ${events.length} eventos y ${rehearsals.length} ensayos. Detalles: ${JSON.stringify({events, rehearsals})}`;
+            }
+        } else if (functionName === 'get_financial_summary_for_dates') {
+            const { startDate, endDate } = functionArgs;
+            const summary = await getFinancialSummary(startDate, endDate);
+            functionResponseContent = `Resumen financiero para el período de ${startDate} a ${endDate}: ${JSON.stringify(summary)}.`;
         }
 
         messages.push({
