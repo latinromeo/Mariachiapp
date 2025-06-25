@@ -8,7 +8,6 @@ import {EVENT_PLANS} from '@/lib/constants';
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  baseURL: "https://api.openai.com/v1"
 });
 
 // Define the structure of the event creation tool
@@ -17,7 +16,7 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'create_event',
-      description: 'Crea un nuevo evento en el calendario del mariachi. Utiliza la fecha actual si el usuario no especifica una. Extrae todos los parámetros posibles de la conversación.',
+      description: 'Crea un nuevo evento. IMPORTANTE: La fecha de hoy es 25 de junio de 2025. Calcula cualquier fecha relativa (como "hoy" o "mañana") a partir de esa fecha base.',
       parameters: {
         type: 'object',
         properties: {
@@ -63,7 +62,7 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     type: 'function',
     function: {
         name: 'create_rehearsal',
-        description: 'Crea un nuevo ensayo para la banda. No lo uses para eventos de clientes. Los ensayos no tienen cliente, plan o costo.',
+        description: 'Crea un nuevo ensayo para la banda. IMPORTANTE: La fecha de hoy es 25 de junio de 2025. Calcula cualquier fecha relativa (como "hoy" o "mañana") a partir de esa fecha base.',
         parameters: {
             type: 'object',
             properties: {
@@ -92,7 +91,7 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     type: 'function',
     function: {
         name: 'get_schedule_for_dates',
-        description: 'Recupera una lista de eventos y ensayos para un rango de fechas. Siempre debes proporcionar \'startDate\' y \'endDate\'. Para consultas de un solo día (como "hoy" o "mañana"), ambas fechas deben ser la misma.',
+        description: 'Recupera una lista de eventos y ensayos para un rango de fechas. IMPORTANTE: La fecha de hoy es 25 de junio de 2025. Calcula startDate y endDate basándote en esa fecha. Para un solo día (como "hoy" o "mañana"), ambas fechas deben ser la misma.',
         parameters: {
             type: 'object',
             properties: {
@@ -237,7 +236,7 @@ export async function POST(req: NextRequest) {
   const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
-      content: `${newSystemPrompt} Asume que la fecha de hoy es miércoles, 25 de junio de 2025. Usa esta fecha como base para cualquier cálculo de fechas relativas (hoy, mañana, esta semana, etc.).`,
+      content: newSystemPrompt,
     },
     // Add previous messages for context
     ...history,
