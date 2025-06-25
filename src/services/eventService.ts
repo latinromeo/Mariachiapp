@@ -99,6 +99,7 @@ export interface EventData {
   updatedAt: any;
   status: 'confirmed' | 'pending' | 'external' | 'cancelled' | 'completed';
   receiptUrlPDF?: string;
+  forceReceiptGeneration?: boolean;
 }
 
 export interface SongToRehearse {
@@ -187,7 +188,7 @@ export interface MusicianExpense {
 
 // --- FORM INPUT TYPES ---
 
-type EventInputData = Omit<EventData, 'id'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'|'receiptUrlPDF'> & { 
+type EventInputData = Omit<EventData, 'id'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'|'receiptUrlPDF'|'forceReceiptGeneration'> & { 
     otherExternalContact?: string;
 };
 type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;
@@ -467,6 +468,22 @@ export async function deleteEvent(id: string): Promise<{ success: boolean; error
     } catch (error) {
         console.error("Error deleting event:", error);
         return { success: false, error: "Failed to delete event from database." };
+    }
+}
+
+export async function triggerReceiptRegeneration(eventId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const eventRef = doc(db, "events", eventId);
+        // This update will trigger the onEventCompleted function again.
+        // We also set receiptUrlPDF to null to show the "Generating..." state immediately.
+        await updateDoc(eventRef, {
+            forceReceiptGeneration: true,
+            receiptUrlPDF: null,
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error triggering receipt regeneration:", error);
+        return { success: false, error: "Failed to trigger receipt regeneration." };
     }
 }
 

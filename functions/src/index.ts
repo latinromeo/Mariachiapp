@@ -170,15 +170,15 @@ export const onEventCompleted = onDocumentUpdated({region: "us-central1", docume
         return;
     }
 
-    // The core logic: proceed only if status transitions to 'completed'.
-    if (beforeData.status !== "completed" && afterData.status === "completed") {
-        logger.log(`Event ${eventId} completed. Starting receipt generation.`);
+    const shouldGenerateOnComplete = beforeData.status !== "completed" && afterData.status === "completed";
+    const shouldForceGenerate = afterData.forceReceiptGeneration === true;
+
+    if (shouldGenerateOnComplete || shouldForceGenerate) {
+        logger.log(`Event ${eventId} action triggered. Starting receipt generation. Reason: ${shouldForceGenerate ? 'Forced' : 'Completed'}`);
         
         try {
-            // Step 1: Generate PDF from event data.
             const pdfBuffer = await generateReceipt(afterData);
             
-            // Step 2: Define file path and upload to Storage.
             const bucket = storage.bucket();
             const clientNameForFile = afterData.clientName || "sin_nombre";
             const sanitizedClientName = sanitizeFilename(clientNameForFile);
@@ -190,7 +190,6 @@ export const onEventCompleted = onDocumentUpdated({region: "us-central1", docume
             });
             logger.log(`Receipt for ${eventId} uploaded to Storage at path: ${filePath}`);
 
-            // Step 3: Generate a long-lived signed URL. This is more robust than public URLs.
             const [signedUrl] = await file.getSignedUrl({
               action: "read",
               expires: "01-01-2100", // A very distant future date.
@@ -198,19 +197,27 @@ export const onEventCompleted = onDocumentUpdated({region: "us-central1", docume
 
             logger.log(`Generated signed URL for ${eventId}: ${signedUrl}`);
             
-            // Step 4: Update the event document in Firestore with the new PDF URL.
-            await db.collection("events").doc(eventId).update({
+            const finalUpdates: { [key: string]: any } = {
                 receiptUrlPDF: signedUrl,
-            });
+            };
+            if (shouldForceGenerate) {
+                finalUpdates.forceReceiptGeneration = false;
+            }
+
+            await db.collection("events").doc(eventId).update(finalUpdates);
 
             logger.log(`Successfully updated event ${eventId} with receipt URL.`);
 
         } catch (error) {
             logger.error(`Failed to process receipt for event ${eventId}. Error:`, error);
-            // Optionally, update the document to indicate failure
-             await db.collection("events").doc(eventId).update({
-                receiptUrlPDF: "error", // Indicate that generation failed
-            }).catch((e) => logger.error(`Could not update event ${eventId} with error state.`, e));
+            const finalUpdates: { [key: string]: any } = {
+                receiptUrlPDF: "error",
+            };
+            if (shouldForceGenerate) {
+                finalUpdates.forceReceiptGeneration = false;
+            }
+             await db.collection("events").doc(eventId).update(finalUpdates)
+             .catch((e) => logger.error(`Could not update event ${eventId} with error state.`, e));
         }
     }
 });

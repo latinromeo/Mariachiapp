@@ -1,19 +1,19 @@
 
 "use client"
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getEventById, type EventData, deleteEvent } from "@/services/eventService";
-import { ArrowLeft, Calendar, DollarSign, Edit, FileText, Loader2, MapPin, MoreVertical, Phone, User, Trash2, XCircle } from "lucide-react";
+import { getEventById, type EventData, deleteEvent, triggerReceiptRegeneration } from "@/services/eventService";
+import { ArrowLeft, Calendar, DollarSign, Edit, FileText, Loader2, MapPin, MoreVertical, Phone, User, Trash2, XCircle, RefreshCw } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useUser } from "@/lib/auth";
-import { formatTime } from "@/lib/utils";
+import { formatTime, cn } from "@/lib/utils";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -48,23 +48,24 @@ export default function EventDetailPage() {
     const eventId = params.id as string;
     const [event, setEvent] = useState<EventData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isRegenerating, setIsRegenerating] = useState(false);
     const { permissions } = useUser();
     const { toast } = useToast();
-
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
+    
+    const fetchEvent = useCallback(async () => {
+        if (!eventId) return;
+        setIsLoading(true);
+        const data = await getEventById(eventId);
+        setEvent(data);
+        setIsLoading(false);
+    }, [eventId]);
 
     useEffect(() => {
-        if (eventId) {
-            const fetchEvent = async () => {
-                setIsLoading(true);
-                const data = await getEventById(eventId);
-                setEvent(data);
-                setIsLoading(false);
-            };
-            fetchEvent();
-        }
-    }, [eventId]);
+        fetchEvent();
+    }, [fetchEvent]);
+
 
     const handleDelete = async () => {
         if (!event) return;
@@ -85,6 +86,27 @@ export default function EventDetailPage() {
             setIsDeleting(false);
         }
     };
+    
+    const handleRegenerate = async () => {
+        if (!event) return;
+        setIsRegenerating(true);
+        const result = await triggerReceiptRegeneration(event.id);
+        if (result.success) {
+            toast({
+                title: "Regenerando Recibo",
+                description: "El proceso ha comenzado. El enlace aparecerá aquí en breve.",
+            });
+            // Poll for changes
+            setTimeout(fetchEvent, 5000); // Check again after 5 seconds
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: result.error || "No se pudo iniciar la regeneración.",
+            });
+        }
+        setIsRegenerating(false);
+    };
 
 
     if (isLoading) {
@@ -103,7 +125,7 @@ export default function EventDetailPage() {
         return <div>Evento no encontrado.</div>
     }
 
-    const eventDate = new Date(event.eventDate);
+    const eventDate = parseISO(event.eventDate);
 
     return (
         <>
@@ -178,13 +200,21 @@ export default function EventDetailPage() {
                     </div>
                 </div>
                 <div className="flex gap-2 justify-end">
-                     {event.status === 'completed' ? (
+                    {event.status === 'completed' ? (
                         event.receiptUrlPDF ? (
                             event.receiptUrlPDF === 'error' ? (
+                                <>
                                 <Button variant="destructive" disabled>
                                     <XCircle className="mr-2 h-4 w-4" />
                                     Error al generar PDF
                                 </Button>
+                                {permissions.canCreateEvents && (
+                                     <Button onClick={handleRegenerate} disabled={isRegenerating}>
+                                        <RefreshCw className={cn("mr-2 h-4 w-4", isRegenerating && "animate-spin")} />
+                                        Regenerar Recibo
+                                    </Button>
+                                )}
+                                </>
                             ) : (
                                 <Button asChild variant="secondary">
                                     <Link href={event.receiptUrlPDF} target="_blank" rel="noopener noreferrer">
@@ -194,10 +224,18 @@ export default function EventDetailPage() {
                                 </Button>
                             )
                         ) : (
+                             <>
                             <Button variant="secondary" disabled>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 Generando Recibo...
                             </Button>
+                            {permissions.canCreateEvents && (
+                                 <Button onClick={handleRegenerate} disabled={isRegenerating}>
+                                    <RefreshCw className={cn("mr-2 h-4 w-4", isRegenerating && "animate-spin")} />
+                                    Regenerar Recibo
+                                </Button>
+                            )}
+                            </>
                         )
                     ) : null}
                     <DropdownMenu>
