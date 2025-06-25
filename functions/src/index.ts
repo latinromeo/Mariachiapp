@@ -1,6 +1,5 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import axios from "axios";
 import {PDFDocument, rgb, StandardFonts} from "pdf-lib";
 import {format, parseISO} from "date-fns";
 import {es} from "date-fns/locale";
@@ -55,11 +54,11 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // 1. Logo
-  const logoUrl = `https://${process.env.GCLOUD_PROJECT}.web.app/logo.png`;
+  // 1. Logo from Firebase Storage
+  const bucket = storage.bucket();
+  const logoFile = bucket.file("logo.png"); // Assumes logo.png is in the root of the bucket
   try {
-    const logoImageBytes = await axios.get(logoUrl, {responseType: "arraybuffer"})
-        .then((res) => res.data);
+    const [logoImageBytes] = await logoFile.download();
     const logoImage = await pdfDoc.embedPng(logoImageBytes);
     const logoDims = logoImage.scale(0.25);
     page.drawImage(logoImage, {
@@ -69,8 +68,9 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
       height: logoDims.height,
     });
   } catch (error) {
-    functions.logger.error("Could not fetch or embed logo. Ensure logo.png exists in your public folder and hosting is deployed.", error);
+    functions.logger.error("Could not fetch or embed logo from Storage. Ensure logo.png exists in the root of your Storage bucket.", error);
   }
+
 
   let y = height - 140;
 
