@@ -87,7 +87,7 @@ export function RehearsalForm({ initialData, rehearsalId }: RehearsalFormProps) 
 
   const timeOptions = useMemo(() => {
     const options = [];
-    for (let i = 8; i < 22; i++) { // From 8 AM to 9 PM
+    for (let i = 6; i < 22; i++) { // From 6 AM to 9:30 PM
       for (let j = 0; j < 2; j++) {
         const hour = i;
         const minute = j * 30;

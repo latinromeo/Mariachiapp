@@ -200,8 +200,22 @@ export function EventForm({ initialData, eventId }: EventFormProps) {
 
   const timeOptions = useMemo(() => {
     const options = [];
-    for (let i = 0; i < 24; i++) {
+    // Generate times from 6:00 AM to 11:30 PM
+    for (let i = 6; i < 24; i++) {
       for (let j = 0; j < 2; j++) {
+        const hour = i;
+        const minute = j * 30;
+        const date = new Date();
+        date.setHours(hour, minute);
+        const formattedHour = (date.getHours() % 12) || 12;
+        const formattedMinute = date.getMinutes().toString().padStart(2, '0');
+        const ampm = date.getHours() >= 12 ? 'PM' : 'AM';
+        options.push(`${formattedHour}:${formattedMinute} ${ampm}`);
+      }
+    }
+    // Generate times from 12:00 AM to 5:30 AM
+    for (let i = 0; i < 6; i++) {
+       for (let j = 0; j < 2; j++) {
         const hour = i;
         const minute = j * 30;
         const date = new Date();
