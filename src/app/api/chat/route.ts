@@ -92,14 +92,14 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     type: 'function',
     function: {
         name: 'get_schedule_for_dates',
-        description: 'Recupera una lista de eventos y ensayos para un rango de fechas. Para consultas de un solo día (como "mañana" o "hoy"), solo necesitas proporcionar \'startDate\'. Para rangos (como "este mes" o "próxima semana"), debes calcular y proporcionar tanto \'startDate\' como \'endDate\'.',
+        description: 'Recupera una lista de eventos y ensayos para un rango de fechas. Siempre debes proporcionar \'startDate\' y \'endDate\'. Para consultas de un solo día (como "hoy" o "mañana"), ambas fechas deben ser la misma.',
         parameters: {
             type: 'object',
             properties: {
                 startDate: { type: 'string', description: 'La fecha de inicio para la búsqueda en formato YYYY-MM-DD.' },
-                endDate: { type: 'string', description: 'La fecha de fin para la búsqueda en formato YYYY-MM-DD. Obligatorio para consultas de rangos como "este mes".' }
+                endDate: { type: 'string', description: 'La fecha de fin para la búsqueda en formato YYYY-MM-DD.' }
             },
-            required: ['startDate']
+            required: ['startDate', 'endDate']
         }
     }
   },
@@ -306,14 +306,13 @@ export async function POST(req: NextRequest) {
             }
         } else if (functionName === 'get_schedule_for_dates') {
             const { startDate, endDate } = functionArgs;
-            const finalEndDate = endDate || startDate;
             const [events, rehearsals] = await Promise.all([
-                getEventsByDateRange(startDate, finalEndDate),
-                getRehearsalsByDateRange(startDate, finalEndDate)
+                getEventsByDateRange(startDate, endDate),
+                getRehearsalsByDateRange(startDate, endDate)
             ]);
 
             if (events.length === 0 && rehearsals.length === 0) {
-                functionResponseContent = `No se encontraron eventos ni ensayos entre ${startDate} y ${finalEndDate}.`;
+                functionResponseContent = `No se encontraron eventos ni ensayos entre ${startDate} y ${endDate}.`;
             } else {
                 functionResponseContent = `Se encontraron ${events.length} eventos y ${rehearsals.length} ensayos. Detalles: ${JSON.stringify({events, rehearsals})}`;
             }
