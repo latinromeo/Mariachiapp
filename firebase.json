@@ -1,7 +1,6 @@
 
 {
   "hosting": {
-    "site": "mariachiappdefirebase",
     "appAssociation": "AUTO"
   }
 }
