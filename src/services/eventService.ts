@@ -98,6 +98,7 @@ export interface EventData {
   createdAt: any;
   updatedAt: any;
   status: 'confirmed' | 'pending' | 'external' | 'cancelled' | 'completed';
+  receiptUrlPDF?: string;
 }
 
 export interface SongToRehearse {
@@ -186,7 +187,7 @@ export interface MusicianExpense {
 
 // --- FORM INPUT TYPES ---
 
-type EventInputData = Omit<EventData, 'id'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'> & { 
+type EventInputData = Omit<EventData, 'id'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'|'receiptUrlPDF'> & { 
     otherExternalContact?: string;
 };
 type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;

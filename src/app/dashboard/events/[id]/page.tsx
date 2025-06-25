@@ -132,6 +132,14 @@ export default function EventDetailPage() {
                 </div>
             </div>
             <div className="flex gap-2 justify-end">
+                {event.receiptUrlPDF && (
+                    <Button asChild variant="secondary">
+                        <Link href={event.receiptUrlPDF} target="_blank" rel="noopener noreferrer">
+                            <FileText className="mr-2 h-4 w-4" />
+                            Ver Recibo PDF
+                        </Link>
+                    </Button>
+                )}
                 <Button variant="outline">
                     <MoreVertical className="mr-2 h-4 w-4" />
                     Más Acciones

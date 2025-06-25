@@ -189,6 +189,11 @@ export function DayDetailModal({ isOpen, onClose, onRefresh, date, events, rehea
                                         Completar
                                     </Button>
                                 )}
+                                {event.status === 'completed' && event.receiptUrlPDF && (
+                                    <a href={event.receiptUrlPDF} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                                        Ver Recibo <FileText className="h-4 w-4" />
+                                    </a>
+                                )}
                             </div>
                         </div>
                     )})}
