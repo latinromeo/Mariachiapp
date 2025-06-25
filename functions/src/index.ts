@@ -1,4 +1,5 @@
-import * as functions from "firebase-functions";
+import {onDocumentUpdated} from "firebase-functions/v2/firestore";
+import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 import {PDFDocument, rgb, StandardFonts} from "pdf-lib";
 import {format, parseISO} from "date-fns";
@@ -75,10 +76,10 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
           height: logoDims.height,
         });
     } else {
-        functions.logger.warn("Logo file 'logo.png' does not exist in the root of the Storage bucket. Skipping logo.");
+        logger.warn("Logo file 'logo.png' does not exist in the root of the Storage bucket. Skipping logo.");
     }
   } catch (error) {
-    functions.logger.error("Could not fetch or embed logo from Storage.", error);
+    logger.error("Could not fetch or embed logo from Storage.", error);
   }
 
 
@@ -137,7 +138,7 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
         const parsedDate = parseISO(eventDate);
         formattedDate = format(parsedDate, "eeee, dd 'de' MMMM 'de' yyyy", {locale: es});
     } catch (e) {
-        functions.logger.error("Could not parse event date:", eventDate, e);
+        logger.error("Could not parse event date:", eventDate, e);
     }
   }
   const formattedTime = formatTime(eventTime);
@@ -174,16 +175,22 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
 }
 
 
-export const onEventCompleted = functions.region("us-central1")
-    .firestore.document("events/{eventId}")
-    .onUpdate(async (change, context) => {
-      const eventId = context.params.eventId;
-      const beforeData = change.before.data();
-      const afterData = change.after.data();
+export const onEventCompleted = onDocumentUpdated(
+    {region: "us-central1", document: "events/{eventId}"},
+    async (event) => {
+      const eventId = event.params.eventId;
+      const beforeData = event.data?.before.data();
+      const afterData = event.data?.after.data();
+
+      // Ensure data exists
+      if (!beforeData || !afterData) {
+          logger.log("Either before or after data is missing. Exiting function for event:", eventId);
+          return;
+      }
 
       // Check if status changed to 'completed'
       if (beforeData.status !== "completed" && afterData.status === "completed") {
-        functions.logger.log(`Event ${eventId} marked as completed. Generating receipt.`);
+        logger.log(`Event ${eventId} marked as completed. Generating receipt.`);
 
         try {
           // 1. Generate PDF
@@ -205,17 +212,16 @@ export const onEventCompleted = functions.region("us-central1")
           // 3. Make file public and get URL
           await file.makePublic();
           const publicUrl = file.publicUrl();
-          functions.logger.log(`Receipt uploaded to ${publicUrl}`);
+          logger.log(`Receipt uploaded to ${publicUrl}`);
 
           // 4. Update Firestore document with the URL
           await db.collection("events").doc(eventId).update({
             receiptUrlPDF: publicUrl,
           });
 
-          functions.logger.log(`Successfully updated event ${eventId} with receipt URL.`);
+          logger.log(`Successfully updated event ${eventId} with receipt URL.`);
         } catch (error) {
-          functions.logger.error(`Failed to generate or upload receipt for event ${eventId}:`, error);
+          logger.error(`Failed to generate or upload receipt for event ${eventId}:`, error);
         }
       }
-      return null;
     });
