@@ -2,7 +2,7 @@
 "use client"
 
 import Link from "next/link";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -54,7 +54,7 @@ export default function RehearsalsPage() {
   const { toast } = useToast();
   const { permissions } = useUser();
 
-  const fetchRehearsals = async () => {
+  const fetchRehearsals = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await getRehearsals();
@@ -65,11 +65,15 @@ export default function RehearsalsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchRehearsals();
-  }, []);
+    window.addEventListener('agendaUpdated', fetchRehearsals);
+    return () => {
+      window.removeEventListener('agendaUpdated', fetchRehearsals);
+    };
+  }, [fetchRehearsals]);
 
   const filteredRehearsals = useMemo(() => {
     if (!searchTerm) {

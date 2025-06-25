@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -55,7 +55,7 @@ export default function ClientsPage() {
   const router = useRouter();
   const { permissions } = useUser();
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await getClients();
@@ -65,11 +65,15 @@ export default function ClientsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchClients();
-  }, []);
+    window.addEventListener('agendaUpdated', fetchClients);
+    return () => {
+      window.removeEventListener('agendaUpdated', fetchClients);
+    };
+  }, [fetchClients]);
 
   const filteredClients = useMemo(() => {
     if (!searchTerm) return clients;

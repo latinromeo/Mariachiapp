@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -30,7 +30,7 @@ export default function RepertoirePage() {
   const [songToEdit, setSongToEdit] = useState<SongDetail | null>(null);
   const { permissions } = useUser();
 
-  const fetchSongs = async () => {
+  const fetchSongs = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await getSongs();
@@ -40,11 +40,15 @@ export default function RepertoirePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchSongs();
-  }, []);
+    window.addEventListener('agendaUpdated', fetchSongs);
+    return () => {
+      window.removeEventListener('agendaUpdated', fetchSongs);
+    };
+  }, [fetchSongs]);
   
   const filteredSongs = useMemo(() => {
     if (!searchTerm) {

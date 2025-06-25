@@ -176,6 +176,10 @@ export default function MyIncomePage() {
     useEffect(() => {
         setIsClient(true);
         fetchData();
+        window.addEventListener('agendaUpdated', fetchData);
+        return () => {
+          window.removeEventListener('agendaUpdated', fetchData);
+        };
     }, [fetchData]);
 
     const {
@@ -403,5 +407,3 @@ export default function MyIncomePage() {
     </div>
   );
 }
-
-    

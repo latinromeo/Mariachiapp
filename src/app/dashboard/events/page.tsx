@@ -66,6 +66,10 @@ export default function EventsCalendarPage() {
   React.useEffect(() => {
     setIsClient(true);
     fetchData();
+    window.addEventListener('agendaUpdated', fetchData);
+    return () => {
+      window.removeEventListener('agendaUpdated', fetchData);
+    };
   }, [fetchData]);
 
 

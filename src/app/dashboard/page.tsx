@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { format, getYear, getMonth, isSameMonth, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -45,8 +45,7 @@ export default function DashboardPage() {
   const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
   const [years, setYears] = useState<number[]>([]);
 
-  useEffect(() => {
-    const fetchAllData = async () => {
+  const fetchAllData = useCallback(async () => {
       setIsLoading(true);
       try {
         const [eventsData, rehearsalsData] = await Promise.all([
@@ -61,17 +60,23 @@ export default function DashboardPage() {
       } finally {
         setIsLoading(false);
       }
-    };
-    
+    }, [toast]);
+  
+  useEffect(() => {
     fetchAllData();
-
+    
     const today = new Date();
     setSelectedMonth(getMonth(today));
     setSelectedYear(getYear(today));
     const currentYear = getYear(today);
     setYears(Array.from({ length: 11 }, (_, i) => currentYear - 5 + i));
     setIsClient(true);
-  }, [toast]);
+    
+    window.addEventListener('agendaUpdated', fetchAllData);
+    return () => {
+        window.removeEventListener('agendaUpdated', fetchAllData);
+    };
+  }, [fetchAllData]);
 
   const pendingActivities = useMemo((): Activity[] => {
     if (!isClient || typeof selectedYear === 'undefined' || typeof selectedMonth === 'undefined') {

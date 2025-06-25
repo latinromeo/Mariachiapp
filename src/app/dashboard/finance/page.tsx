@@ -91,6 +91,10 @@ export default function FinancePage() {
     useEffect(() => {
         setIsClient(true);
         fetchData();
+        window.addEventListener('agendaUpdated', fetchData);
+        return () => {
+          window.removeEventListener('agendaUpdated', fetchData);
+        };
     }, [fetchData]);
 
     const { 

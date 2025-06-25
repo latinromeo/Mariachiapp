@@ -119,6 +119,7 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
           title: "¡Agenda Actualizada!",
           description: "El asistente ha realizado cambios en tu agenda.",
         });
+        window.dispatchEvent(new Event('agendaUpdated'));
         router.refresh();
       }
 
