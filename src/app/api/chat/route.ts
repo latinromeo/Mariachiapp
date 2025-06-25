@@ -2,7 +2,18 @@
 import {NextRequest, NextResponse} from 'next/server';
 import OpenAI from 'openai';
 import {type ChatCompletionMessageParam} from 'openai/resources/chat/completions';
-import {createEvent, createRehearsal, getEventsByDateRange, getRehearsalsByDateRange, getFinancialSummary, getClientCount} from '@/services/eventService';
+import {
+    createEvent, 
+    createRehearsal, 
+    getEventsByDateRange, 
+    getRehearsalsByDateRange, 
+    getFinancialSummary, 
+    getClientCount,
+    deleteEvent,
+    deleteRehearsal,
+    updateEvent,
+    updateRehearsal
+} from '@/services/eventService';
 import {EVENT_PLANS} from '@/lib/constants';
 
 // Initialize OpenAI client
@@ -16,24 +27,22 @@ Eres Many AI, el asistente virtual del mariachi "Reyes de México". Tu función 
 FUNCIONES PRINCIPALES:
 
 1. GESTIÓN DE AGENDA (Eventos y Ensayos):
-- Puedes consultar eventos y ensayos.
-- Puedes crear nuevos eventos o ensayos.
-- Cuando el usuario pregunte por la agenda para un período de tiempo (ej. "qué hay para este mes", "próxima semana", "agenda de hoy"), DEBES calcular el rango de fechas correspondiente (parámetros 'startDate' y 'endDate' en formato YYYY-MM-DD) y usar la herramienta 'get_schedule_for_dates' para obtener la información.
-- Para "hoy", 'startDate' y 'endDate' deben ser la fecha actual.
-- Para "mañana", 'startDate' y 'endDate' deben ser la fecha de mañana.
-- Para "esta semana", calcula desde el lunes hasta el domingo de la semana actual.
-- Para "este mes", calcula desde el primer hasta el último día del mes actual.
-- Para "la próxima semana", calcula desde el próximo lunes hasta el domingo siguiente.
-- NO uses la herramienta sin un rango de fechas válido.
+- Puedes consultar, crear, modificar y eliminar eventos o ensayos.
+- Para consultar, cuando el usuario pregunte por la agenda para un período de tiempo (ej. "qué hay para este mes"), DEBES calcular el rango de fechas ('startDate' y 'endDate' en formato YYYY-MM-DD) y usar la herramienta 'get_schedule_for_dates'.
+- Para "hoy", 'startDate' y 'endDate' deben ser la fecha actual. Para "esta semana", del lunes al domingo actual. Para "este mes", del primer al último día del mes.
+- La información de la agenda que recibes contiene IDs únicos para cada evento y ensayo. Usa estos IDs para modificar o eliminar.
 
-2. GESTIÓN DE CLIENTES:
-- Puedes obtener el número total de clientes registrados usando la herramienta 'get_client_count'.
+2. MODIFICACIÓN Y ELIMINACIÓN:
+- ¡IMPORTANTE! Antes de usar una herramienta para modificar o eliminar (como 'delete_rehearsal', 'delete_event', 'update_rehearsal', 'update_event'), SIEMPRE debes pedir confirmación explícita al usuario.
+- En tu solicitud de confirmación, incluye detalles específicos del ítem para evitar errores. Por ejemplo: "¿Estás seguro de que quieres eliminar el ensayo sobre 'Nuevas Canciones' del martes a las 5pm?".
+- Si la solicitud del usuario es ambigua (ej. "elimina el ensayo del martes" y hay dos), pide que especifique cuál.
+- Una vez que el usuario confirme (ej. "sí, elimina ese", "confirmo"), entonces y solo entonces, llama a la herramienta correspondiente con el ID correcto.
 
-3. FINANZAS:
-- Puedes obtener un resumen financiero para un período usando la herramienta 'get_financial_summary_for_dates'.
-- Interpreta los rangos de fechas igual que para la agenda.
+3. GESTIÓN DE CLIENTES Y FINANZAS:
+- Puedes obtener el número total de clientes ('get_client_count').
+- Puedes obtener un resumen financiero para un período ('get_financial_summary_for_dates').
 
-Siempre sé cortés y finaliza preguntando si puedes ayudar en algo más. Usa emojis útiles: 📅 (fecha), 📍 (ubicación), 💰 (pago), 🎶 (canción), ⚠️ (alerta).
+Siempre sé cortés y finaliza preguntando si puedes ayudar en algo más. Usa emojis útiles: 📅 (fecha), 📍 (ubicación), 💰 (pago), 🎶 (canción), ⚠️ (alerta), ✅ (confirmación), 🗑️ (eliminar).
 `;
 
 
@@ -140,7 +149,89 @@ export async function POST(req: NextRequest) {
               required: ['startDate', 'endDate']
           }
       }
-    }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'delete_rehearsal',
+        description: 'Elimina un ensayo específico. Requiere el ID del ensayo a eliminar. CRÍTICO: Pide siempre confirmación al usuario antes de usar esta herramienta.',
+        parameters: {
+          type: 'object',
+          properties: {
+            rehearsalId: { type: 'string', description: 'El ID único del ensayo a eliminar, obtenido del contexto de la conversación.' },
+          },
+          required: ['rehearsalId'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'delete_event',
+        description: 'Elimina un evento específico. Requiere el ID del evento a eliminar. CRÍTICO: Pide siempre confirmación al usuario antes de usar esta herramienta.',
+        parameters: {
+          type: 'object',
+          properties: {
+            eventId: { type: 'string', description: 'El ID único del evento a eliminar, obtenido del contexto de la conversación.' },
+          },
+          required: ['eventId'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'update_event',
+        description: 'Modifica un evento existente. Requiere el ID del evento y un objeto con los campos a actualizar. CRÍTICO: Pide siempre confirmación al usuario antes de usar esta herramienta.',
+        parameters: {
+          type: 'object',
+          properties: {
+            eventId: { type: 'string', description: 'El ID único del evento a modificar.' },
+            updates: {
+              type: 'object',
+              description: 'Un objeto con los campos y nuevos valores para actualizar del evento.',
+              properties: {
+                clientName: { type: 'string' },
+                clientPhone: { type: 'string' },
+                eventType: { type: 'string' },
+                eventDate: { type: 'string', description: 'La nueva fecha en formato YYYY-MM-DD.' },
+                eventTime: { type: 'string' },
+                plan: { type: 'string', enum: ['express', '30_min', '1_hora', 'personalizado'] },
+                location: { type: 'string' },
+                sector: { type: 'string' },
+                notes: { type: 'string' },
+              },
+            },
+          },
+          required: ['eventId', 'updates'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'update_rehearsal',
+        description: 'Modifica un ensayo existente. Requiere el ID del ensayo y un objeto con los campos a actualizar. CRÍTICO: Pide siempre confirmación al usuario antes de usar esta herramienta.',
+        parameters: {
+          type: 'object',
+          properties: {
+            rehearsalId: { type: 'string', description: 'El ID único del ensayo a modificar.' },
+            updates: {
+              type: 'object',
+              description: 'Un objeto con los campos y nuevos valores para actualizar del ensayo.',
+              properties: {
+                focus: { type: 'string' },
+                date: { type: 'string', description: 'La nueva fecha en formato YYYY-MM-DD.' },
+                time: { type: 'string' },
+                location: { type: 'string' },
+                notes: { type: 'string' },
+              },
+            },
+          },
+          required: ['rehearsalId', 'updates'],
+        },
+      },
+    },
   ];
 
   const systemPrompt = `${baseSystemPrompt}
@@ -176,6 +267,8 @@ export async function POST(req: NextRequest) {
 
     let eventCreated = false;
     let rehearsalCreated = false;
+    let eventModified = false;
+    let rehearsalModified = false;
 
     if (toolCalls) {
       messages.push(responseMessage); // Add assistant's tool-calling message to history
@@ -239,6 +332,40 @@ export async function POST(req: NextRequest) {
             const { startDate, endDate } = functionArgs;
             const summary = await getFinancialSummary(startDate, endDate);
             functionResponseContent = `Resumen financiero para el período de ${startDate} a ${endDate}: ${JSON.stringify(summary)}.`;
+        } else if (functionName === 'delete_event') {
+            const result = await deleteEvent(functionArgs.eventId);
+            if (result.success) {
+              functionResponseContent = `El evento ha sido eliminado exitosamente. Notifica al usuario que la acción se completó.`;
+              eventModified = true;
+            } else {
+              functionResponseContent = `Hubo un error al eliminar el evento: ${result.error}. Informa al usuario del problema.`;
+            }
+        } else if (functionName === 'delete_rehearsal') {
+            const result = await deleteRehearsal(functionArgs.rehearsalId);
+            if (result.success) {
+              functionResponseContent = `El ensayo ha sido eliminado exitosamente. Notifica al usuario que la acción se completó.`;
+              rehearsalModified = true;
+            } else {
+              functionResponseContent = `Hubo un error al eliminar el ensayo: ${result.error}. Informa al usuario del problema.`;
+            }
+        } else if (functionName === 'update_event') {
+            const { eventId, updates } = functionArgs;
+            const result = await updateEvent(eventId, updates);
+            if (result.success) {
+              functionResponseContent = `El evento ha sido modificado exitosamente. Notifica al usuario que la acción se completó.`;
+              eventModified = true;
+            } else {
+              functionResponseContent = `Hubo un error al modificar el evento: ${result.error}. Informa al usuario del problema.`;
+            }
+        } else if (functionName === 'update_rehearsal') {
+            const { rehearsalId, updates } = functionArgs;
+            const result = await updateRehearsal(rehearsalId, updates);
+            if (result.success) {
+              functionResponseContent = `El ensayo ha sido modificado exitosamente. Notifica al usuario que la acción se completó.`;
+              rehearsalModified = true;
+            } else {
+              functionResponseContent = `Hubo un error al modificar el ensayo: ${result.error}. Informa al usuario del problema.`;
+            }
         }
 
         messages.push({
@@ -259,6 +386,8 @@ export async function POST(req: NextRequest) {
         reply: finalResponse.choices[0].message.content,
         eventCreated,
         rehearsalCreated,
+        eventModified,
+        rehearsalModified,
       });
     } else {
       // No tool was called, just return the text response
@@ -266,6 +395,8 @@ export async function POST(req: NextRequest) {
         reply: responseMessage.content,
         eventCreated,
         rehearsalCreated,
+        eventModified,
+        rehearsalModified,
       });
     }
   } catch (error: any) {
