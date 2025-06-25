@@ -57,30 +57,60 @@ export default function MediaPage() {
 
   const handleUpload = async () => {
     if (!file) {
-        toast({
-            variant: "destructive",
-            title: "Ningún archivo seleccionado",
-            description: "Por favor, selecciona un archivo para subir.",
-        });
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Ningún archivo seleccionado',
+        description: 'Por favor, selecciona un archivo para subir.',
+      });
+      return;
     }
-    
+
     setIsUploading(true);
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
 
-    let toastTitle = "Análisis de Facturas Desactivado";
-    let toastDescription = "Esta función se ha desactivado temporalmente para resolver un problema de instalación. La carga de archivos es solo una demostración.";
-
-     setTimeout(() => {
-        setIsUploading(false);
-        toast({
-            title: toastTitle,
-            description: toastDescription,
+    reader.onload = async () => {
+      const imageDataUri = reader.result as string;
+      try {
+        const res = await fetch('/api/analyze-invoice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageDataUri }),
         });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Error en el servidor');
+        }
+
+        toast({
+          title: '¡Gasto Registrado!',
+          description: data.message,
+        });
+      } catch (error: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Error al Analizar Factura',
+          description: error.message || 'No se pudo procesar el archivo.',
+        });
+      } finally {
+        setIsUploading(false);
         setFile(null);
-        setFileName("");
+        setFileName('');
         const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-        if (fileInput) fileInput.value = "";
-    }, 1500);
+        if (fileInput) fileInput.value = '';
+      }
+    };
+
+    reader.onerror = (error) => {
+      console.error('Error reading file:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo leer el archivo seleccionado.',
+      });
+      setIsUploading(false);
+    };
   };
 
 
@@ -107,7 +137,7 @@ export default function MediaPage() {
                 <CardHeader>
                     <CardTitle>Subir y Registrar Gasto</CardTitle>
                     <CardDescription>
-                        Sube una foto de una factura y la IA extraerá los datos para registrar el gasto automáticamente. (Función temporalmente desactivada)
+                        Sube una foto de una factura y la IA extraerá los datos para registrar el gasto automáticamente.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -177,4 +207,3 @@ export default function MediaPage() {
     </div>
   );
 }
-
