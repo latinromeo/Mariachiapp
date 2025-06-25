@@ -109,7 +109,7 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
       <CardHeader className="flex flex-row items-center justify-between border-b">
         <div className="flex items-center gap-3">
           <Bot className="h-6 w-6 text-primary" />
-          <CardTitle className="text-lg">Maestro Mariachi AI</CardTitle>
+          <CardTitle className="text-lg">Many AI</CardTitle>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-4 w-4" />
