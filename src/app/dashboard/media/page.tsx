@@ -1,17 +1,19 @@
-
 "use client"
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { es } from "date-fns/locale";
-import { Upload } from "lucide-react";
+import { Upload, Loader2 } from "lucide-react";
 import { useUser, UserRole } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
+import { analyzeInvoice } from "@/ai/flows/analyze-invoice-flow";
+import { createManualFinanceEntry } from "@/services/eventService";
+import { format } from 'date-fns';
+
 
 const TABS_CONFIG: { value: string; label: string; roles: UserRole[] }[] = [
   { value: "invoices", label: "Facturas de Gastos", roles: ['Administrador General', 'Contador', 'Beta Tester'] },
@@ -24,12 +26,13 @@ const TABS_CONFIG: { value: string; label: string; roles: UserRole[] }[] = [
 
 export default function MediaPage() {
   const { user } = useUser();
+  const { toast } = useToast();
   
   const availableTabs = TABS_CONFIG.filter(tab => tab.roles.includes(user.role));
   const [activeTab, setActiveTab] = useState(availableTabs[0]?.value || "");
 
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [fileName, setFileName] = useState("ningún archivo seleccionado");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const months = Array.from({ length: 12 }, (_, i) => ({
     value: String(i + 1),
@@ -41,9 +44,80 @@ export default function MediaPage() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
-      setFileName(event.target.files[0].name);
+      setSelectedFile(event.target.files[0]);
     } else {
-      setFileName("ningún archivo seleccionado");
+      setSelectedFile(null);
+    }
+  };
+
+  const handleUploadAndAnalyze = async () => {
+    if (!selectedFile) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Por favor, selecciona un archivo primero.' });
+        return;
+    }
+    
+    setIsAnalyzing(true);
+    
+    try {
+        const reader = new FileReader();
+        reader.readAsDataURL(selectedFile);
+        reader.onload = async () => {
+            try {
+                const invoiceImageUri = reader.result as string;
+
+                const aiResult = await analyzeInvoice({
+                    invoiceImageUri,
+                    currentDate: format(new Date(), 'yyyy-MM-dd'),
+                });
+                
+                const financeEntry = {
+                    type: 'expense' as const,
+                    description: aiResult.description,
+                    amount: aiResult.amount,
+                    date: aiResult.date,
+                    category: aiResult.category,
+                };
+                
+                const dbResult = await createManualFinanceEntry(financeEntry);
+
+                if (dbResult.success) {
+                    toast({
+                        title: "¡Gasto Registrado!",
+                        description: `Se ha creado un gasto de ${financeEntry.amount} por "${financeEntry.description}".`,
+                    });
+                    setSelectedFile(null);
+                } else {
+                    throw new Error(dbResult.error || "No se pudo guardar el gasto en la base de datos.");
+                }
+            } catch (error: any) {
+                console.error("Error during analysis or DB operation:", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Error en el Proceso',
+                    description: error.message || 'El asistente no pudo procesar la factura. Inténtalo de nuevo.',
+                });
+            } finally {
+                setIsAnalyzing(false);
+            }
+        };
+        reader.onerror = (error) => {
+            console.error("Error reading file:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Error de Lectura',
+                description: 'No se pudo leer el archivo de la factura.',
+            });
+            setIsAnalyzing(false);
+        }
+    } catch (error: any) {
+        // This catch block is for synchronous errors before the reader starts.
+        console.error("Error setting up file reader:", error);
+         toast({
+            variant: 'destructive',
+            title: 'Error Inesperado',
+            description: 'Ocurrió un error al iniciar el proceso de carga.',
+        });
+        setIsAnalyzing(false);
     }
   };
 
@@ -74,41 +148,31 @@ export default function MediaPage() {
         
         <TabsContent value="invoices" className="mt-6">
           <div className="space-y-8">
-             {user.role !== 'Contador' && (
+             {user.role === 'Administrador General' && (
                 <Card>
                 <CardHeader>
-                    <CardTitle>Subir Factura de Gasto</CardTitle>
+                    <CardTitle>Subir y Analizar Factura de Gasto</CardTitle>
+                    <CardDescription>Sube una imagen de una factura y el asistente la registrará como un gasto automáticamente.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid gap-8 md:grid-cols-2 items-start">
-                    <div className="flex flex-col items-center">
-                        <Label className="mb-2 self-start font-medium">Fecha de la Factura:</Label>
-                        <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        className="rounded-md border"
-                        locale={es}
-                        initialFocus
-                        />
-                    </div>
-                    <div className="space-y-4 pt-8">
+                    <div className="space-y-4">
                         <div>
-                        <Label className="font-medium">Seleccionar Archivo de Factura:</Label>
+                        <Label htmlFor="invoice-file-input" className="font-medium">Seleccionar Archivo de Factura:</Label>
                         <div className="flex items-center gap-4 mt-2">
                             <Button asChild className="shrink-0">
                             <label htmlFor="invoice-file-input" className="cursor-pointer">Seleccionar archivo</label>
                             </Button>
-                            <span className="text-sm text-muted-foreground truncate">{fileName}</span>
-                            <Input id="invoice-file-input" type="file" className="hidden" onChange={handleFileChange} />
+                            <span className="text-sm text-muted-foreground truncate">{selectedFile ? selectedFile.name : 'Ningún archivo seleccionado'}</span>
+                            <Input id="invoice-file-input" type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
                         </div>
                         </div>
-                        <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white w-full" disabled>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Subir Factura
+                        <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto" onClick={handleUploadAndAnalyze} disabled={isAnalyzing || !selectedFile}>
+                        {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                        {isAnalyzing ? 'Analizando Factura...' : 'Subir y Registrar Gasto'}
                         </Button>
-                        <p className="text-xs text-muted-foreground text-center">Nota: La subida de archivos a la nube no está implementada. Esto es solo para diseño visual.</p>
-                    </div>
+                        <p className="text-xs text-muted-foreground">
+                            Formatos soportados: JPG, PNG, WEBP.
+                        </p>
                     </div>
                 </CardContent>
                 </Card>
