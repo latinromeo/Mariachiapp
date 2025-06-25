@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       type: 'function',
       function: {
         name: 'create_event',
-        description: `Crea un nuevo evento. ${dateContext}`,
+        description: `Crea una nueva **presentación o evento con un cliente**. Usa esta herramienta para cumpleaños, bodas, serenatas, etc. No la uses para ensayos. ${dateContext}`,
         parameters: {
           type: 'object',
           properties: {
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       type: 'function',
       function: {
           name: 'create_rehearsal',
-          description: `Crea un nuevo ensayo para la banda. ${dateContext}`,
+          description: `Crea un nuevo **ensayo o práctica** para la banda. No la uses para eventos con clientes. ${dateContext}`,
           parameters: {
               type: 'object',
               properties: {
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
       type: 'function',
       function: {
         name: 'delete_rehearsal',
-        description: 'Elimina un ensayo específico. Requiere el ID del ensayo a eliminar. CRÍTICO: Pide siempre confirmación al usuario antes de usar esta herramienta.',
+        description: 'Elimina un **ensayo o práctica** de la banda. Requiere el ID del ensayo. CRÍTICO: Pide siempre confirmación al usuario antes de usar esta herramienta.',
         parameters: {
           type: 'object',
           properties: {
@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
       type: 'function',
       function: {
         name: 'delete_event',
-        description: 'Elimina un evento específico. Requiere el ID del evento a eliminar. CRÍTICO: Pide siempre confirmación al usuario antes de usar esta herramienta.',
+        description: 'Elimina un **evento o presentación** con un cliente. Requiere el ID del evento. CRÍTICO: Pide siempre confirmación al usuario antes de usar esta herramienta.',
         parameters: {
           type: 'object',
           properties: {
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
       type: 'function',
       function: {
         name: 'update_event',
-        description: 'Modifica un evento existente. Requiere el ID del evento y un objeto con los campos a actualizar. CRÍTICO: Pide siempre confirmación al usuario antes de usar esta herramienta.',
+        description: 'Modifica un **evento o presentación** existente con un cliente. Requiere el ID del evento y los campos a actualizar. CRÍTICO: Pide siempre confirmación al usuario antes de usar esta herramienta.',
         parameters: {
           type: 'object',
           properties: {
@@ -211,7 +211,7 @@ export async function POST(req: NextRequest) {
       type: 'function',
       function: {
         name: 'update_rehearsal',
-        description: 'Modifica un ensayo existente. Requiere el ID del ensayo y un objeto con los campos a actualizar. CRÍTICO: Pide siempre confirmación al usuario antes de usar esta herramienta.',
+        description: 'Modifica un **ensayo o práctica** existente de la banda. Requiere el ID del ensayo y los campos a actualizar. CRÍTICO: Pide siempre confirmación al usuario antes de usar esta herramienta.',
         parameters: {
           type: 'object',
           properties: {
