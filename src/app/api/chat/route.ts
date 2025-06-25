@@ -24,17 +24,16 @@ interface RequestBody {
 // Helper function to remove undefined properties from an object before sending to Firestore
 const cleanForFirestore = (data: any): any => {
     if (data === null || data === undefined) {
-        return data;
+        return null; // Return null for undefined or null values
     }
     if (Array.isArray(data)) {
         return data.map(item => cleanForFirestore(item));
     }
-    if (typeof data === 'object') {
+    if (typeof data === 'object' && !(data instanceof Date) && typeof data.toDate !== 'function') {
         const cleaned: { [key: string]: any } = {};
         for (const key of Object.keys(data)) {
-            const value = data[key];
-            if (value !== undefined) {
-                cleaned[key] = cleanForFirestore(value);
+            if (data[key] !== undefined) {
+                cleaned[key] = cleanForFirestore(data[key]);
             }
         }
         return cleaned;

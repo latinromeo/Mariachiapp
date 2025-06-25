@@ -17,26 +17,25 @@ import {
     limit,
     orderBy,
     writeBatch,
-    DocumentSnapshot
+    type DocumentSnapshot
 } from 'firebase/firestore';
 import { EVENT_PLANS } from "@/lib/constants";
 
 // --- HELPER FUNCTIONS ---
 
-// Helper function to remove undefined properties from an object before sending to Firestore
 const cleanForFirestore = (data: any): any => {
     if (data === null || data === undefined) {
-        return data;
+        return null; // Firestore can handle nulls, but not undefined
     }
     if (Array.isArray(data)) {
         return data.map(item => cleanForFirestore(item));
     }
-    if (typeof data === 'object') {
+    // Ensure we don't process Timestamps or other special objects
+    if (typeof data === 'object' && !(data instanceof Date) && typeof data.toDate !== 'function') {
         const cleaned: { [key: string]: any } = {};
         for (const key of Object.keys(data)) {
-            const value = data[key];
-            if (value !== undefined) {
-                cleaned[key] = cleanForFirestore(value);
+            if (data[key] !== undefined) {
+                cleaned[key] = cleanForFirestore(data[key]);
             }
         }
         return cleaned;
@@ -44,13 +43,14 @@ const cleanForFirestore = (data: any): any => {
     return data;
 };
 
-const processDocTimestamps = (doc: DocumentSnapshot) => {
-    const data = doc.data();
+const processDocTimestamps = (docSnap: DocumentSnapshot) => {
+    const data = docSnap.data();
     if (!data) return null;
 
-    const processedData: { [key: string]: any } = { id: doc.id };
+    const processedData: { [key: string]: any } = { id: docSnap.id };
     for (const key in data) {
         const value = data[key];
+        // Check if it's a Firestore Timestamp and convert it
         if (value && typeof value.toDate === 'function') {
             processedData[key] = value.toDate().toISOString();
         } else {
@@ -503,7 +503,7 @@ export async function getRehearsalById(id: string): Promise<RehearsalData | null
     try {
         const docRef = doc(db, 'rehearsals', id);
         const docSnap = await getDoc(docRef);
-        if (!docSnap.exists) {
+        if (!docSnap.exists()) {
             console.error("No such rehearsal!");
             return null;
         }
