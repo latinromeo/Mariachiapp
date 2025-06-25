@@ -1,3 +1,4 @@
+
 // src/services/eventService.ts
 'use server';
 
@@ -16,8 +17,7 @@ import {
     limit,
     orderBy,
     writeBatch,
-    DocumentSnapshot,
-    Timestamp
+    DocumentSnapshot
 } from 'firebase/firestore';
 import { EVENT_PLANS } from "@/lib/constants";
 
@@ -580,31 +580,22 @@ export async function upsertMusicianIncome(userId: string, eventId: string, amou
     const incomeId = `${userId}_${eventId}`;
     const incomeRef = doc(db, "musicianIncomes", incomeId);
     try {
-        await updateDoc(incomeRef, {
-            userId,
-            eventId,
-            amount,
-            date: eventDate,
-        });
+        const incomeDoc = await getDoc(incomeRef);
+        if (incomeDoc.exists()) {
+             await updateDoc(incomeRef, {
+                amount,
+                date: eventDate,
+            });
+        } else {
+             await addDoc(collection(db, "musicianIncomes"), {
+                userId,
+                eventId,
+                amount,
+                date: eventDate,
+            });
+        }
         return { success: true };
     } catch (error) {
-        // If doc doesn't exist, updateDoc fails. We use addDoc via setDoc.
-        if ((error as any).code === 'not-found') {
-            try {
-                const batch = writeBatch(db);
-                batch.set(incomeRef, {
-                    userId,
-                    eventId,
-                    amount,
-                    date: eventDate,
-                });
-                await batch.commit();
-                return { success: true };
-            } catch (set_error) {
-                 console.error("Error setting musician income:", set_error);
-                return { success: false, error: "Failed to save musician income." };
-            }
-        }
         console.error("Error upserting musician income:", error);
         return { success: false, error: "Failed to save musician income." };
     }
@@ -893,3 +884,5 @@ export async function getSuggestedSongs(eventType: string): Promise<SongDetail[]
 
     return suggestions;
 }
+
+    
