@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useRef, useEffect, type FormEvent } from 'react';
-import { Bot, Loader2, Send, X } from 'lucide-react';
+import { Bot, Loader2, Send, X, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,33 +24,83 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeechSupported, setIsSpeechSupported] = useState(false);
+
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const messagesRef = useRef(messages);
   const { toast } = useToast();
 
-  // Auto-scroll to bottom when new messages are added
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setIsSpeechSupported(true);
+      recognitionRef.current = new SpeechRecognition();
+      const recognition = recognitionRef.current;
+      recognition.lang = 'es-ES';
+      recognition.interimResults = true;
+      recognition.continuous = false;
+
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        
+        const transcript = finalTranscript || interimTranscript;
+        setInput(transcript);
+
+        if (finalTranscript.toLowerCase().trim().endsWith('enviar')) {
+            const command = finalTranscript.slice(0, finalTranscript.toLowerCase().lastIndexOf('enviar')).trim();
+            handleSendMessage(command);
+            recognition.stop();
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        if (event.error === 'not-allowed') {
+            toast({
+                variant: "destructive",
+                title: "Permiso de Micrófono Denegado",
+                description: "Por favor, permite el acceso al micrófono para usar esta función.",
+            });
+        }
+        setIsListening(false);
+      };
     }
-  }, [messages, isLoading]);
+  }, [toast]);
+  
+  const handleSendMessage = async (prompt: string) => {
+    if (!prompt || isLoading) return;
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!input || isLoading) return;
-
-    const userMessage: Message = { role: 'user', content: input };
+    const userMessage: Message = { role: 'user', content: prompt };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
 
     try {
-      // Pass the previous messages as history for context
-      const history = messages.map(({ role, content }) => ({ role, content }));
+      const history = messagesRef.current.map(({ role, content }) => ({ role, content }));
 
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: input, history }),
+        body: JSON.stringify({ prompt, history }),
       });
 
       const data = await res.json();
@@ -66,7 +117,6 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
           title: "¡Evento Creado!",
           description: "El asistente ha agendado un nuevo evento en tu calendario.",
         });
-        // You might want to refresh the calendar or events list here
       }
       
        if (data.rehearsalCreated) {
@@ -76,24 +126,37 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
         });
       }
 
-
     } catch (error: any) {
       console.error('Failed to fetch assistant reply:', error);
       let displayMessage = `Lo siento, ha ocurrido un error: ${error.message || 'Por favor, inténtalo de nuevo.'}`;
-
-      if (error.message && (error.message.includes('429') || error.message.toLowerCase().includes('quota'))) {
-        displayMessage = '¡Excelente! La conexión con la IA funciona, pero parece que has excedido tu cuota de uso actual. Por favor, revisa tu plan y detalles de facturación en tu cuenta de OpenAI.';
-      }
-      
-      const errorMessage: Message = {
-        role: 'assistant',
-        content: displayMessage,
-      };
+      const errorMessage: Message = { role: 'assistant', content: displayMessage };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
   };
+
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    handleSendMessage(input);
+  };
+  
+  const handleMicClick = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current?.start();
+      setIsListening(true);
+    }
+  };
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
 
   if (!isOpen) {
     return null;
@@ -111,8 +174,7 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
         </Button>
       </CardHeader>
       <CardContent className="flex-1 p-0 overflow-hidden">
-        <div ref={scrollAreaRef} className="h-full overflow-y-auto">
-          <div className="space-y-4 p-4">
+        <div ref={scrollAreaRef} className="h-full overflow-y-auto p-4 pb-8 space-y-4">
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -148,7 +210,6 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
                 </div>
               </div>
             )}
-          </div>
         </div>
       </CardContent>
       <CardFooter className="border-t pt-4">
@@ -156,11 +217,17 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Pregúntale algo al maestro..."
+            placeholder="Pregúntale o díctale algo..."
             disabled={isLoading}
             autoComplete="off"
           />
-          <Button type="submit" size="icon" disabled={isLoading}>
+          {isSpeechSupported && (
+            <Button type="button" size="icon" variant={isListening ? "destructive" : "outline"} onClick={handleMicClick} disabled={isLoading}>
+                <Mic className="h-4 w-4" />
+                <span className="sr-only">{isListening ? 'Detener grabación' : 'Iniciar grabación'}</span>
+            </Button>
+          )}
+          <Button type="submit" size="icon" disabled={isLoading || !input}>
             <Send className="h-4 w-4" />
           </Button>
         </form>
