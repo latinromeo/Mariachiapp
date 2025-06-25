@@ -41,6 +41,7 @@ const sanitizeFilename = (name: string) => {
 };
 
 async function generateReceipt(eventData: any): Promise<Buffer> {
+  console.log("Step 1: Starting PDF generation.");
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage();
   const {width, height} = page.getSize();
@@ -53,6 +54,7 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
     const logoFile = bucket.file("logo.png");
     const [logoExists] = await logoFile.exists();
     if (logoExists) {
+        console.log("Step 2: Logo found in Storage. Embedding logo.");
         const [logoImageBytes] = await logoFile.download();
         const logoImage = await pdfDoc.embedPng(logoImageBytes);
         const logoDims = logoImage.scale(0.25);
@@ -62,9 +64,11 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
           width: logoDims.width,
           height: logoDims.height,
         });
+    } else {
+      console.warn("Step 2: Logo 'logo.png' not found in Storage. Continuing without it.");
     }
   } catch (error) {
-    console.error("Could not embed logo from Storage. Continuing without it.", error);
+    console.error("Step 2: Error loading logo from Storage. Continuing without it.", error);
   }
 
   let y = height - 140;
@@ -88,6 +92,7 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
   };
 
   const { clientName, eventDate, eventTime, eventType, location, sector, contractedAmount, amountPaid, paymentMethod } = eventData;
+  console.log("Step 3: Drawing event details onto PDF.");
 
   let formattedDate = "Fecha inválida";
   if (eventDate && typeof eventDate === "string") {
@@ -116,33 +121,41 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
       },
   );
 
+  console.log("Step 4: Saving PDF to buffer.");
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
 }
 
 
 export async function POST(req: NextRequest) {
+    console.log("--- generate-receipt API called ---");
     const { eventId } = await req.json();
 
     if (!eventId) {
+        console.error("API Error: Event ID is required.");
         return NextResponse.json({ success: false, error: 'Event ID is required.' }, { status: 400 });
     }
+    console.log(`Processing receipt for event ID: ${eventId}`);
 
     try {
         const eventRef = db.collection("events").doc(eventId);
         const eventSnap = await eventRef.get();
 
         if (!eventSnap.exists) {
+            console.error(`API Error: Event with ID ${eventId} not found.`);
             return NextResponse.json({ success: false, error: 'Event not found.' }, { status: 404 });
         }
         
         const eventData = eventSnap.data();
         if (!eventData) {
+            console.error(`API Error: Event data is empty for ID ${eventId}.`);
             return NextResponse.json({ success: false, error: 'Event data is empty.' }, { status: 500 });
         }
 
+        console.log("Event data fetched successfully.");
         const pdfBuffer = await generateReceipt(eventData);
         
+        console.log("Step 5: PDF buffer created. Uploading to Firebase Storage.");
         const bucket = storage.bucket();
         const clientNameForFile = eventData.clientName || "sin_nombre";
         const sanitizedClientName = sanitizeFilename(clientNameForFile);
@@ -152,26 +165,30 @@ export async function POST(req: NextRequest) {
         await file.save(pdfBuffer, {
             metadata: { contentType: "application/pdf", cacheControl: "public, max-age=31536000" },
         });
+        console.log(`Step 6: File uploaded successfully to: ${filePath}`);
 
+        console.log("Step 7: Generating signed URL for the file.");
         const [signedUrl] = await file.getSignedUrl({
           action: "read",
           expires: "01-01-2100", // A very distant future date.
         });
+        console.log("Step 8: Signed URL generated. Updating event document.");
         
         await eventRef.update({
             receiptUrlPDF: signedUrl,
         });
+        console.log("Step 9: Event document updated with PDF URL. Process complete.");
 
         return NextResponse.json({ success: true, receiptUrl: signedUrl });
 
     } catch (error: any) {
-        console.error(`Failed to process receipt for event ${eventId}. Error:`, error);
-        // Update Firestore to indicate an error
+        console.error(`--- FATAL ERROR for event ${eventId} ---`, error);
+        // Try to update Firestore to indicate an error state for better UX
         try {
             await db.collection("events").doc(eventId).update({ receiptUrlPDF: "error" });
         } catch (updateError) {
              console.error(`Could not even update event ${eventId} with error state.`, updateError);
         }
-        return NextResponse.json({ success: false, error: error.message || 'An unknown error occurred.' }, { status: 500 });
+        return NextResponse.json({ success: false, error: error.message || 'An unknown server error occurred.' }, { status: 500 });
     }
 }
