@@ -16,7 +16,8 @@ import {
     limit,
     orderBy,
     writeBatch,
-    type DocumentSnapshot
+    type DocumentSnapshot,
+    setDoc
 } from 'firebase/firestore';
 import { EVENT_PLANS } from "@/lib/constants";
 
@@ -168,6 +169,8 @@ export interface MusicianIncome {
     eventId: string;
     amount: number;
     date: string; // event date
+    createdAt: any;
+    updatedAt: any;
 }
 
 export interface MusicianExpense {
@@ -614,14 +617,22 @@ export async function upsertMusicianIncome(userId: string, eventId: string, amou
     const incomeId = `${userId}_${eventId}`;
     const incomeRef = doc(db, "musicianIncomes", incomeId);
     try {
-        const payload = {
+        const docSnap = await getDoc(incomeRef);
+
+        const payload: { [key: string]: any } = {
             userId,
             eventId,
             amount,
             date: eventDate,
+            updatedAt: new Date(),
         };
-        // Using set with merge: true to create or update
-        await addDoc(collection(db, 'musicianIncomes'), cleanForFirestore(payload));
+
+        if (!docSnap.exists()) {
+            payload.createdAt = new Date();
+        }
+        
+        await setDoc(incomeRef, cleanForFirestore(payload), { merge: true });
+
         return { success: true };
     } catch (error) {
         console.error("Error upserting musician income:", error);
@@ -635,7 +646,7 @@ export async function getMusicianIncomes(userId: string): Promise<MusicianIncome
     try {
         const q = query(collection(db, "musicianIncomes"), where("userId", "==", userId));
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MusicianIncome));
+        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as MusicianIncome[];
     } catch (error) {
         console.error("Error fetching musician incomes:", error);
         return [];
