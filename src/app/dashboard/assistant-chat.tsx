@@ -1,14 +1,12 @@
-
 'use client';
 
-import {useState, useRef, useEffect, type FormEvent} from 'react';
-import {Bot, Loader2, Send, X} from 'lucide-react';
-import {Button} from '@/components/ui/button';
-import {Card, CardContent, CardFooter, CardHeader, CardTitle} from '@/components/ui/card';
-import {Input} from '@/components/ui/input';
-import {ScrollArea} from '@/components/ui/scroll-area';
-import {cn} from '@/lib/utils';
-import {Avatar, AvatarFallback} from '@/components/ui/avatar';
+import { useState, useRef, useEffect, type FormEvent } from 'react';
+import { Bot, Loader2, Send, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 
 interface Message {
@@ -21,7 +19,7 @@ interface AssistantChatProps {
   onClose: () => void;
 }
 
-export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
+export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,30 +29,27 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isLoading]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!input || isLoading) return;
 
-    const userMessage: Message = {role: 'user', content: input};
+    const userMessage: Message = { role: 'user', content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
 
     try {
       // Pass the previous messages as history for context
-      const history = messages.map(({role, content}) => ({role, content}));
+      const history = messages.map(({ role, content }) => ({ role, content }));
 
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({prompt: input, history}),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: input, history }),
       });
 
       const data = await res.json();
@@ -63,7 +58,7 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
         throw new Error(data.error || `API error: ${res.statusText}`);
       }
 
-      const assistantMessage: Message = {role: 'assistant', content: data.reply};
+      const assistantMessage: Message = { role: 'assistant', content: data.reply };
       setMessages((prev) => [...prev, assistantMessage]);
 
       if (data.eventCreated) {
@@ -115,9 +110,9 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
           <X className="h-4 w-4" />
         </Button>
       </CardHeader>
-      <CardContent className="flex-1 p-0">
-        <ScrollArea className="h-full" ref={scrollAreaRef}>
-          <div className="space-y-4 px-4 pt-4 pb-8">
+      <CardContent className="flex-1 p-0 overflow-hidden">
+        <div ref={scrollAreaRef} className="h-full overflow-y-auto">
+          <div className="space-y-4 p-4">
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -133,7 +128,7 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
                 )}
                 <div
                   className={cn(
-                    'max-w-xs rounded-lg px-4 py-2 text-sm break-all',
+                    'max-w-xs rounded-lg px-4 py-2 text-sm break-words',
                     message.role === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted'
@@ -154,7 +149,7 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </CardContent>
       <CardFooter className="border-t pt-4">
         <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
