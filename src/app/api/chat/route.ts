@@ -35,7 +35,7 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           },
           eventDate: {
             type: 'string',
-            description: 'La fecha del evento en formato YYYY-MM-DD. Si el usuario dice "hoy", "mañana" o similar, usa la fecha correspondiente.',
+            description: 'La fecha del evento en formato YYYY-MM-DD. Si el usuario dice "hoy", "mañana" o similar, debes calcular y usar la fecha correspondiente.',
           },
           eventTime: {
             type: 'string',
@@ -73,7 +73,7 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
                 },
                 date: {
                     type: 'string',
-                    description: 'La fecha del ensayo en formato YYYY-MM-DD. Si el usuario dice "hoy", "mañana" o similar, usa la fecha correspondiente.',
+                    description: 'La fecha del ensayo en formato YYYY-MM-DD. Si el usuario dice "hoy", "mañana" o similar, debes calcular y usar la fecha correspondiente.',
                 },
                 time: {
                     type: 'string',
@@ -135,18 +135,11 @@ export async function POST(req: NextRequest) {
   if (!prompt) {
     return NextResponse.json({ error: 'No se recibió ningún prompt.' }, { status: 400 });
   }
-  
-  const getToday = () => new Date().toISOString().split('T')[0];
-  const getTomorrow = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
-  };
 
   const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
-      content: `Eres "Maestro Mariachi AI", un asistente experto en la gestión del grupo "Mariachi Reyes de México". Hoy es ${new Date().toLocaleDateString('es-DO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. Tienes acceso de SOLO LECTURA a la agenda y las finanzas. Para responder preguntas sobre la agenda (eventos o ensayos), usa la herramienta 'get_schedule_for_dates'. Para preguntas sobre finanzas, usa 'get_financial_summary_for_dates'. Solo debes usar 'create_event' o 'create_rehearsal' cuando el usuario te pida explícitamente CREAR algo nuevo. Nunca modifiques datos a menos que te lo pidan. Si el usuario dice "hoy", usa la fecha ${getToday()}. Si dice "mañana", usa la fecha ${getTomorrow()}. Para rangos como "esta semana", calcula el rango de 7 días a partir de hoy.`,
+      content: `Eres "Maestro Mariachi AI", un asistente experto en la gestión del grupo "Mariachi Reyes de México". La fecha actual es ${new Date().toLocaleDateString('es-DO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. Cuando el usuario pregunte por fechas relativas como "hoy", "mañana" o "esta semana", debes calcular la fecha o el rango de fechas correspondiente en formato YYYY-MM-DD y usarla en las herramientas. Por ejemplo, si hoy es 2025-06-25, "mañana" es 2025-06-26. "Esta semana" sería un rango desde hoy hasta dentro de 6 días. Tienes acceso de SOLO LECTURA a la agenda y las finanzas. Para responder preguntas sobre la agenda (eventos o ensayos), usa la herramienta 'get_schedule_for_dates'. Para preguntas sobre finanzas, usa 'get_financial_summary_for_dates'. Solo debes usar 'create_event' o 'create_rehearsal' cuando el usuario te pida explícitamente CREAR algo nuevo. Nunca modifiques datos a menos que te lo pidan.`,
     },
     // Add previous messages for context
     ...history,
@@ -180,11 +173,6 @@ export async function POST(req: NextRequest) {
         let functionResponseContent = '';
 
         if (functionName === 'create_event') {
-          // The model might send a relative date like "hoy". Convert it to YYYY-MM-DD.
-          if (functionArgs.eventDate.toLowerCase() === 'hoy') {
-            functionArgs.eventDate = getToday();
-          }
-
           const validPlans = EVENT_PLANS.map(p => p.value);
           if (!functionArgs.plan || !validPlans.includes(functionArgs.plan)) {
             functionArgs.plan = 'personalizado'; 
@@ -210,11 +198,6 @@ export async function POST(req: NextRequest) {
             functionResponseContent = `Hubo un error al crear el evento: ${result.error}. Informa al usuario del problema.`;
           }
         } else if (functionName === 'create_rehearsal') {
-            if (functionArgs.date.toLowerCase() === 'hoy') {
-                functionArgs.date = getToday();
-            } else if (functionArgs.date.toLowerCase() === 'mañana') {
-                functionArgs.date = getTomorrow();
-            }
             const result = await createRehearsal(functionArgs);
 
             if (result.success) {
