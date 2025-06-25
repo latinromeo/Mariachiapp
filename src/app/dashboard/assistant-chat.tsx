@@ -115,28 +115,35 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
       setMessages((prev) => [...prev, assistantMessage]);
 
       if (data.refreshAgenda) {
-        toast({
-          title: "¡Agenda Actualizada!",
-          description: "El asistente ha realizado cambios en tu agenda.",
-        });
         window.dispatchEvent(new Event('agendaUpdated'));
-        router.refresh();
       }
 
       // Auto-activate microphone for confirmations
       const replyText = (data.reply || '').toLowerCase();
-      const confirmationKeywords = ['¿confirmar', '¿deseas', '¿quieres', '¿estás seguro'];
-      const isConfirmationQuestion = confirmationKeywords.some(keyword => replyText.includes(keyword)) && replyText.includes('?');
+      // Expanded keywords for more robust detection
+      const confirmationKeywords = [
+        'confirmar', 'confirmamos', 'confirma',
+        'deseas', 'quieres', 'quieres que',
+        'seguro', 'segura',
+        'procedo', 'procedemos',
+        'elimino', 'eliminarlo',
+        'modifico',
+        'cancelo',
+        'actualizo',
+        'registro',
+      ];
+      const isConfirmationQuestion = replyText.includes('?') && confirmationKeywords.some(keyword => replyText.includes(keyword));
 
       if (isConfirmationQuestion && recognitionRef.current) {
           setTimeout(() => {
               try {
+                  // Safeguard: Stop any lingering recognition before starting a new one.
+                  recognitionRef.current?.stop();
                   finalTranscriptRef.current = ''; // Reset transcript before listening
                   recognitionRef.current?.start();
                   setIsListening(true);
               } catch(e) {
-                  // This can happen if recognition is already in an error state or similar.
-                  console.log("Recognition could not be started:", e);
+                  console.error("Speech recognition could not be started:", e);
                   setIsListening(false);
               }
           }, 500); // Small delay for user to process the question
