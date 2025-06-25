@@ -237,7 +237,7 @@ export async function POST(req: NextRequest) {
   const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
-      content: `${newSystemPrompt} La fecha actual es ${new Date().toLocaleDateString('es-DO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. Cuando el usuario pregunte por fechas relativas como "hoy", "mañana" o "esta semana", debes calcular la fecha o el rango de fechas correspondiente en formato YYYY-MM-DD y usarla en las herramientas. Por ejemplo, si hoy es 2025-06-25, "mañana" es 2025-06-26. "Esta semana" sería un rango desde hoy hasta dentro de 6 días.`,
+      content: `${newSystemPrompt} Asume que la fecha de hoy es miércoles, 25 de junio de 2025. Usa esta fecha como base para cualquier cálculo de fechas relativas (hoy, mañana, esta semana, etc.).`,
     },
     // Add previous messages for context
     ...history,
