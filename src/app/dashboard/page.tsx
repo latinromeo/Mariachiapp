@@ -14,7 +14,7 @@ import { Calendar, Clock, MapPin, Phone, CheckCircle, Loader2, Music, PlusCircle
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { EVENT_PLANS } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
 import { useUser } from "@/lib/auth";
 
 const formatCurrency = (value: number | undefined) => {
@@ -273,12 +273,12 @@ export default function DashboardPage() {
                                                 <div className="pl-8 space-y-2 text-sm">
                                                     {permissions.canCreateEvents ? (
                                                         <>
-                                                            <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-purple-600"/> {activity.eventTime}</p>
+                                                            <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-purple-600"/> {formatTime(activity.eventTime)}</p>
                                                             <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green-600"/> {activity.sector}</p>
                                                         </>
                                                     ) : (
                                                         <div className="flex items-center gap-4">
-                                                            <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-purple-600"/> {activity.eventTime}</p>
+                                                            <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-purple-600"/> {formatTime(activity.eventTime)}</p>
                                                             <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green-600"/> {activity.sector}</p>
                                                         </div>
                                                     )}
@@ -345,7 +345,7 @@ export default function DashboardPage() {
                                             <div className="space-y-2 text-sm">
                                                 <div className="text-muted-foreground">Tema: <span className="font-semibold text-foreground">{activity.focus}</span></div>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-muted-foreground">
-                                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-purple-600"/> {activity.time}</p>
+                                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-purple-600"/> {formatTime(activity.time)}</p>
                                                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green-600"/> {activity.location}</p>
                                                 </div>
                                             </div>

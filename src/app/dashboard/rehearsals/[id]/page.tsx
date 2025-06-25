@@ -25,6 +25,7 @@ import { es } from "date-fns/locale";
 import { useUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { formatTime } from "@/lib/utils";
 
 export default function RehearsalDetailPage() {
     const params = useParams();
@@ -123,7 +124,7 @@ export default function RehearsalDetailPage() {
                         </CardHeader>
                         <CardContent className="text-sm space-y-2">
                              <p><strong>Día:</strong> <span className="capitalize">{format(rehearsalDate, "eeee, dd 'de' MMMM 'de' yyyy", { locale: es })}</span></p>
-                             <p className="flex items-center gap-2"><strong>Hora:</strong> <Clock className="h-4 w-4"/> {rehearsal.time}</p>
+                             <p className="flex items-center gap-2"><strong>Hora:</strong> <Clock className="h-4 w-4"/> {formatTime(rehearsal.time)}</p>
                              <p className="flex items-center gap-2"><strong>Ubicación:</strong> <MapPin className="h-4 w-4"/> {rehearsal.location}</p>
                         </CardContent>
                     </Card>

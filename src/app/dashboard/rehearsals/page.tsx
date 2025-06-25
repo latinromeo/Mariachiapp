@@ -40,7 +40,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
 import { useUser } from "@/lib/auth";
 
 export default function RehearsalsPage() {
@@ -182,7 +182,7 @@ export default function RehearsalsPage() {
         ) : filteredRehearsals.length > 0 ? (
             filteredRehearsals.map((rehearsal) => {
                 const date = parseDate(rehearsal.date);
-                const formattedDateTime = format(date, "EEE, d MMM", { locale: es }) + `, ${rehearsal.time}`;
+                const formattedDateTime = format(date, "EEE, d MMM", { locale: es }) + `, ${formatTime(rehearsal.time)}`;
                 const songCount = rehearsal.songs?.length || 0;
 
                 return (

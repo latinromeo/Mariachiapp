@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useUser } from "@/lib/auth";
+import { formatTime } from "@/lib/utils";
 
 const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -88,7 +89,7 @@ export default function EventDetailPage() {
                             </CardHeader>
                             <CardContent className="text-sm space-y-2">
                                 <p><strong>Día:</strong> <span className="capitalize">{format(eventDate, "eeee, dd 'de' MMMM 'de' yyyy", { locale: es })}</span></p>
-                                <p><strong>Hora:</strong> {event.eventTime}</p>
+                                <p><strong>Hora:</strong> {formatTime(event.eventTime)}</p>
                             </CardContent>
                         </Card>
                          <Card>

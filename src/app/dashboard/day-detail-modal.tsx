@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
+import { cn, formatTime } from "@/lib/utils"
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -126,7 +126,7 @@ export function DayDetailModal({ isOpen, onClose, onRefresh, date, events, rehea
                             <Badge variant={config.badgeVariant} className="absolute top-4 right-4">{config.badgeText}</Badge>
                             <div className="space-y-3">
                                 <p className="flex items-center gap-2 text-foreground font-semibold text-base pr-20">
-                                    <Calendar className={cn("h-5 w-5", config.iconColor)}/> {event.eventTime} - {event.eventType} {event.clientName}
+                                    <Calendar className={cn("h-5 w-5", config.iconColor)}/> {formatTime(event.eventTime)} - {event.eventType} {event.clientName}
                                 </p>
                                 <div className="text-sm space-y-2">
                                     <p className="flex items-center gap-2 text-foreground">
@@ -203,7 +203,7 @@ export function DayDetailModal({ isOpen, onClose, onRefresh, date, events, rehea
                              <Separator className="my-2" />
                              <div className="text-sm text-foreground space-y-2">
                                 <div className="space-y-1">
-                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-purple-600"/> {rehearsal.time}</p>
+                                    <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-purple-600"/> {formatTime(rehearsal.time)}</p>
                                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green-600"/> {rehearsal.location}</p>
                                 </div>
                                 {rehearsal.songs && rehearsal.songs.length > 0 && (
