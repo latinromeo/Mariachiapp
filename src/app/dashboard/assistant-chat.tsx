@@ -116,8 +116,8 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
         </Button>
       </CardHeader>
       <CardContent className="flex-1 p-0">
-        <ScrollArea className="h-full p-4" ref={scrollAreaRef}>
-          <div className="space-y-4">
+        <ScrollArea className="h-full" ref={scrollAreaRef}>
+          <div className="space-y-4 p-4">
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -133,7 +133,7 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
                 )}
                 <div
                   className={cn(
-                    'max-w-xs rounded-lg px-4 py-2 text-sm break-words',
+                    'max-w-xs rounded-lg px-4 py-2 text-sm break-all',
                     message.role === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted'
