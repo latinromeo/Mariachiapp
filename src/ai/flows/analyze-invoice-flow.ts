@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI agent for analyzing invoices from images.
@@ -8,7 +9,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { z } from 'zod';
 import {FINANCE_CATEGORIES} from '@/lib/constants';
 
 const categoryValues = FINANCE_CATEGORIES.map(c => c.value) as [string, ...string[]];
