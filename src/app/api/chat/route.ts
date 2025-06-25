@@ -4,8 +4,8 @@ import OpenAI from 'openai';
 import { add, format, nextDay } from 'date-fns';
 import type { Day } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -180,11 +180,11 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
                     songs: [],
                     notes: `Creado por AI a partir del prompt: "${prompt}"`,
                     status: 'pending' as const,
-                    createdAt: serverTimestamp(),
-                    updatedAt: serverTimestamp(),
+                    createdAt: FieldValue.serverTimestamp(),
+                    updatedAt: FieldValue.serverTimestamp(),
                 };
                 
-                await addDoc(collection(db, 'rehearsals'), rehearsalData);
+                await adminDb.collection('rehearsals').add(rehearsalData);
                 eventCreated = true;
 
             } else if (intent === 'crear_evento') {
@@ -206,11 +206,11 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
                   externalGroup: false,
                   notes: `Creado por AI a partir del prompt: "${prompt}"`,
                   status: 'pending' as const,
-                  createdAt: serverTimestamp(),
-                  updatedAt: serverTimestamp(),
+                  createdAt: FieldValue.serverTimestamp(),
+                  updatedAt: FieldValue.serverTimestamp(),
                 };
 
-                await addDoc(collection(db, 'events'), eventData);
+                await adminDb.collection('events').add(eventData);
                 eventCreated = true;
             }
         } catch (e: any) {
