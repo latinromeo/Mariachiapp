@@ -11,7 +11,6 @@ import {
     getDocs,
     updateDoc,
     deleteDoc,
-    serverTimestamp,
     query,
     where,
     limit,
@@ -229,8 +228,8 @@ export async function createClient(data: ClientInputData): Promise<{ success: bo
     try {
         const payload = {
             ...data,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
         };
         const docRef = await addDoc(collection(db, 'clients'), cleanForFirestore(payload));
         return { success: true, clientId: docRef.id };
@@ -260,7 +259,7 @@ export async function updateClient(id: string, data: Partial<ClientInputData>): 
         const docRef = doc(db, "clients", id);
         const payload = {
             ...data,
-            updatedAt: serverTimestamp(),
+            updatedAt: new Date(),
         };
         await updateDoc(docRef, cleanForFirestore(payload));
         return { success: true };
@@ -354,8 +353,8 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
     pendingBalance,
     profit,
     status: data.externalGroup ? 'external' as const : 'pending' as const,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   try {
@@ -402,7 +401,7 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
             contractedAmount,
             musiciansPay,
             amountPaid,
-            updatedAt: serverTimestamp(),
+            updatedAt: new Date(),
         };
 
         if (data.externalGroup !== undefined) {
@@ -436,7 +435,7 @@ export async function completeEvent(eventId: string): Promise<{ success: boolean
       status: 'completed',
       amountPaid: contractedAmount,
       pendingBalance: 0,
-      updatedAt: serverTimestamp(),
+      updatedAt: new Date(),
     });
 
     return { success: true };
@@ -487,8 +486,8 @@ export async function createRehearsal(data: RehearsalInputData): Promise<{ succe
             ...data,
             songs: songsForDb,
             status: 'pending' as const,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
         };
 
         const docRef = await addDoc(collection(db, 'rehearsals'), cleanForFirestore(payload));
@@ -532,7 +531,7 @@ export async function updateRehearsal(id: string, data: Partial<RehearsalInputDa
             payload.songs = songsForDb;
         }
         
-        payload.updatedAt = serverTimestamp();
+        payload.updatedAt = new Date();
 
         const docRef = doc(db, "rehearsals", id);
         await updateDoc(docRef, cleanForFirestore(payload));
@@ -548,7 +547,7 @@ export async function completeRehearsal(id: string): Promise<{ success: boolean;
         const docRef = doc(db, "rehearsals", id);
         await updateDoc(docRef, {
             status: 'completed',
-            updatedAt: serverTimestamp(),
+            updatedAt: new Date(),
         });
         return { success: true };
     } catch (error) {
@@ -585,7 +584,7 @@ export async function createManualFinanceEntry(data: ManualFinanceEntryInputData
         const payload = {
             ...data,
             createdBy: 'admin', // Hardcoded for now
-            createdAt: serverTimestamp(),
+            createdAt: new Date(),
         };
         const docRef = await addDoc(collection(db, 'manualFinanceEntries'), cleanForFirestore(payload));
         return { success: true, entryId: docRef.id };
@@ -640,7 +639,7 @@ export async function createMusicianExpense(userId: string, data: MusicianExpens
         const payload = {
             ...data,
             userId,
-            createdAt: serverTimestamp()
+            createdAt: new Date()
         };
         const docRef = await addDoc(collection(db, "musicianExpenses"), cleanForFirestore(payload));
         return { success: true, expenseId: docRef.id };
@@ -786,7 +785,7 @@ async function seedInitialSongs() {
             const docRef = doc(songsCol); 
             const payload = {
                 ...songData,
-                createdAt: serverTimestamp()
+                createdAt: new Date()
             };
             batch.set(docRef, cleanForFirestore(payload));
         }
@@ -813,8 +812,8 @@ export async function createSong(data: SongInputData): Promise<{ success: boolea
   try {
     const payload = {
         ...data,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
     };
     const docRef = await addDoc(collection(db, "songs"), cleanForFirestore(payload));
     return { success: true, songId: docRef.id };
@@ -829,7 +828,7 @@ export async function updateSong(id: string, data: Partial<SongInputData>): Prom
         const docRef = doc(db, "songs", id);
         const payload = {
             ...data,
-            updatedAt: serverTimestamp(),
+            updatedAt: new Date(),
         };
         await updateDoc(docRef, cleanForFirestore(payload));
         return { success: true };

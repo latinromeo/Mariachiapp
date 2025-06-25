@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import { add, format, nextDay } from 'date-fns';
 import type { Day } from 'date-fns';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 
 
 const openai = new OpenAI({
@@ -201,8 +201,8 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
                     songs: [],
                     notes: `Creado por AI a partir del prompt: "${prompt}"`,
                     status: 'pending' as const,
-                    createdAt: serverTimestamp(),
-                    updatedAt: serverTimestamp(),
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
                 };
                 
                 await addDoc(collection(db, 'rehearsals'), cleanForFirestore(rehearsalData));
@@ -227,8 +227,8 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
                   externalGroup: false,
                   notes: `Creado por AI a partir del prompt: "${prompt}"`,
                   status: 'pending' as const,
-                  createdAt: serverTimestamp(),
-                  updatedAt: serverTimestamp(),
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
                 };
 
                 await addDoc(collection(db, 'events'), cleanForFirestore(eventData));
