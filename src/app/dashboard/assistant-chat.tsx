@@ -51,7 +51,7 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
       // Pass the previous messages as history for context
       const history = messages.map(({role, content}) => ({role, content}));
 
-      const res = await fetch('/api/chat', { // This path will be proxied by firebase.json
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({prompt: input, history}),
@@ -73,6 +73,14 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
         });
         // You might want to refresh the calendar or events list here
       }
+      
+       if (data.rehearsalCreated) {
+        toast({
+          title: "¡Ensayo Creado!",
+          description: "El asistente ha agendado un nuevo ensayo en tu calendario.",
+        });
+      }
+
 
     } catch (error: any) {
       console.error('Failed to fetch assistant reply:', error);
@@ -125,7 +133,7 @@ export function AssistantChat({isOpen, onClose}: AssistantChatProps) {
                 )}
                 <div
                   className={cn(
-                    'max-w-xs rounded-lg px-4 py-2 text-sm',
+                    'max-w-xs rounded-lg px-4 py-2 text-sm break-words',
                     message.role === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted'
