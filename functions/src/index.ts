@@ -6,12 +6,14 @@ import {PDFDocument, rgb, StandardFonts} from "pdf-lib";
 import {format, parseISO} from "date-fns";
 import {es} from "date-fns/locale";
 
+// Initialize Firebase Admin SDK.
+// It will automatically use the project's service account credentials.
 admin.initializeApp();
 
 const db = admin.firestore();
 const storage = admin.storage();
 
-// Helper to format currency
+// Helper to format currency consistently.
 const formatCurrency = (value: number | undefined) => {
   if (typeof value !== "number" || isNaN(value)) {
     return "RD$0.00";
@@ -22,37 +24,37 @@ const formatCurrency = (value: number | undefined) => {
   })}`;
 };
 
-// Helper to format time to 12-hour format with AM/PM
+// Helper to format time to 12-hour format with AM/PM.
 const formatTime = (timeString: string | undefined): string => {
-  if (!timeString) {
-    return "";
-  }
-  if (timeString.toLowerCase().includes("am") ||
-      timeString.toLowerCase().includes("pm")) {
+  if (!timeString) return "";
+  // If already in AM/PM format, return as is.
+  if (timeString.toLowerCase().includes("am") || timeString.toLowerCase().includes("pm")) {
     return timeString;
   }
+  // Otherwise, attempt to parse from 24-hour format.
   const parts = timeString.split(":");
-  if (parts.length < 2) {
-    return timeString;
-  }
+  if (parts.length < 2) return timeString;
   let hours = parseInt(parts[0], 10);
   const minutes = parseInt(parts[1], 10);
-  if (isNaN(hours) || isNaN(minutes)) {
-    return timeString;
-  }
+  if (isNaN(hours) || isNaN(minutes)) return timeString;
+
   const ampm = hours >= 12 ? "PM" : "AM";
   hours = hours % 12;
-  hours = hours ? hours : 12;
+  hours = hours ? hours : 12; // the hour '0' should be '12'
   const minutesStr = minutes < 10 ? "0" + minutes : String(minutes);
   return `${hours}:${minutesStr} ${ampm}`;
 };
 
-// Helper to sanitize filenames
+// Helper to sanitize filenames for safe storage.
 const sanitizeFilename = (name: string) => {
     return name.replace(/[^a-z0-9_.-]/gi, "_").toLowerCase();
 };
 
-
+/**
+ * Generates a PDF receipt for a given event.
+ * @param {any} eventData The data of the completed event.
+ * @return {Promise<Buffer>} A promise that resolves with the PDF as a Buffer.
+ */
 async function generateReceipt(eventData: any): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage();
@@ -61,10 +63,11 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // 1. Logo from Firebase Storage
-  const bucket = storage.bucket();
-  const logoFile = bucket.file("logo.png"); // Assumes logo.png is in the root of the bucket
+  // 1. Embed Logo from Firebase Storage (if it exists)
   try {
+    // The bucket() method without arguments refers to the default GCS bucket.
+    const bucket = storage.bucket();
+    const logoFile = bucket.file("logo.png"); // Assumes logo.png is in the root.
     const [logoExists] = await logoFile.exists();
     if (logoExists) {
         const [logoImageBytes] = await logoFile.download();
@@ -77,12 +80,11 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
           height: logoDims.height,
         });
     } else {
-        logger.warn("Logo file 'logo.png' does not exist in the root of the Storage bucket. Skipping logo.");
+        logger.warn("Logo file 'logo.png' not found in Storage. Skipping.");
     }
   } catch (error) {
-    logger.error("Could not fetch or embed logo from Storage.", error);
+    logger.error("Could not embed logo from Storage. Continuing without it.", error);
   }
-
 
   let y = height - 140;
 
@@ -104,37 +106,26 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
       value: string | undefined,
       isBold = false,
   ) => {
-    if (!value) return;
-    page.drawText(label, {
-      x: 50,
-      y,
-      font: boldFont,
-      size: 12,
-      color: rgb(0.3, 0.3, 0.3),
-    });
-    page.drawText(value, {
-      x: 200,
-      y,
-      font: isBold ? boldFont : font,
-      size: 12,
-      color: rgb(0.1, 0.1, 0.1),
-    });
+    if (value === undefined || value === null) return;
+    page.drawText(label, {x: 50, y, font: boldFont, size: 12, color: rgb(0.3, 0.3, 0.3)});
+    page.drawText(value, {x: 200, y, font: isBold ? boldFont : font, size: 12, color: rgb(0.1, 0.1, 0.1)});
     y -= 25;
   };
 
-  // Defensive checks for eventData fields
-  const clientName = eventData.clientName || "N/A";
-  const eventDate = eventData.eventDate;
-  const eventTime = eventData.eventTime || "N/A";
-  const eventType = eventData.eventType || "N/A";
-  const location = eventData.location || "N/A";
-  const sector = eventData.sector || "N/A";
-  const contractedAmount = eventData.contractedAmount;
-  const amountPaid = eventData.amountPaid;
-  const paymentMethod = eventData.paymentMethod || "N/A";
+  const {
+      clientName = "N/A",
+      eventDate,
+      eventTime = "N/A",
+      eventType = "N/A",
+      location = "N/A",
+      sector = "N/A",
+      contractedAmount,
+      amountPaid,
+      paymentMethod = "N/A",
+  } = eventData;
 
   let formattedDate = "Fecha inválida";
-  if (eventDate) {
+  if (eventDate && typeof eventDate === "string") {
     try {
         const parsedDate = parseISO(eventDate);
         formattedDate = format(parsedDate, "eeee, dd 'de' MMMM 'de' yyyy", {locale: es});
@@ -142,11 +133,10 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
         logger.error("Could not parse event date:", eventDate, e);
     }
   }
-  const formattedTime = formatTime(eventTime);
 
   drawDetailRow("Cliente:", clientName);
   drawDetailRow("Fecha:", formattedDate);
-  drawDetailRow("Hora:", formattedTime);
+  drawDetailRow("Hora:", formatTime(eventTime));
   drawDetailRow("Tipo de Evento:", eventType);
   drawDetailRow("Dirección:", `${location}, ${sector}`);
   y -= 10;
@@ -157,17 +147,8 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
 
   // 4. Thank You Message
   page.drawText(
-      "Gracias por confiar en Mariachi Reyes de México. " +
-      "¡Fue un honor formar parte de tu celebración! 🎺",
-      {
-        x: 50,
-        y: y,
-        font: font,
-        size: 14,
-        color: rgb(0.2, 0.2, 0.2),
-        lineHeight: 20,
-        width: width - 100,
-        align: "center",
+      "Gracias por confiar en Mariachi Reyes de México. ¡Fue un honor formar parte de tu celebración! 🎺", {
+        x: 50, y, font, size: 14, color: rgb(0.2, 0.2, 0.2), lineHeight: 20, width: width - 100, align: "center",
       },
   );
 
@@ -175,66 +156,55 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
   return Buffer.from(pdfBytes);
 }
 
+/**
+ * Triggered when an event document is updated.
+ * Checks if the status changed to "completed" and generates a PDF receipt.
+ */
+export const onEventCompleted = onDocumentUpdated({region: "us-central1", document: "events/{eventId}"}, async (event) => {
+    const eventId = event.params.eventId;
+    const beforeData = event.data?.before.data();
+    const afterData = event.data?.after.data();
 
-export const onEventCompleted = onDocumentUpdated(
-    {region: "us-central1", document: "events/{eventId}"},
-    async (event) => {
-      const eventId = event.params.eventId;
-      const beforeData = event.data?.before.data();
-      const afterData = event.data?.after.data();
+    if (!beforeData || !afterData) {
+        logger.log(`Data missing for event update: ${eventId}. Exiting.`);
+        return;
+    }
 
-      // Ensure data exists
-      if (!beforeData || !afterData) {
-          logger.log("Either before or after data is missing. Exiting function for event:", eventId);
-          return;
-      }
-
-      // Check if status changed to 'completed'
-      if (beforeData.status !== "completed" && afterData.status === "completed") {
-        logger.log(`Event ${eventId} status changed to 'completed'. Starting receipt generation.`);
-
+    // The core logic: proceed only if status transitions to 'completed'.
+    if (beforeData.status !== "completed" && afterData.status === "completed") {
+        logger.log(`Event ${eventId} completed. Starting receipt generation.`);
+        
         try {
-          // 1. Generate PDF
-          logger.log(`Generating PDF for event: ${eventId}`);
-          const pdfBuffer = await generateReceipt(afterData);
-          logger.log(`PDF buffer created, size: ${pdfBuffer.length} bytes.`);
+            // Step 1: Generate PDF from event data.
+            const pdfBuffer = await generateReceipt(afterData);
+            
+            // Step 2: Define file path and upload to Storage.
+            const bucket = storage.bucket();
+            const clientNameForFile = afterData.clientName || "sin_nombre";
+            const sanitizedClientName = sanitizeFilename(clientNameForFile);
+            const filePath = `receipts/recibo-${sanitizedClientName}-${afterData.eventDate}.pdf`;
+            const file = bucket.file(filePath);
 
-          // 2. Upload to Firebase Storage
-          const bucket = storage.bucket();
-          const clientNameForFile = afterData.clientName || "sin_nombre";
-          const sanitizedClientName = sanitizeFilename(clientNameForFile);
-          const fileName = `receipts/recibo-${sanitizedClientName}-${afterData.eventDate}.pdf`;
-          const file = bucket.file(fileName);
-          logger.log(`Uploading to Storage bucket '${bucket.name}' with filename '${fileName}'`);
+            await file.save(pdfBuffer, {
+                metadata: { contentType: "application/pdf", cacheControl: "public, max-age=31536000" },
+            });
 
+            // Step 3: Make the file public and get its URL.
+            await file.makePublic();
+            
+            // The public URL format is predictable for GCS.
+            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+            logger.log(`Receipt for ${eventId} uploaded to: ${publicUrl}`);
+            
+            // Step 4: Update the event document in Firestore with the new PDF URL.
+            await db.collection("events").doc(eventId).update({
+                receiptUrlPDF: publicUrl,
+            });
 
-          await file.save(pdfBuffer, {
-            metadata: {
-              contentType: "application/pdf",
-              cacheControl: "public, max-age=31536000", // Cache for 1 year
-            },
-          });
-          logger.log("File saved to Storage.");
+            logger.log(`Successfully updated event ${eventId} with receipt URL.`);
 
-
-          // 3. Make file public and construct URL
-          await file.makePublic();
-          logger.log("File made public.");
-
-          const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-          logger.log(`Generated public URL: ${publicUrl}`);
-
-
-          // 4. Update Firestore document with the URL
-          await db.collection("events").doc(eventId).update({
-            receiptUrlPDF: publicUrl,
-          });
-
-          logger.log(`Successfully updated event ${eventId} with receipt URL.`);
         } catch (error) {
-          logger.error(`Failed to generate or upload receipt for event ${eventId}:`, error);
+            logger.error(`Failed to process receipt for event ${eventId}. Error:`, error);
         }
-      } else {
-        logger.log(`Event ${eventId} was updated, but status did not change to 'completed'. No action taken.`);
-      }
-    });
+    }
+});
