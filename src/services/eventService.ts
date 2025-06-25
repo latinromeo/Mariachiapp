@@ -1,9 +1,24 @@
 // src/services/eventService.ts
 'use server';
 
-import { adminDb } from '@/lib/firebase-admin';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import type { firestore } from 'firebase-admin';
+import { db } from '@/lib/firebase';
+import { 
+    collection,
+    doc,
+    addDoc,
+    getDoc,
+    getDocs,
+    updateDoc,
+    deleteDoc,
+    serverTimestamp,
+    query,
+    where,
+    limit,
+    orderBy,
+    writeBatch,
+    DocumentSnapshot,
+    Timestamp
+} from 'firebase/firestore';
 import { EVENT_PLANS } from "@/lib/constants";
 
 // --- INTERFACES ---
@@ -141,14 +156,14 @@ type MusicianExpenseInput = Omit<MusicianExpense, 'id' | 'userId' | 'createdAt'>
 
 // --- HELPER FUNCTIONS ---
 
-const processDocTimestamps = (doc: firestore.DocumentSnapshot) => {
+const processDocTimestamps = (doc: DocumentSnapshot) => {
     const data = doc.data();
     if (!data) return null;
 
     const processedData: { [key: string]: any } = { id: doc.id };
     for (const key in data) {
         const value = data[key];
-        if (value instanceof Timestamp) {
+        if (value && typeof value.toDate === 'function') {
             processedData[key] = value.toDate().toISOString();
         } else {
             processedData[key] = value;
@@ -162,7 +177,8 @@ const processDocTimestamps = (doc: firestore.DocumentSnapshot) => {
 
 export async function getClients(): Promise<ClientData[]> {
     try {
-        const snapshot = await adminDb.collection('clients').orderBy("createdAt", "desc").get();
+        const q = query(collection(db, 'clients'), orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
         if (snapshot.empty) return [];
         return snapshot.docs.map(processDocTimestamps).filter(Boolean) as ClientData[];
     } catch (error) {
@@ -173,7 +189,8 @@ export async function getClients(): Promise<ClientData[]> {
 
 export async function findClientByPhone(phone: string): Promise<ClientData | null> {
     try {
-        const snapshot = await adminDb.collection('clients').where('phone', '==', phone).limit(1).get();
+        const q = query(collection(db, 'clients'), where('phone', '==', phone), limit(1));
+        const snapshot = await getDocs(q);
         if (snapshot.empty) return null;
         return processDocTimestamps(snapshot.docs[0]) as ClientData;
     } catch (error) {
@@ -189,10 +206,10 @@ export async function createClient(data: ClientInputData): Promise<{ success: bo
     }
 
     try {
-        const docRef = await adminDb.collection('clients').add({
+        const docRef = await addDoc(collection(db, 'clients'), {
             ...data,
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
         });
         return { success: true, clientId: docRef.id };
     } catch (error) {
@@ -203,8 +220,9 @@ export async function createClient(data: ClientInputData): Promise<{ success: bo
 
 export async function getClientById(id: string): Promise<ClientData | null> {
     try {
-        const docSnap = await adminDb.collection("clients").doc(id).get();
-        if (!docSnap.exists) {
+        const docRef = doc(db, "clients", id);
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) {
             console.error("No such client!");
             return null;
         }
@@ -217,9 +235,10 @@ export async function getClientById(id: string): Promise<ClientData | null> {
 
 export async function updateClient(id: string, data: Partial<ClientInputData>): Promise<{ success: boolean; error?: string }> {
     try {
-        await adminDb.collection("clients").doc(id).update({
+        const docRef = doc(db, "clients", id);
+        await updateDoc(docRef, {
             ...data,
-            updatedAt: FieldValue.serverTimestamp(),
+            updatedAt: serverTimestamp(),
         });
         return { success: true };
     } catch (error) {
@@ -230,7 +249,8 @@ export async function updateClient(id: string, data: Partial<ClientInputData>): 
 
 export async function deleteClient(id: string): Promise<{ success: boolean; error?: string }> {
     try {
-        await adminDb.collection("clients").doc(id).delete();
+        const docRef = doc(db, "clients", id);
+        await deleteDoc(docRef);
         return { success: true };
     } catch (error) {
         console.error("Error deleting client:", error);
@@ -242,7 +262,8 @@ export async function deleteClient(id: string): Promise<{ success: boolean; erro
 
 export async function getEvents(): Promise<EventData[]> {
     try {
-        const snapshot = await adminDb.collection("events").orderBy("eventDate", "desc").get();
+        const q = query(collection(db, 'events'), orderBy("eventDate", "desc"));
+        const snapshot = await getDocs(q);
         return snapshot.docs.map(processDocTimestamps).filter(Boolean) as EventData[];
     } catch (error) {
         console.error("Error fetching events:", error);
@@ -252,8 +273,9 @@ export async function getEvents(): Promise<EventData[]> {
 
 export async function getEventById(id: string): Promise<EventData | null> {
     try {
-        const docSnap = await adminDb.collection("events").doc(id).get();
-        if (!docSnap.exists) {
+        const docRef = doc(db, "events", id);
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) {
             console.error("No such event!");
             return null;
         }
@@ -309,12 +331,12 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
     pendingBalance,
     profit,
     status: data.externalGroup ? 'external' as const : 'pending' as const,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
 
   try {
-    const docRef = await adminDb.collection("events").add(newEventData);
+    const docRef = await addDoc(collection(db, "events"), newEventData);
     return { success: true, eventId: docRef.id };
   } catch (error) {
      console.error("Error creating event:", error);
@@ -323,11 +345,11 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
 }
 
 export async function updateEvent(id: string, data: Partial<EventInputData>): Promise<{ success: boolean; error?: string }> {
-    const eventRef = adminDb.collection("events").doc(id);
+    const eventRef = doc(db, "events", id);
 
     try {
-        const eventSnap = await eventRef.get();
-        if (!eventSnap.exists) {
+        const eventSnap = await getDoc(eventRef);
+        if (!eventSnap.exists()) {
             return { success: false, error: "Event not found." };
         }
         
@@ -357,7 +379,7 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
             contractedAmount,
             musiciansPay,
             amountPaid,
-            updatedAt: FieldValue.serverTimestamp(),
+            updatedAt: serverTimestamp(),
         };
 
         if (data.externalGroup !== undefined) {
@@ -366,7 +388,7 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
             }
         }
 
-        await eventRef.update(updatePayload);
+        await updateDoc(eventRef, updatePayload);
         return { success: true };
     } catch (error) {
         console.error("Error updating event:", error);
@@ -377,21 +399,21 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
 
 export async function completeEvent(eventId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const eventRef = adminDb.collection("events").doc(eventId);
-    const eventSnap = await eventRef.get();
+    const eventRef = doc(db, "events", eventId);
+    const eventSnap = await getDoc(eventRef);
 
-    if (!eventSnap.exists) {
+    if (!eventSnap.exists()) {
       return { success: false, error: "Event not found." };
     }
 
     const eventData = eventSnap.data();
     const contractedAmount = eventData?.contractedAmount || 0;
 
-    await eventRef.update({
+    await updateDoc(eventRef, {
       status: 'completed',
       amountPaid: contractedAmount,
       pendingBalance: 0,
-      updatedAt: FieldValue.serverTimestamp(),
+      updatedAt: serverTimestamp(),
     });
 
     return { success: true };
@@ -403,7 +425,7 @@ export async function completeEvent(eventId: string): Promise<{ success: boolean
 
 export async function deleteEvent(id: string): Promise<{ success: boolean; error?: string }> {
     try {
-        await adminDb.collection("events").doc(id).delete();
+        await deleteDoc(doc(db, "events", id));
         return { success: true };
     } catch (error) {
         console.error("Error deleting event:", error);
@@ -416,7 +438,8 @@ export async function deleteEvent(id: string): Promise<{ success: boolean; error
 
 export async function getRehearsals(): Promise<RehearsalData[]> {
     try {
-        const snapshot = await adminDb.collection("rehearsals").orderBy("date", "desc").get();
+        const q = query(collection(db, 'rehearsals'), orderBy("date", "desc"));
+        const snapshot = await getDocs(q);
         return snapshot.docs.map(processDocTimestamps).filter(Boolean) as RehearsalData[];
     } catch (error) {
         console.error("Error fetching rehearsals:", error);
@@ -441,11 +464,11 @@ export async function createRehearsal(data: RehearsalInputData): Promise<{ succe
             ...data,
             songs: songsForDb,
             status: 'pending' as const,
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
         };
 
-        const docRef = await adminDb.collection("rehearsals").add(payload);
+        const docRef = await addDoc(collection(db, 'rehearsals'), payload);
         return { success: true, rehearsalId: docRef.id };
     } catch (error) {
         console.error("Error creating rehearsal:", error);
@@ -455,7 +478,8 @@ export async function createRehearsal(data: RehearsalInputData): Promise<{ succe
 
 export async function getRehearsalById(id: string): Promise<RehearsalData | null> {
     try {
-        const docSnap = await adminDb.collection("rehearsals").doc(id).get();
+        const docRef = doc(db, 'rehearsals', id);
+        const docSnap = await getDoc(docRef);
         if (!docSnap.exists) {
             console.error("No such rehearsal!");
             return null;
@@ -485,10 +509,10 @@ export async function updateRehearsal(id: string, data: Partial<RehearsalInputDa
             payload.songs = songsForDb;
         }
         
-        payload.updatedAt = FieldValue.serverTimestamp();
+        payload.updatedAt = serverTimestamp();
 
-        const docRef = adminDb.collection("rehearsals").doc(id);
-        await docRef.update(payload);
+        const docRef = doc(db, "rehearsals", id);
+        await updateDoc(docRef, payload);
         return { success: true };
     } catch (error) {
         console.error("Error updating rehearsal:", error);
@@ -498,10 +522,10 @@ export async function updateRehearsal(id: string, data: Partial<RehearsalInputDa
 
 export async function completeRehearsal(id: string): Promise<{ success: boolean; error?: string }> {
     try {
-        const docRef = adminDb.collection("rehearsals").doc(id);
-        await docRef.update({
+        const docRef = doc(db, "rehearsals", id);
+        await updateDoc(docRef, {
             status: 'completed',
-            updatedAt: FieldValue.serverTimestamp(),
+            updatedAt: serverTimestamp(),
         });
         return { success: true };
     } catch (error) {
@@ -512,7 +536,7 @@ export async function completeRehearsal(id: string): Promise<{ success: boolean;
 
 export async function deleteRehearsal(id: string): Promise<{ success: boolean; error?: string }> {
     try {
-        await adminDb.collection("rehearsals").doc(id).delete();
+        await deleteDoc(doc(db, "rehearsals", id));
         return { success: true };
     } catch (error) {
         console.error("Error deleting rehearsal:", error);
@@ -524,7 +548,8 @@ export async function deleteRehearsal(id: string): Promise<{ success: boolean; e
 
 export async function getManualFinanceEntries(): Promise<ManualFinanceEntry[]> {
     try {
-        const snapshot = await adminDb.collection("manualFinanceEntries").orderBy("date", "desc").get();
+        const q = query(collection(db, "manualFinanceEntries"), orderBy("date", "desc"));
+        const snapshot = await getDocs(q);
         return snapshot.docs.map(processDocTimestamps).filter(Boolean) as ManualFinanceEntry[];
     } catch (error) {
         console.error("Error fetching manual entries:", error);
@@ -534,10 +559,10 @@ export async function getManualFinanceEntries(): Promise<ManualFinanceEntry[]> {
 
 export async function createManualFinanceEntry(data: ManualFinanceEntryInputData): Promise<{ success: boolean; entryId?: string, error?: string }> {
     try {
-        const docRef = await adminDb.collection('manualFinanceEntries').add({
+        const docRef = await addDoc(collection(db, 'manualFinanceEntries'), {
             ...data,
             createdBy: 'admin', // Hardcoded for now
-            createdAt: FieldValue.serverTimestamp(),
+            createdAt: serverTimestamp(),
         });
         return { success: true, entryId: docRef.id };
     } catch (error) {
@@ -553,16 +578,33 @@ export async function upsertMusicianIncome(userId: string, eventId: string, amou
         return { success: false, error: "User ID and Event ID are required." };
     }
     const incomeId = `${userId}_${eventId}`;
-    const incomeRef = adminDb.collection("musicianIncomes").doc(incomeId);
+    const incomeRef = doc(db, "musicianIncomes", incomeId);
     try {
-        await incomeRef.set({
+        await updateDoc(incomeRef, {
             userId,
             eventId,
             amount,
             date: eventDate,
-        }, { merge: true });
+        });
         return { success: true };
     } catch (error) {
+        // If doc doesn't exist, updateDoc fails. We use addDoc via setDoc.
+        if ((error as any).code === 'not-found') {
+            try {
+                const batch = writeBatch(db);
+                batch.set(incomeRef, {
+                    userId,
+                    eventId,
+                    amount,
+                    date: eventDate,
+                });
+                await batch.commit();
+                return { success: true };
+            } catch (set_error) {
+                 console.error("Error setting musician income:", set_error);
+                return { success: false, error: "Failed to save musician income." };
+            }
+        }
         console.error("Error upserting musician income:", error);
         return { success: false, error: "Failed to save musician income." };
     }
@@ -572,7 +614,8 @@ export async function upsertMusicianIncome(userId: string, eventId: string, amou
 export async function getMusicianIncomes(userId: string): Promise<MusicianIncome[]> {
     if (!userId) return [];
     try {
-        const snapshot = await adminDb.collection("musicianIncomes").where("userId", "==", userId).get();
+        const q = query(collection(db, "musicianIncomes"), where("userId", "==", userId));
+        const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MusicianIncome));
     } catch (error) {
         console.error("Error fetching musician incomes:", error);
@@ -585,10 +628,10 @@ export async function createMusicianExpense(userId: string, data: MusicianExpens
         return { success: false, error: "User ID is required." };
     }
     try {
-        const docRef = await adminDb.collection("musicianExpenses").add({
+        const docRef = await addDoc(collection(db, "musicianExpenses"), {
             ...data,
             userId,
-            createdAt: FieldValue.serverTimestamp()
+            createdAt: serverTimestamp()
         });
         return { success: true, expenseId: docRef.id };
     } catch (error) {
@@ -600,7 +643,8 @@ export async function createMusicianExpense(userId: string, data: MusicianExpens
 export async function getMusicianExpenses(userId: string): Promise<MusicianExpense[]> {
      if (!userId) return [];
      try {
-        const snapshot = await adminDb.collection("musicianExpenses").where("userId", "==", userId).orderBy("date", "desc").get();
+        const q = query(collection(db, "musicianExpenses"), where("userId", "==", userId), orderBy("date", "desc"));
+        const snapshot = await getDocs(q);
         return snapshot.docs.map(processDocTimestamps).filter(Boolean) as MusicianExpense[];
     } catch (error) {
         console.error("Error fetching musician expenses:", error);
@@ -719,19 +763,20 @@ const initialSongs: Omit<SongDetail, 'id' | 'createdAt' | 'updatedAt'>[] = [
 
 async function seedInitialSongs() {
     try {
-        const songsCol = adminDb.collection('songs');
-        const existingSongsSnapshot = await songsCol.limit(1).get();
+        const songsCol = collection(db, 'songs');
+        const q = query(songsCol, limit(1));
+        const existingSongsSnapshot = await getDocs(q);
 
         if (!existingSongsSnapshot.empty) {
             return;
         }
-
-        const batch = adminDb.batch();
+        
+        const batch = writeBatch(db);
         for (const songData of initialSongs) {
-            const docRef = songsCol.doc(); 
+            const docRef = doc(songsCol); 
             batch.set(docRef, {
                 ...songData,
-                createdAt: FieldValue.serverTimestamp()
+                createdAt: serverTimestamp()
             });
         }
         await batch.commit();
@@ -743,7 +788,8 @@ async function seedInitialSongs() {
 export async function getSongs(): Promise<SongDetail[]> {
     try {
         await seedInitialSongs();
-        const snapshot = await adminDb.collection('songs').orderBy("title", "asc").get();
+        const q = query(collection(db, 'songs'), orderBy("title", "asc"));
+        const snapshot = await getDocs(q);
         if (snapshot.empty) return [];
         return snapshot.docs.map(processDocTimestamps).filter(Boolean) as SongDetail[];
     } catch (error) {
@@ -754,10 +800,10 @@ export async function getSongs(): Promise<SongDetail[]> {
 
 export async function createSong(data: SongInputData): Promise<{ success: boolean; songId?: string, error?: string }> {
   try {
-    const docRef = await adminDb.collection("songs").add({
+    const docRef = await addDoc(collection(db, "songs"), {
         ...data,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
     });
     return { success: true, songId: docRef.id };
   } catch (error) {
@@ -768,10 +814,10 @@ export async function createSong(data: SongInputData): Promise<{ success: boolea
 
 export async function updateSong(id: string, data: Partial<SongInputData>): Promise<{ success: boolean; error?: string }> {
     try {
-        const docRef = adminDb.collection("songs").doc(id);
-        await docRef.update({
+        const docRef = doc(db, "songs", id);
+        await updateDoc(docRef, {
             ...data,
-            updatedAt: FieldValue.serverTimestamp(),
+            updatedAt: serverTimestamp(),
         });
         return { success: true };
     } catch (error) {
@@ -782,7 +828,7 @@ export async function updateSong(id: string, data: Partial<SongInputData>): Prom
 
 export async function deleteSong(id: string): Promise<{ success: boolean; error?: string }> {
     try {
-        await adminDb.collection("songs").doc(id).delete();
+        await deleteDoc(doc(db, "songs", id));
         return { success: true };
     } catch (error) {
         console.error("Error deleting song:", error);
