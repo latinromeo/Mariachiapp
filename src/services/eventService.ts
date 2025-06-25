@@ -922,7 +922,7 @@ export async function getSuggestedSongs(eventType: string): Promise<SongDetail[]
 export async function getEventsByDateRange(startDate: string, endDate: string): Promise<EventData[]> {
     try {
         const eventsRef = collection(db, 'events');
-        const q = query(eventsRef, where("eventDate", ">=", startDate), where("eventDate", "<=", endDate), orderBy("eventDate"), orderBy("eventTime"));
+        const q = query(eventsRef, where("eventDate", ">=", startDate), where("eventDate", "<=", endDate), orderBy("eventDate"));
         const snapshot = await getDocs(q);
         if (snapshot.empty) return [];
         return snapshot.docs.map(processDocTimestamps).filter(Boolean) as EventData[];
@@ -935,7 +935,7 @@ export async function getEventsByDateRange(startDate: string, endDate: string): 
 export async function getRehearsalsByDateRange(startDate: string, endDate: string): Promise<RehearsalData[]> {
     try {
         const rehearsalsRef = collection(db, 'rehearsals');
-        const q = query(rehearsalsRef, where("date", ">=", startDate), where("date", "<=", endDate), orderBy("date"), orderBy("time"));
+        const q = query(rehearsalsRef, where("date", ">=", startDate), where("date", "<=", endDate), orderBy("date"));
         const snapshot = await getDocs(q);
         if (snapshot.empty) return [];
         return snapshot.docs.map(processDocTimestamps).filter(Boolean) as RehearsalData[];
