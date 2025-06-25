@@ -72,7 +72,9 @@ export default function EventsCalendarPage() {
   const getEventsForDay = (day: Date) => {
     return events.filter(event => {
       try {
-        return isSameDay(new Date(event.eventDate), day);
+        const [year, month, d] = event.eventDate.split('-').map(Number);
+        const eventDate = new Date(year, month - 1, d);
+        return isSameDay(eventDate, day);
       } catch {
         return false;
       }
@@ -82,7 +84,9 @@ export default function EventsCalendarPage() {
   const getRehearsalsForDay = (day: Date) => {
     return rehearsals.filter(rehearsal => {
       try {
-        return isSameDay(new Date(rehearsal.date), day);
+        const [year, month, d] = rehearsal.date.split('-').map(Number);
+        const rehearsalDate = new Date(year, month - 1, d);
+        return isSameDay(rehearsalDate, day);
       } catch {
         return false;
       }

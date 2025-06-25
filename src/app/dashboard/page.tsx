@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { format, getYear, getMonth, isSameMonth, parse } from "date-fns";
+import { format, getYear, getMonth, isSameMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -83,17 +83,11 @@ export default function DashboardPage() {
       if (typeof dateInput !== 'string' || !dateInput) return null;
       const dateString = dateInput.split('T')[0];
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-         try {
-            // Attempt to parse ISO string like '2024-07-28T04:00:00.000Z'
-            const d = new Date(dateInput);
-            if (!isNaN(d.getTime())) return d;
-        } catch {
-            return null;
-        }
-        return null;
+         return null;
       }
       try {
-        return parse(dateString, 'yyyy-MM-dd', new Date());
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
       } catch {
         return null;
       }
