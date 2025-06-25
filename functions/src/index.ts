@@ -1,3 +1,4 @@
+
 import {onDocumentUpdated} from "firebase-functions/v2/firestore";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
@@ -190,11 +191,13 @@ export const onEventCompleted = onDocumentUpdated(
 
       // Check if status changed to 'completed'
       if (beforeData.status !== "completed" && afterData.status === "completed") {
-        logger.log(`Event ${eventId} marked as completed. Generating receipt.`);
+        logger.log(`Event ${eventId} status changed to 'completed'. Starting receipt generation.`);
 
         try {
           // 1. Generate PDF
+          logger.log(`Generating PDF for event: ${eventId}`);
           const pdfBuffer = await generateReceipt(afterData);
+          logger.log(`PDF buffer created, size: ${pdfBuffer.length} bytes.`);
 
           // 2. Upload to Firebase Storage
           const bucket = storage.bucket();
@@ -202,17 +205,25 @@ export const onEventCompleted = onDocumentUpdated(
           const sanitizedClientName = sanitizeFilename(clientNameForFile);
           const fileName = `receipts/recibo-${sanitizedClientName}-${afterData.eventDate}.pdf`;
           const file = bucket.file(fileName);
+          logger.log(`Uploading to Storage bucket '${bucket.name}' with filename '${fileName}'`);
+
 
           await file.save(pdfBuffer, {
             metadata: {
               contentType: "application/pdf",
+              cacheControl: "public, max-age=31536000", // Cache for 1 year
             },
           });
+          logger.log("File saved to Storage.");
 
-          // 3. Make file public and get URL
+
+          // 3. Make file public and construct URL
           await file.makePublic();
-          const publicUrl = file.publicUrl();
-          logger.log(`Receipt uploaded to ${publicUrl}`);
+          logger.log("File made public.");
+
+          const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+          logger.log(`Generated public URL: ${publicUrl}`);
+
 
           // 4. Update Firestore document with the URL
           await db.collection("events").doc(eventId).update({
@@ -223,5 +234,7 @@ export const onEventCompleted = onDocumentUpdated(
         } catch (error) {
           logger.error(`Failed to generate or upload receipt for event ${eventId}:`, error);
         }
+      } else {
+        logger.log(`Event ${eventId} was updated, but status did not change to 'completed'. No action taken.`);
       }
     });
