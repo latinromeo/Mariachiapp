@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getEventById, type EventData, deleteEvent, triggerReceiptRegeneration } from "@/services/eventService";
+import { getEventById, type EventData, deleteEvent, updateEvent } from "@/services/eventService";
 import { ArrowLeft, Calendar, DollarSign, Edit, FileText, Loader2, MapPin, MoreVertical, Phone, User, Trash2, XCircle, RefreshCw } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,13 +56,14 @@ export default function EventDetailPage() {
     
     const fetchEvent = useCallback(async () => {
         if (!eventId) return;
-        setIsLoading(true);
+        // Don't set loading to true on refetch, to avoid UI flicker
         const data = await getEventById(eventId);
         setEvent(data);
         setIsLoading(false);
     }, [eventId]);
 
     useEffect(() => {
+        setIsLoading(true);
         fetchEvent();
     }, [fetchEvent]);
 
@@ -90,22 +91,26 @@ export default function EventDetailPage() {
     const handleRegenerate = async () => {
         if (!event) return;
         setIsRegenerating(true);
-        const result = await triggerReceiptRegeneration(event.id);
-        if (result.success) {
-            toast({
-                title: "Regenerando Recibo",
-                description: "El proceso ha comenzado. El enlace aparecerá aquí en breve.",
+        
+        // Update UI to show "generating" state
+        await updateEvent(event.id, { receiptUrlPDF: null });
+        fetchEvent();
+
+        try {
+            const res = await fetch('/api/generate-receipt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ eventId: event.id }),
             });
-            // Poll for changes
-            setTimeout(fetchEvent, 5000); // Check again after 5 seconds
-        } else {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: result.error || "No se pudo iniciar la regeneración.",
-            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'API Error');
+            toast({ title: "Recibo Regenerado", description: "El recibo se ha generado exitosamente." });
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error", description: error.message });
+        } finally {
+            fetchEvent(); // Refresh again to get the final result
+            setIsRegenerating(false);
         }
-        setIsRegenerating(false);
     };
 
 
@@ -232,7 +237,7 @@ export default function EventDetailPage() {
                             {permissions.canCreateEvents && (
                                  <Button onClick={handleRegenerate} disabled={isRegenerating}>
                                     <RefreshCw className={cn("mr-2 h-4 w-4", isRegenerating && "animate-spin")} />
-                                    Regenerar Recibo
+                                    Forzar Regeneración
                                 </Button>
                             )}
                             </>

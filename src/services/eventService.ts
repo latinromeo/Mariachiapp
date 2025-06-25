@@ -98,8 +98,7 @@ export interface EventData {
   createdAt: any;
   updatedAt: any;
   status: 'confirmed' | 'pending' | 'external' | 'cancelled' | 'completed';
-  receiptUrlPDF?: string;
-  forceReceiptGeneration?: boolean;
+  receiptUrlPDF?: string | null;
 }
 
 export interface SongToRehearse {
@@ -188,7 +187,7 @@ export interface MusicianExpense {
 
 // --- FORM INPUT TYPES ---
 
-type EventInputData = Omit<EventData, 'id'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'|'receiptUrlPDF'|'forceReceiptGeneration'> & { 
+type EventInputData = Omit<EventData, 'id'|'pendingBalance'|'profit'|'createdAt'|'updatedAt'|'status'|'receiptUrlPDF'> & { 
     otherExternalContact?: string;
 };
 type ClientInputData = Omit<ClientData, 'id'|'createdAt'|'updatedAt'>;
@@ -382,7 +381,7 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
   }
 }
 
-export async function updateEvent(id: string, data: Partial<EventInputData>): Promise<{ success: boolean; error?: string }> {
+export async function updateEvent(id: string, data: Partial<EventInputData | { receiptUrlPDF: string | null }>): Promise<{ success: boolean; error?: string }> {
     const eventRef = doc(db, "events", id);
 
     try {
@@ -425,6 +424,11 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
                 updatePayload.status = data.externalGroup ? 'external' : 'pending';
             }
         }
+        
+        // This allows updating receiptUrlPDF without affecting other logic
+        if ('receiptUrlPDF' in data) {
+            updatePayload.receiptUrlPDF = data.receiptUrlPDF;
+        }
 
         await updateDoc(eventRef, cleanForFirestore(updatePayload));
         return { success: true };
@@ -451,6 +455,7 @@ export async function completeEvent(eventId: string): Promise<{ success: boolean
       status: 'completed',
       amountPaid: contractedAmount,
       pendingBalance: 0,
+      receiptUrlPDF: null, // Set to null to indicate "generating"
       updatedAt: new Date(),
     });
 
@@ -468,22 +473,6 @@ export async function deleteEvent(id: string): Promise<{ success: boolean; error
     } catch (error) {
         console.error("Error deleting event:", error);
         return { success: false, error: "Failed to delete event from database." };
-    }
-}
-
-export async function triggerReceiptRegeneration(eventId: string): Promise<{ success: boolean; error?: string }> {
-    try {
-        const eventRef = doc(db, "events", eventId);
-        // This update will trigger the onEventCompleted function again.
-        // We also set receiptUrlPDF to null to show the "Generating..." state immediately.
-        await updateDoc(eventRef, {
-            forceReceiptGeneration: true,
-            receiptUrlPDF: null,
-        });
-        return { success: true };
-    } catch (error) {
-        console.error("Error triggering receipt regeneration:", error);
-        return { success: false, error: "Failed to trigger receipt regeneration." };
     }
 }
 

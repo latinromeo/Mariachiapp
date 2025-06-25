@@ -84,13 +84,40 @@ export function DayDetailModal({ isOpen, onClose, onRefresh, date, events, rehea
 
   const handleCompleteEvent = async (eventId: string) => {
     setIsCompleting(eventId);
+    // Step 1: Update the event status to 'completed'
     const result = await completeEvent(eventId);
+
     if (result.success) {
       toast({
         title: "¡Evento Completado!",
-        description: "El evento se marcó como completado y las finanzas se actualizaron.",
+        description: "El evento se marcó como completado. Generando recibo...",
       });
-      onRefresh();
+      onRefresh(); // Refresh UI to show "Generating..." state
+
+      // Step 2: Trigger receipt generation via the new API route
+      try {
+        const apiRes = await fetch('/api/generate-receipt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId }),
+        });
+        const apiData = await apiRes.json();
+        if (!apiRes.ok) {
+          throw new Error(apiData.error || 'Error en el servidor al generar PDF.');
+        }
+        toast({
+          title: "¡Recibo Generado!",
+          description: "El recibo PDF está listo y adjunto al evento.",
+        });
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Error al Generar Recibo",
+          description: error.message,
+        });
+      } finally {
+        onRefresh(); // Refresh UI again to show the final PDF link or error state
+      }
     } else {
       toast({
         variant: "destructive",
