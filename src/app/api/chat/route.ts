@@ -2,7 +2,7 @@
 import {NextRequest, NextResponse} from 'next/server';
 import OpenAI from 'openai';
 import {type ChatCompletionMessageParam} from 'openai/resources/chat/completions';
-import {createEvent, createRehearsal, getEventsByDateRange, getRehearsalsByDateRange, getFinancialSummary} from '@/services/eventService';
+import {createEvent, createRehearsal, getEventsByDateRange, getRehearsalsByDateRange, getFinancialSummary, getClientCount} from '@/services/eventService';
 import {EVENT_PLANS} from '@/lib/constants';
 
 // Initialize OpenAI client
@@ -60,6 +60,7 @@ Puedes mostrar letra, tono, categoría y sugerencias de interpretación.
 3. 👥 Clientes
 
 Puedes acceder a los datos de clientes almacenados.
+Puedes consultar la cantidad total de clientes registrados.
 Nunca reveles números de teléfono completos a músicos.
 Puedes buscar clientes por nombre o número parcial para facilitar cotizaciones o seguimiento.
 Puedes generar respuestas para cotizaciones rápidas (no automatizar envíos sin autorización).
@@ -175,6 +176,17 @@ export async function POST(req: NextRequest) {
     {
       type: 'function',
       function: {
+        name: 'get_client_count',
+        description: 'Obtiene la cantidad total de clientes registrados en el sistema para responder a preguntas como "¿cuántos clientes tengo?".',
+        parameters: {
+          type: 'object',
+          properties: {},
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
           name: 'get_schedule_for_dates',
           description: `Recupera una lista de eventos y ensayos para un rango de fechas. ${dateContext} Para un solo día (como "hoy" o "mañana"), ambas fechas deben ser la misma.`,
           parameters: {
@@ -281,6 +293,9 @@ export async function POST(req: NextRequest) {
             } else {
                 functionResponseContent = `Hubo un error al crear el ensayo: ${result.error}. Informa al usuario del problema.`;
             }
+        } else if (functionName === 'get_client_count') {
+            const count = await getClientCount();
+            functionResponseContent = `El sistema tiene un total de ${count} clientes registrados.`;
         } else if (functionName === 'get_schedule_for_dates') {
             const { startDate, endDate } = functionArgs;
             const [events, rehearsals] = await Promise.all([

@@ -280,6 +280,17 @@ export async function deleteClient(id: string): Promise<{ success: boolean; erro
     }
 }
 
+export async function getClientCount(): Promise<number> {
+    try {
+        const q = query(collection(db, 'clients'));
+        const snapshot = await getDocs(q);
+        return snapshot.size;
+    } catch (error) {
+        console.error("Error fetching client count:", error);
+        return 0;
+    }
+}
+
 // --- EVENT SERVICE FUNCTIONS ---
 
 export async function getEvents(): Promise<EventData[]> {
