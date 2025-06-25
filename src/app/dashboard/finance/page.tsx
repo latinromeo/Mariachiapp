@@ -444,8 +444,9 @@ export default function FinancePage() {
                             <TableRow>
                                 <TableHead>FECHA</TableHead>
                                 <TableHead>DESCRIPCIÓN</TableHead>
-                                <TableHead>TIPO</TableHead>
-                                <TableHead className="text-right">MONTO</TableHead>
+                                <TableHead>CATEGORÍA</TableHead>
+                                <TableHead className="text-right">INGRESO</TableHead>
+                                <TableHead className="text-right">GASTO</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -454,7 +455,8 @@ export default function FinancePage() {
                                     <TableRow key={i}>
                                         <TableCell><Skeleton className="h-4 w-20"/></TableCell>
                                         <TableCell><Skeleton className="h-4 w-48"/></TableCell>
-                                        <TableCell><Skeleton className="h-6 w-16 rounded-full"/></TableCell>
+                                        <TableCell><Skeleton className="h-6 w-24 rounded-full"/></TableCell>
+                                        <TableCell className="text-right"><Skeleton className="h-4 w-24 float-right"/></TableCell>
                                         <TableCell className="text-right"><Skeleton className="h-4 w-24 float-right"/></TableCell>
                                     </TableRow>
                                 ))
@@ -464,16 +466,23 @@ export default function FinancePage() {
                                         <TableCell className="font-medium">
                                             {format(safeParseDate(t.date), 'dd/MM/yyyy')}
                                         </TableCell>
-                                        <TableCell>{t.description}</TableCell>
                                         <TableCell>
-                                            <Badge variant={t.type === 'Ingreso' ? 'secondary' : 'destructive'} className={t.type === 'Ingreso' ? 'text-green-600 border-green-300 bg-green-50' : ''}>{t.type}</Badge>
+                                            <div className="font-medium">{t.description}</div>
                                         </TableCell>
-                                        <TableCell className={`text-right font-semibold ${t.type === 'Gasto' ? 'text-destructive' : 'text-green-600'}`}>{formatCurrency(t.amount, false)}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline">{t.category}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right font-semibold text-green-600">
+                                            {t.type === 'Ingreso' ? formatCurrency(t.amount, false) : '-'}
+                                        </TableCell>
+                                        <TableCell className="text-right font-semibold text-destructive">
+                                            {t.type === 'Gasto' ? formatCurrency(t.amount, false) : '-'}
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">No hay transacciones registradas.</TableCell>
+                                    <TableCell colSpan={5} className="h-24 text-center">No hay transacciones registradas.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
