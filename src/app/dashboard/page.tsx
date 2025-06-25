@@ -337,16 +337,9 @@ export default function DashboardPage() {
                                             <Separator className="my-2" />
                                         
                                             <div className="flex justify-start items-center text-sm pt-1">
-                                                {permissions.canCreateRehearsals ? (
-                                                    <Link href={`/dashboard/rehearsals/${activity.id}/edit`} className="text-primary hover:underline font-medium flex items-center gap-1">
-                                                        Ver Detalles / Editar
-                                                        <Edit className="h-3 w-3" />
-                                                    </Link>
-                                                ) : (
-                                                    <Link href={`/dashboard/rehearsals/${activity.id}`} className="text-primary hover:underline font-medium flex items-center gap-1">
-                                                        Ver más
-                                                    </Link>
-                                                )}
+                                                <Link href={`/dashboard/rehearsals/${activity.id}`} className="text-primary hover:underline font-medium flex items-center gap-1">
+                                                    Ver Detalles / Gestionar
+                                                </Link>
                                             </div>
                                         </div>
                                     </Card>
