@@ -158,9 +158,9 @@ export async function POST(req: NextRequest) {
         parameters: {
           type: 'object',
           properties: {
-            rehearsalId: { type: 'string', description: 'El ID único del ensayo a eliminar, obtenido del contexto de la conversación.' },
+            id: { type: 'string', description: 'El ID único del ensayo a eliminar, obtenido del contexto de la conversación.' },
           },
-          required: ['rehearsalId'],
+          required: ['id'],
         },
       },
     },
@@ -172,9 +172,9 @@ export async function POST(req: NextRequest) {
         parameters: {
           type: 'object',
           properties: {
-            eventId: { type: 'string', description: 'El ID único del evento a eliminar, obtenido del contexto de la conversación.' },
+            id: { type: 'string', description: 'El ID único del evento a eliminar, obtenido del contexto de la conversación.' },
           },
-          required: ['eventId'],
+          required: ['id'],
         },
       },
     },
@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
         parameters: {
           type: 'object',
           properties: {
-            eventId: { type: 'string', description: 'El ID único del evento a modificar.' },
+            id: { type: 'string', description: 'El ID único del evento a modificar.' },
             updates: {
               type: 'object',
               description: 'Un objeto con los campos y nuevos valores para actualizar del evento.',
@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
               },
             },
           },
-          required: ['eventId', 'updates'],
+          required: ['id', 'updates'],
         },
       },
     },
@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
         parameters: {
           type: 'object',
           properties: {
-            rehearsalId: { type: 'string', description: 'El ID único del ensayo a modificar.' },
+            id: { type: 'string', description: 'El ID único del ensayo a modificar.' },
             updates: {
               type: 'object',
               description: 'Un objeto con los campos y nuevos valores para actualizar del ensayo.',
@@ -228,7 +228,7 @@ export async function POST(req: NextRequest) {
               },
             },
           },
-          required: ['rehearsalId', 'updates'],
+          required: ['id', 'updates'],
         },
       },
     },
@@ -330,7 +330,7 @@ export async function POST(req: NextRequest) {
             const summary = await getFinancialSummary(startDate, endDate);
             functionResponseContent = `Resumen financiero para el período de ${startDate} a ${endDate}: ${JSON.stringify(summary)}.`;
         } else if (functionName === 'delete_event') {
-            const result = await deleteEvent(functionArgs.eventId);
+            const result = await deleteEvent(functionArgs.id);
             if (result.success) {
               functionResponseContent = `El evento ha sido eliminado exitosamente. Notifica al usuario que la acción se completó.`;
               refreshAgenda = true;
@@ -338,7 +338,7 @@ export async function POST(req: NextRequest) {
               functionResponseContent = `Hubo un error al eliminar el evento: ${result.error}. Informa al usuario del problema.`;
             }
         } else if (functionName === 'delete_rehearsal') {
-            const result = await deleteRehearsal(functionArgs.rehearsalId);
+            const result = await deleteRehearsal(functionArgs.id);
             if (result.success) {
               functionResponseContent = `El ensayo ha sido eliminado exitosamente. Notifica al usuario que la acción se completó.`;
               refreshAgenda = true;
@@ -346,8 +346,8 @@ export async function POST(req: NextRequest) {
               functionResponseContent = `Hubo un error al eliminar el ensayo: ${result.error}. Informa al usuario del problema.`;
             }
         } else if (functionName === 'update_event') {
-            const { eventId, updates } = functionArgs;
-            const result = await updateEvent(eventId, updates);
+            const { id, updates } = functionArgs;
+            const result = await updateEvent(id, updates);
             if (result.success) {
               functionResponseContent = `El evento ha sido modificado exitosamente. Notifica al usuario que la acción se completó.`;
               refreshAgenda = true;
@@ -355,8 +355,8 @@ export async function POST(req: NextRequest) {
               functionResponseContent = `Hubo un error al modificar el evento: ${result.error}. Informa al usuario del problema.`;
             }
         } else if (functionName === 'update_rehearsal') {
-            const { rehearsalId, updates } = functionArgs;
-            const result = await updateRehearsal(rehearsalId, updates);
+            const { id, updates } = functionArgs;
+            const result = await updateRehearsal(id, updates);
             if (result.success) {
               functionResponseContent = `El ensayo ha sido modificado exitosamente. Notifica al usuario que la acción se completó.`;
               refreshAgenda = true;
