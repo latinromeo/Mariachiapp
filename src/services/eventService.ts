@@ -672,11 +672,17 @@ export async function createMusicianExpense(userId: string, data: MusicianExpens
 }
 
 export async function getMusicianExpenses(userId: string): Promise<MusicianExpense[]> {
-     if (!userId) return [];
-     try {
-        const q = query(collection(db, "musicianExpenses"), where("userId", "==", userId), orderBy("date", "desc"));
+    if (!userId) return [];
+    try {
+        // Query without ordering to avoid needing a composite index
+        const q = query(collection(db, "musicianExpenses"), where("userId", "==", userId));
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as MusicianExpense[];
+        const expenses = snapshot.docs.map(processDocTimestamps).filter(Boolean) as MusicianExpense[];
+        
+        // Sort in-memory to ensure descending order by date
+        expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        return expenses;
     } catch (error) {
         console.error("Error fetching musician expenses:", error);
         return [];
