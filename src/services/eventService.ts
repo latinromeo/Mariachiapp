@@ -21,6 +21,46 @@ import {
 } from 'firebase/firestore';
 import { EVENT_PLANS } from "@/lib/constants";
 
+// --- HELPER FUNCTIONS ---
+
+// Helper function to remove undefined properties from an object before sending to Firestore
+const cleanForFirestore = (data: any): any => {
+    if (data === null || data === undefined) {
+        return data;
+    }
+    if (Array.isArray(data)) {
+        return data.map(item => cleanForFirestore(item));
+    }
+    if (typeof data === 'object') {
+        const cleaned: { [key: string]: any } = {};
+        for (const key of Object.keys(data)) {
+            const value = data[key];
+            if (value !== undefined) {
+                cleaned[key] = cleanForFirestore(value);
+            }
+        }
+        return cleaned;
+    }
+    return data;
+};
+
+const processDocTimestamps = (doc: DocumentSnapshot) => {
+    const data = doc.data();
+    if (!data) return null;
+
+    const processedData: { [key: string]: any } = { id: doc.id };
+    for (const key in data) {
+        const value = data[key];
+        if (value && typeof value.toDate === 'function') {
+            processedData[key] = value.toDate().toISOString();
+        } else {
+            processedData[key] = value;
+        }
+    }
+    return processedData;
+};
+
+
 // --- INTERFACES ---
 
 export interface ClientData {
@@ -154,25 +194,6 @@ type SongInputData = Omit<SongDetail, 'id' | 'createdAt' | 'updatedAt' | 'sugges
 type MusicianExpenseInput = Omit<MusicianExpense, 'id' | 'userId' | 'createdAt'>;
 
 
-// --- HELPER FUNCTIONS ---
-
-const processDocTimestamps = (doc: DocumentSnapshot) => {
-    const data = doc.data();
-    if (!data) return null;
-
-    const processedData: { [key: string]: any } = { id: doc.id };
-    for (const key in data) {
-        const value = data[key];
-        if (value && typeof value.toDate === 'function') {
-            processedData[key] = value.toDate().toISOString();
-        } else {
-            processedData[key] = value;
-        }
-    }
-    return processedData;
-};
-
-
 // --- CLIENT SERVICE FUNCTIONS ---
 
 export async function getClients(): Promise<ClientData[]> {
@@ -206,11 +227,12 @@ export async function createClient(data: ClientInputData): Promise<{ success: bo
     }
 
     try {
-        const docRef = await addDoc(collection(db, 'clients'), {
+        const payload = {
             ...data,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-        });
+        };
+        const docRef = await addDoc(collection(db, 'clients'), cleanForFirestore(payload));
         return { success: true, clientId: docRef.id };
     } catch (error) {
         console.error("Error creating client:", error);
@@ -236,10 +258,11 @@ export async function getClientById(id: string): Promise<ClientData | null> {
 export async function updateClient(id: string, data: Partial<ClientInputData>): Promise<{ success: boolean; error?: string }> {
     try {
         const docRef = doc(db, "clients", id);
-        await updateDoc(docRef, {
+        const payload = {
             ...data,
             updatedAt: serverTimestamp(),
-        });
+        };
+        await updateDoc(docRef, cleanForFirestore(payload));
         return { success: true };
     } catch (error) {
         console.error("Error updating client:", error);
@@ -336,7 +359,7 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
   };
 
   try {
-    const docRef = await addDoc(collection(db, "events"), newEventData);
+    const docRef = await addDoc(collection(db, "events"), cleanForFirestore(newEventData));
     return { success: true, eventId: docRef.id };
   } catch (error) {
      console.error("Error creating event:", error);
@@ -388,7 +411,7 @@ export async function updateEvent(id: string, data: Partial<EventInputData>): Pr
             }
         }
 
-        await updateDoc(eventRef, updatePayload);
+        await updateDoc(eventRef, cleanForFirestore(updatePayload));
         return { success: true };
     } catch (error) {
         console.error("Error updating event:", error);
@@ -468,7 +491,7 @@ export async function createRehearsal(data: RehearsalInputData): Promise<{ succe
             updatedAt: serverTimestamp(),
         };
 
-        const docRef = await addDoc(collection(db, 'rehearsals'), payload);
+        const docRef = await addDoc(collection(db, 'rehearsals'), cleanForFirestore(payload));
         return { success: true, rehearsalId: docRef.id };
     } catch (error) {
         console.error("Error creating rehearsal:", error);
@@ -512,7 +535,7 @@ export async function updateRehearsal(id: string, data: Partial<RehearsalInputDa
         payload.updatedAt = serverTimestamp();
 
         const docRef = doc(db, "rehearsals", id);
-        await updateDoc(docRef, payload);
+        await updateDoc(docRef, cleanForFirestore(payload));
         return { success: true };
     } catch (error) {
         console.error("Error updating rehearsal:", error);
@@ -559,11 +582,12 @@ export async function getManualFinanceEntries(): Promise<ManualFinanceEntry[]> {
 
 export async function createManualFinanceEntry(data: ManualFinanceEntryInputData): Promise<{ success: boolean; entryId?: string, error?: string }> {
     try {
-        const docRef = await addDoc(collection(db, 'manualFinanceEntries'), {
+        const payload = {
             ...data,
             createdBy: 'admin', // Hardcoded for now
             createdAt: serverTimestamp(),
-        });
+        };
+        const docRef = await addDoc(collection(db, 'manualFinanceEntries'), cleanForFirestore(payload));
         return { success: true, entryId: docRef.id };
     } catch (error) {
         console.error("Error creating manual entry:", error);
@@ -580,20 +604,14 @@ export async function upsertMusicianIncome(userId: string, eventId: string, amou
     const incomeId = `${userId}_${eventId}`;
     const incomeRef = doc(db, "musicianIncomes", incomeId);
     try {
-        const incomeDoc = await getDoc(incomeRef);
-        if (incomeDoc.exists()) {
-             await updateDoc(incomeRef, {
-                amount,
-                date: eventDate,
-            });
-        } else {
-             await addDoc(collection(db, "musicianIncomes"), {
-                userId,
-                eventId,
-                amount,
-                date: eventDate,
-            });
-        }
+        const payload = {
+            userId,
+            eventId,
+            amount,
+            date: eventDate,
+        };
+        // Using set with merge: true to create or update
+        await addDoc(collection(db, 'musicianIncomes'), cleanForFirestore(payload));
         return { success: true };
     } catch (error) {
         console.error("Error upserting musician income:", error);
@@ -619,11 +637,12 @@ export async function createMusicianExpense(userId: string, data: MusicianExpens
         return { success: false, error: "User ID is required." };
     }
     try {
-        const docRef = await addDoc(collection(db, "musicianExpenses"), {
+        const payload = {
             ...data,
             userId,
             createdAt: serverTimestamp()
-        });
+        };
+        const docRef = await addDoc(collection(db, "musicianExpenses"), cleanForFirestore(payload));
         return { success: true, expenseId: docRef.id };
     } catch (error) {
         console.error("Error creating musician expense:", error);
@@ -765,10 +784,11 @@ async function seedInitialSongs() {
         const batch = writeBatch(db);
         for (const songData of initialSongs) {
             const docRef = doc(songsCol); 
-            batch.set(docRef, {
+            const payload = {
                 ...songData,
                 createdAt: serverTimestamp()
-            });
+            };
+            batch.set(docRef, cleanForFirestore(payload));
         }
         await batch.commit();
     } catch(e) {
@@ -791,11 +811,12 @@ export async function getSongs(): Promise<SongDetail[]> {
 
 export async function createSong(data: SongInputData): Promise<{ success: boolean; songId?: string, error?: string }> {
   try {
-    const docRef = await addDoc(collection(db, "songs"), {
+    const payload = {
         ...data,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-    });
+    };
+    const docRef = await addDoc(collection(db, "songs"), cleanForFirestore(payload));
     return { success: true, songId: docRef.id };
   } catch (error) {
      console.error("Error creating song:", error);
@@ -806,10 +827,11 @@ export async function createSong(data: SongInputData): Promise<{ success: boolea
 export async function updateSong(id: string, data: Partial<SongInputData>): Promise<{ success: boolean; error?: string }> {
     try {
         const docRef = doc(db, "songs", id);
-        await updateDoc(docRef, {
+        const payload = {
             ...data,
             updatedAt: serverTimestamp(),
-        });
+        };
+        await updateDoc(docRef, cleanForFirestore(payload));
         return { success: true };
     } catch (error) {
         console.error("Error updating song:", error);
@@ -884,5 +906,3 @@ export async function getSuggestedSongs(eventType: string): Promise<SongDetail[]
 
     return suggestions;
 }
-
-    

@@ -21,6 +21,28 @@ interface RequestBody {
   history: ChatMessage[];
 }
 
+// Helper function to remove undefined properties from an object before sending to Firestore
+const cleanForFirestore = (data: any): any => {
+    if (data === null || data === undefined) {
+        return data;
+    }
+    if (Array.isArray(data)) {
+        return data.map(item => cleanForFirestore(item));
+    }
+    if (typeof data === 'object') {
+        const cleaned: { [key: string]: any } = {};
+        for (const key of Object.keys(data)) {
+            const value = data[key];
+            if (value !== undefined) {
+                cleaned[key] = cleanForFirestore(value);
+            }
+        }
+        return cleaned;
+    }
+    return data;
+};
+
+
 function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: string; location: string; focus: string; } {
     const today = new Date();
     let eventDate = new Date();
@@ -184,7 +206,7 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
                     updatedAt: serverTimestamp(),
                 };
                 
-                await addDoc(collection(db, 'rehearsals'), rehearsalData);
+                await addDoc(collection(db, 'rehearsals'), cleanForFirestore(rehearsalData));
                 eventCreated = true;
 
             } else if (intent === 'crear_evento') {
@@ -210,7 +232,7 @@ Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente hu
                   updatedAt: serverTimestamp(),
                 };
 
-                await addDoc(collection(db, 'events'), eventData);
+                await addDoc(collection(db, 'events'), cleanForFirestore(eventData));
                 eventCreated = true;
             }
         } catch (e: any) {
