@@ -36,7 +36,7 @@ FUNCIONES PRINCIPALES:
 - ¡IMPORTANTE! Antes de usar una herramienta para modificar o eliminar (como 'delete_rehearsal', 'delete_event', 'update_rehearsal', 'update_event'), SIEMPRE debes pedir confirmación explícita al usuario.
 - En tu solicitud de confirmación, incluye detalles específicos del ítem para evitar errores. Por ejemplo: "¿Estás seguro de que quieres eliminar el ensayo sobre 'Nuevas Canciones' del martes a las 5pm?".
 - Si la solicitud del usuario es ambigua (ej. "elimina el ensayo del martes" y hay dos), pide que especifique cuál.
-- Una vez que el usuario confirme (ej. "sí, elimina ese", "confirmo"), entonces y solo entonces, llama a la herramienta correspondiente con el ID correcto.
+- Una vez que el usuario confirme (ej. "sí, elimina ese", "confirmo"), es OBLIGATORIO que llames a la herramienta correspondiente para ejecutar la acción. No confirmes la acción al usuario sin antes haber llamado a la herramienta y recibido una respuesta exitosa.
 
 3. GESTIÓN DE CLIENTES Y FINANZAS:
 - Puedes obtener el número total de clientes ('get_client_count').
@@ -265,10 +265,7 @@ export async function POST(req: NextRequest) {
     const responseMessage = initialResponse.choices[0].message;
     const toolCalls = responseMessage.tool_calls;
 
-    let eventCreated = false;
-    let rehearsalCreated = false;
-    let eventModified = false;
-    let rehearsalModified = false;
+    let refreshAgenda = false;
 
     if (toolCalls) {
       messages.push(responseMessage); // Add assistant's tool-calling message to history
@@ -300,7 +297,7 @@ export async function POST(req: NextRequest) {
           
           if (result.success) {
             functionResponseContent = `El evento para ${functionArgs.clientName} ha sido creado exitosamente con el ID: ${result.eventId}. Notifica al usuario que todo está confirmado.`;
-            eventCreated = true;
+            refreshAgenda = true;
           } else {
             functionResponseContent = `Hubo un error al crear el evento: ${result.error}. Informa al usuario del problema.`;
           }
@@ -309,7 +306,7 @@ export async function POST(req: NextRequest) {
 
             if (result.success) {
                 functionResponseContent = `El ensayo sobre "${functionArgs.focus}" ha sido creado exitosamente con el ID: ${result.rehearsalId}. Notifica al usuario que todo está confirmado.`;
-                rehearsalCreated = true;
+                refreshAgenda = true;
             } else {
                 functionResponseContent = `Hubo un error al crear el ensayo: ${result.error}. Informa al usuario del problema.`;
             }
@@ -336,7 +333,7 @@ export async function POST(req: NextRequest) {
             const result = await deleteEvent(functionArgs.eventId);
             if (result.success) {
               functionResponseContent = `El evento ha sido eliminado exitosamente. Notifica al usuario que la acción se completó.`;
-              eventModified = true;
+              refreshAgenda = true;
             } else {
               functionResponseContent = `Hubo un error al eliminar el evento: ${result.error}. Informa al usuario del problema.`;
             }
@@ -344,7 +341,7 @@ export async function POST(req: NextRequest) {
             const result = await deleteRehearsal(functionArgs.rehearsalId);
             if (result.success) {
               functionResponseContent = `El ensayo ha sido eliminado exitosamente. Notifica al usuario que la acción se completó.`;
-              rehearsalModified = true;
+              refreshAgenda = true;
             } else {
               functionResponseContent = `Hubo un error al eliminar el ensayo: ${result.error}. Informa al usuario del problema.`;
             }
@@ -353,7 +350,7 @@ export async function POST(req: NextRequest) {
             const result = await updateEvent(eventId, updates);
             if (result.success) {
               functionResponseContent = `El evento ha sido modificado exitosamente. Notifica al usuario que la acción se completó.`;
-              eventModified = true;
+              refreshAgenda = true;
             } else {
               functionResponseContent = `Hubo un error al modificar el evento: ${result.error}. Informa al usuario del problema.`;
             }
@@ -362,7 +359,7 @@ export async function POST(req: NextRequest) {
             const result = await updateRehearsal(rehearsalId, updates);
             if (result.success) {
               functionResponseContent = `El ensayo ha sido modificado exitosamente. Notifica al usuario que la acción se completó.`;
-              rehearsalModified = true;
+              refreshAgenda = true;
             } else {
               functionResponseContent = `Hubo un error al modificar el ensayo: ${result.error}. Informa al usuario del problema.`;
             }
@@ -384,19 +381,13 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         reply: finalResponse.choices[0].message.content,
-        eventCreated,
-        rehearsalCreated,
-        eventModified,
-        rehearsalModified,
+        refreshAgenda: refreshAgenda,
       });
     } else {
       // No tool was called, just return the text response
       return NextResponse.json({
         reply: responseMessage.content,
-        eventCreated,
-        rehearsalCreated,
-        eventModified,
-        rehearsalModified,
+        refreshAgenda: false,
       });
     }
   } catch (error: any) {

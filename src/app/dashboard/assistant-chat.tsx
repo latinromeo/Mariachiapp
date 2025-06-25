@@ -114,41 +114,11 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
       const assistantMessage: Message = { role: 'assistant', content: data.reply };
       setMessages((prev) => [...prev, assistantMessage]);
 
-      let needsRefresh = false;
-
-      if (data.eventCreated) {
+      if (data.refreshAgenda) {
         toast({
-          title: "¡Evento Creado!",
-          description: "El asistente ha agendado un nuevo evento en tu calendario.",
+          title: "¡Agenda Actualizada!",
+          description: "El asistente ha realizado cambios en tu agenda.",
         });
-        needsRefresh = true;
-      }
-      
-       if (data.rehearsalCreated) {
-        toast({
-          title: "¡Ensayo Creado!",
-          description: "El asistente ha agendado un nuevo ensayo en tu calendario.",
-        });
-        needsRefresh = true;
-      }
-
-      if (data.eventModified) {
-        toast({
-            title: "¡Evento Actualizado!",
-            description: "Un evento ha sido modificado o eliminado de tu agenda.",
-        });
-        needsRefresh = true;
-      }
-
-      if (data.rehearsalModified) {
-        toast({
-            title: "¡Ensayo Actualizado!",
-            description: "Un ensayo ha sido modificado o eliminado de tu agenda.",
-        });
-        needsRefresh = true;
-      }
-
-      if (needsRefresh) {
         router.refresh();
       }
 
