@@ -2,32 +2,20 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
+// Your web app's Firebase configuration provided by you.
+// This ensures the app is always connected to the correct Firebase project.
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyDXhKOt63UuXVBOQFXM6LgnpWQFwC5wJhs",
+  authDomain: "mariachiappdefirebase.firebaseapp.com",
+  projectId: "mariachiappdefirebase",
+  storageBucket: "mariachiappdefirebase.appspot.com",
+  messagingSenderId: "932231459466",
+  appId: "1:932231459466:web:75998c80aba808c7f9b373",
+  measurementId: "G-6SY8WZ5PF5"
 };
 
-// Crucial check to ensure Firebase config is loaded.
-if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID") {
-  console.error("Firebase configuration is missing or incomplete!");
-  // This error will be shown to the developer, guiding them to fix the .env file.
-  // It's not thrown to avoid crashing the app for the end-user on initial load.
-}
-
 // Initialize Firebase
-let app;
-let db;
-
-try {
-  app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  db = getFirestore(app);
-} catch (e) {
-    console.error("Error initializing Firebase. Please check your configuration in the .env file.", e)
-}
-
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const db = getFirestore(app);
 
 export { app, db };
