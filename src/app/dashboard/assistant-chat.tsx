@@ -126,7 +126,7 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
       // Auto-activate microphone for confirmations
       const replyText = (data.reply || '').toLowerCase();
       const confirmationKeywords = ['¿confirmar', '¿deseas', '¿quieres', '¿estás seguro'];
-      const isConfirmationQuestion = confirmationKeywords.some(keyword => replyText.includes(keyword)) && replyText.endsWith('?');
+      const isConfirmationQuestion = confirmationKeywords.some(keyword => replyText.includes(keyword)) && replyText.includes('?');
 
       if (isConfirmationQuestion && recognitionRef.current) {
           setTimeout(() => {
