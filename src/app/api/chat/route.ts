@@ -55,6 +55,8 @@ function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: s
         eventDate = add(today, { days: 2 });
     } else if (lowerPrompt.includes('mañana')) {
         eventDate = add(today, { days: 1 });
+    } else if (lowerPrompt.includes('hoy')) {
+        eventDate = today;
     } else {
         for (const dayName in dayMap) {
             if (lowerPrompt.includes(dayName)) {
@@ -147,7 +149,7 @@ Tu comportamiento debe seguir estas reglas:
    - Responde confirmando con un mensaje profesional y amable.
    - Incluye al final una línea separada y clara: \`INTENT: crear_ensayo\`, \`INTENT: crear_evento\`, \`INTENT: crear_cliente\`, \`INTENT: agregar_nota\`, etc., según corresponda.
 
-3. **Contexto inteligente:** Si se menciona algo como "mañana", "pasado mañana", "el viernes", o "en el estudio de Luis", interpreta y convierte eso a una fecha y ubicación concreta para crear el evento.
+3. **Contexto inteligente:** Si se menciona algo como "hoy", "mañana", "pasado mañana", "el viernes", o "en el estudio de Luis", interpreta y convierte eso a una fecha y ubicación concreta para crear el evento.
 
 4. **Formato de hora:** Interpreta frases como "a las 5", "cinco pm", "3 de la tarde", "mediodía", y conviértelas en formato 24 horas (por ejemplo: 17:00).
 

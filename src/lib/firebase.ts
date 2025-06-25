@@ -1,6 +1,7 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAnalytics, isSupported } from "firebase/analytics";
 
 // Your web app's Firebase configuration provided by you.
 // This ensures the app is always connected to the correct Firebase project.
@@ -17,5 +18,14 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
+
+// Conditionally initialize Analytics only on the client side
+if (typeof window !== 'undefined') {
+    isSupported().then(yes => {
+        if (yes) {
+            getAnalytics(app);
+        }
+    });
+}
 
 export { app, db };
