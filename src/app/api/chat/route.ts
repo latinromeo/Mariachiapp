@@ -9,6 +9,7 @@ import { collection, addDoc } from 'firebase/firestore';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  baseURL: 'https://api.openai.com/v1', // Force the correct API endpoint
 });
 
 interface ChatMessage {
