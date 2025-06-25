@@ -1,18 +1,29 @@
-
 "use client"
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getRehearsalById, type RehearsalData } from "@/services/eventService";
-import { ArrowLeft, Calendar, Clock, Edit, FileText, ListMusic, MapPin, Music, StickyNote, Video } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { getRehearsalById, type RehearsalData, deleteRehearsal, completeRehearsal } from "@/services/eventService";
+import { ArrowLeft, Calendar, Clock, Edit, FileText, ListMusic, MapPin, Music, StickyNote, Video, Trash2, CheckCircle, Loader2 } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useUser } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 export default function RehearsalDetailPage() {
     const params = useParams();
@@ -20,19 +31,51 @@ export default function RehearsalDetailPage() {
     const rehearsalId = params.id as string;
     const [rehearsal, setRehearsal] = useState<RehearsalData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isCompleting, setIsCompleting] = useState(false);
     const { permissions } = useUser();
+    const { toast } = useToast();
+
+    const fetchRehearsalData = async () => {
+        if (rehearsalId) {
+            setIsLoading(true);
+            const data = await getRehearsalById(rehearsalId);
+            setRehearsal(data);
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (rehearsalId) {
-            const fetchRehearsal = async () => {
-                setIsLoading(true);
-                const data = await getRehearsalById(rehearsalId);
-                setRehearsal(data);
-                setIsLoading(false);
-            };
-            fetchRehearsal();
+            fetchRehearsalData();
         }
     }, [rehearsalId]);
+
+    const handleCompleteRehearsal = async () => {
+        if (!rehearsal) return;
+        setIsCompleting(true);
+        const result = await completeRehearsal(rehearsal.id);
+        if (result.success) {
+            toast({ title: "Ensayo Completado", description: "El ensayo se ha marcado como completado." });
+            fetchRehearsalData();
+        } else {
+            toast({ variant: "destructive", title: "Error", description: result.error || "No se pudo completar el ensayo." });
+        }
+        setIsCompleting(false);
+    };
+
+    const handleDeleteRehearsal = async () => {
+        if (!rehearsal) return;
+        setIsDeleting(true);
+        const result = await deleteRehearsal(rehearsal.id);
+        if (result.success) {
+            toast({ title: "Ensayo Eliminado", description: "El ensayo ha sido eliminado correctamente." });
+            router.push('/dashboard/rehearsals');
+        } else {
+            toast({ variant: "destructive", title: "Error al eliminar", description: result.error || "No se pudo eliminar el ensayo." });
+            setIsDeleting(false);
+        }
+    };
 
     if (isLoading) {
         return (
@@ -63,6 +106,14 @@ export default function RehearsalDetailPage() {
                     Volver Atrás
                 </Button>
             </div>
+
+            {rehearsal.status === 'completed' && (
+                <Badge variant="secondary" className="w-fit text-lg py-1 px-4 bg-green-100 text-green-700 border-green-300 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700">
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    Ensayo Completado
+                </Badge>
+            )}
+
             <div className="grid lg:grid-cols-3 gap-6 items-start">
                 <div className="lg:col-span-2 grid gap-6">
                     <Card>
@@ -119,13 +170,44 @@ export default function RehearsalDetailPage() {
                 </div>
             </div>
             <div className="flex gap-2 justify-end">
-                {permissions.canCreateRehearsals && (
-                    <Button asChild>
-                        <Link href={`/dashboard/rehearsals/${rehearsalId}/edit`}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar Ensayo
-                        </Link>
-                    </Button>
+                {rehearsal.status !== 'completed' && permissions.canCreateRehearsals && (
+                    <>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" disabled={isDeleting}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Eliminar Ensayo
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Esta acción no se puede deshacer. Se eliminará permanentemente este ensayo.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeleteRehearsal} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
+                                        {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Sí, eliminar
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+
+                         <Button variant="outline" onClick={handleCompleteRehearsal} disabled={isCompleting}>
+                            {isCompleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                            Marcar Completo
+                        </Button>
+
+                        <Button asChild>
+                            <Link href={`/dashboard/rehearsals/${rehearsalId}/edit`}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar Ensayo
+                            </Link>
+                        </Button>
+                    </>
                 )}
             </div>
         </div>
