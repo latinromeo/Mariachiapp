@@ -45,6 +45,11 @@ const formatTime = (timeString: string | undefined): string => {
   return `${hours}:${minutesStr} ${ampm}`;
 };
 
+// Helper to sanitize filenames
+const sanitizeFilename = (name: string) => {
+    return name.replace(/[^a-z0-9_.-]/gi, "_").toLowerCase();
+};
+
 
 async function generateReceipt(eventData: any): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
@@ -58,17 +63,22 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
   const bucket = storage.bucket();
   const logoFile = bucket.file("logo.png"); // Assumes logo.png is in the root of the bucket
   try {
-    const [logoImageBytes] = await logoFile.download();
-    const logoImage = await pdfDoc.embedPng(logoImageBytes);
-    const logoDims = logoImage.scale(0.25);
-    page.drawImage(logoImage, {
-      x: (width - logoDims.width) / 2,
-      y: height - 100,
-      width: logoDims.width,
-      height: logoDims.height,
-    });
+    const [logoExists] = await logoFile.exists();
+    if (logoExists) {
+        const [logoImageBytes] = await logoFile.download();
+        const logoImage = await pdfDoc.embedPng(logoImageBytes);
+        const logoDims = logoImage.scale(0.25);
+        page.drawImage(logoImage, {
+          x: (width - logoDims.width) / 2,
+          y: height - 100,
+          width: logoDims.width,
+          height: logoDims.height,
+        });
+    } else {
+        functions.logger.warn("Logo file 'logo.png' does not exist in the root of the Storage bucket. Skipping logo.");
+    }
   } catch (error) {
-    functions.logger.error("Could not fetch or embed logo from Storage. Ensure logo.png exists in the root of your Storage bucket.", error);
+    functions.logger.error("Could not fetch or embed logo from Storage.", error);
   }
 
 
@@ -110,19 +120,37 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
     y -= 25;
   };
 
-  const parsedDate = parseISO(eventData.eventDate);
-  const formattedDate = format(parsedDate, "eeee, dd 'de' MMMM 'de' yyyy", {locale: es});
-  const formattedTime = formatTime(eventData.eventTime);
+  // Defensive checks for eventData fields
+  const clientName = eventData.clientName || "N/A";
+  const eventDate = eventData.eventDate;
+  const eventTime = eventData.eventTime || "N/A";
+  const eventType = eventData.eventType || "N/A";
+  const location = eventData.location || "N/A";
+  const sector = eventData.sector || "N/A";
+  const contractedAmount = eventData.contractedAmount;
+  const amountPaid = eventData.amountPaid;
+  const paymentMethod = eventData.paymentMethod || "N/A";
 
-  drawDetailRow("Cliente:", eventData.clientName);
+  let formattedDate = "Fecha inválida";
+  if (eventDate) {
+    try {
+        const parsedDate = parseISO(eventDate);
+        formattedDate = format(parsedDate, "eeee, dd 'de' MMMM 'de' yyyy", {locale: es});
+    } catch (e) {
+        functions.logger.error("Could not parse event date:", eventDate, e);
+    }
+  }
+  const formattedTime = formatTime(eventTime);
+
+  drawDetailRow("Cliente:", clientName);
   drawDetailRow("Fecha:", formattedDate);
   drawDetailRow("Hora:", formattedTime);
-  drawDetailRow("Tipo de Evento:", eventData.eventType);
-  drawDetailRow("Dirección:", `${eventData.location}, ${eventData.sector}`);
+  drawDetailRow("Tipo de Evento:", eventType);
+  drawDetailRow("Dirección:", `${location}, ${sector}`);
   y -= 10;
-  drawDetailRow("Monto Total:", formatCurrency(eventData.contractedAmount), true);
-  drawDetailRow("Monto Pagado:", formatCurrency(eventData.amountPaid), true);
-  drawDetailRow("Método de Pago:", eventData.paymentMethod);
+  drawDetailRow("Monto Total:", formatCurrency(contractedAmount), true);
+  drawDetailRow("Monto Pagado:", formatCurrency(amountPaid), true);
+  drawDetailRow("Método de Pago:", paymentMethod);
   y -= 20;
 
   // 4. Thank You Message
@@ -163,7 +191,9 @@ export const onEventCompleted = functions.region("us-central1")
 
           // 2. Upload to Firebase Storage
           const bucket = storage.bucket();
-          const fileName = `receipts/recibo-${afterData.clientName.replace(/\s/g, "_")}-${afterData.eventDate}.pdf`;
+          const clientNameForFile = afterData.clientName || "sin_nombre";
+          const sanitizedClientName = sanitizeFilename(clientNameForFile);
+          const fileName = `receipts/recibo-${sanitizedClientName}-${afterData.eventDate}.pdf`;
           const file = bucket.file(fileName);
 
           await file.save(pdfBuffer, {
