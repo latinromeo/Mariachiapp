@@ -292,19 +292,23 @@ function DashboardLayoutContent({
         <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">{children}</main>
       </SidebarInset>
        <BottomNav />
-        <div className="fixed bottom-4 right-4 z-50 md:bottom-6 md:right-6">
-         {!isChatOpen && (
-            <Button
-              size="lg"
-              className="rounded-full h-14 w-14 shadow-lg"
-              onClick={() => setIsChatOpen(true)}
-            >
-              <Bot className="h-7 w-7" />
-              <span className="sr-only">Abrir Asistente AI</span>
-            </Button>
-         )}
-       </div>
-       <AssistantChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+       {user.role === 'Administrador General' && (
+         <>
+            <div className="fixed bottom-4 right-4 z-50 md:bottom-6 md:right-6">
+              {!isChatOpen && (
+                <Button
+                  size="lg"
+                  className="rounded-full h-14 w-14 shadow-lg"
+                  onClick={() => setIsChatOpen(true)}
+                >
+                  <Bot className="h-7 w-7" />
+                  <span className="sr-only">Abrir Asistente AI</span>
+                </Button>
+              )}
+            </div>
+            <AssistantChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+         </>
+       )}
     </>
   )
 }
