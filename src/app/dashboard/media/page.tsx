@@ -1,10 +1,11 @@
+
 "use client"
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Loader2 } from "lucide-react";
@@ -27,6 +28,8 @@ export default function MediaPage() {
   
   const availableTabs = TABS_CONFIG.filter(tab => tab.roles.includes(user.role));
   const [activeTab, setActiveTab] = useState(availableTabs[0]?.value || "");
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const months = Array.from({ length: 12 }, (_, i) => ({
     value: String(i + 1),
@@ -42,6 +45,39 @@ export default function MediaPage() {
       <p className="text-sm">Sube nuevos archivos para verlos aquí.</p>
     </div>
   );
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+        setFile(e.target.files[0]);
+    }
+  };
+
+  const handleUpload = () => {
+      if (!file) {
+          toast({
+              variant: "destructive",
+              title: "Ningún archivo seleccionado",
+              description: "Por favor, selecciona un archivo para subir.",
+          });
+          return;
+      }
+      setIsUploading(true);
+      // Simulate upload
+      setTimeout(() => {
+          setIsUploading(false);
+          toast({
+              title: "Función no implementada",
+              description: "La subida de archivos es solo una demostración visual por ahora.",
+          });
+          setFile(null);
+          // Reset file input
+          const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+          if (fileInput) {
+              fileInput.value = "";
+          }
+      }, 1500);
+  };
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,6 +89,32 @@ export default function MediaPage() {
           Sube, visualiza y organiza tus archivos y facturas.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Subir Archivo</CardTitle>
+            <CardDescription>
+                Selecciona un archivo para subirlo a tu biblioteca multimedia.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div className="grid w-full max-w-sm items-center gap-1.5">
+                <Label htmlFor="file-upload">Seleccionar archivo</Label>
+                <Input id="file-upload" type="file" onChange={handleFileChange} disabled={isUploading} />
+            </div>
+        </CardContent>
+        <CardFooter>
+            <Button onClick={handleUpload} disabled={isUploading || !file}>
+                {isUploading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                    <Upload className="mr-2 h-4 w-4" />
+                )}
+                {isUploading ? "Subiendo..." : "Subir Archivo"}
+            </Button>
+        </CardFooter>
+      </Card>
+
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="h-auto w-full justify-start overflow-x-auto p-1">
