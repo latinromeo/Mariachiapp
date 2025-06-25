@@ -50,16 +50,6 @@ const COLORS: Record<string, string> = {
     'Otro': 'hsl(var(--chart-3))',
 };
 
-interface Transaction {
-    date: string;
-    description: string;
-    category: string;
-    type: 'Ingreso' | 'Gasto';
-    amount: number;
-    id: string;
-    createdAt: any;
-}
-
 const safeParseDate = (dateString: string) => {
     if (!dateString) return new Date(0); // Fallback to epoch for invalid date
     try {
@@ -192,41 +182,31 @@ export default function FinancePage() {
         }, {} as ChartConfig);
 
         // Transaction History
-        const eventIncomeTransactions: Transaction[] = events
-            .filter(event => event.contractedAmount > 0)
+        const eventTransactions = events
             .map(event => ({
+                type: 'event' as const,
                 date: event.eventDate,
-                description: `Ingreso Evento: ${event.eventType} - ${event.clientName}`,
+                description: `${event.eventType} - ${event.clientName}`,
+                id: event.id,
+                createdAt: event.createdAt,
+                income: event.contractedAmount > 0 ? event.contractedAmount : undefined,
+                expense: !event.externalGroup && event.musiciansPay && event.musiciansPay > 0 ? event.musiciansPay : undefined,
                 category: event.externalGroup ? 'Referido Externo' : 'Presentación Mariachi',
-                type: 'Ingreso',
-                amount: event.contractedAmount,
-                id: `evt-in-${event.id}`,
-                createdAt: event.createdAt,
-            }));
+            }))
+            .filter(et => et.income || et.expense);
 
-        const eventExpenseTransactions: Transaction[] = events
-            .filter(event => !event.externalGroup && event.musiciansPay && event.musiciansPay > 0)
-            .map(event => ({
-                date: event.eventDate,
-                description: `Pago Músicos: ${event.eventType} - ${event.clientName}`,
-                category: 'Pago a Músicos',
-                type: 'Gasto',
-                amount: event.musiciansPay!,
-                id: `evt-out-${event.id}`,
-                createdAt: event.createdAt,
-            }));
-
-        const manualTransactions: Transaction[] = manualEntries.map(entry => ({
+        const manualTransactions = manualEntries.map(entry => ({
+            type: 'manual' as const,
             date: entry.date,
             description: entry.description,
             category: entry.category || 'Otro',
-            type: entry.type === 'income' ? 'Ingreso' : 'Gasto',
+            transactionType: entry.type === 'income' ? 'Ingreso' : 'Gasto',
             amount: entry.amount,
             id: `man-${entry.id}`,
             createdAt: entry.createdAt,
         }));
         
-        const transactionHistory = [...eventIncomeTransactions, ...eventExpenseTransactions, ...manualTransactions];
+        const transactionHistory = [...eventTransactions, ...manualTransactions];
         transactionHistory.sort((a, b) => {
             const dateA = safeParseDate(a.date);
             const dateB = safeParseDate(b.date);
@@ -477,25 +457,49 @@ export default function FinancePage() {
                                     </TableRow>
                                 ))
                             ) : transactionHistory.length > 0 ? (
-                                transactionHistory.map(t => (
-                                    <TableRow key={t.id}>
-                                        <TableCell className="font-medium">
-                                            {format(safeParseDate(t.date), 'dd/MM/yyyy')}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="font-medium">{t.description}</div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline">{t.category}</Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right font-semibold text-green-600">
-                                            {t.type === 'Ingreso' ? formatCurrency(t.amount, false) : '-'}
-                                        </TableCell>
-                                        <TableCell className="text-right font-semibold text-destructive">
-                                            {t.type === 'Gasto' ? formatCurrency(t.amount, false) : '-'}
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                transactionHistory.map(t => {
+                                    if (t.type === 'event') {
+                                        return (
+                                            <TableRow key={t.id}>
+                                                <TableCell className="font-medium">
+                                                    {format(safeParseDate(t.date), 'dd/MM/yyyy')}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="font-medium">{t.description}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline">{t.category}</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right font-semibold text-green-600">
+                                                    {t.income ? formatCurrency(t.income, false) : '-'}
+                                                </TableCell>
+                                                <TableCell className="text-right font-semibold text-destructive">
+                                                    {t.expense ? formatCurrency(t.expense, false) : '-'}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    }
+                                    // Handle manual transactions
+                                    return (
+                                        <TableRow key={t.id}>
+                                            <TableCell className="font-medium">
+                                                {format(safeParseDate(t.date), 'dd/MM/yyyy')}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="font-medium">{t.description}</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline">{t.category}</Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right font-semibold text-green-600">
+                                                {t.transactionType === 'Ingreso' ? formatCurrency(t.amount, false) : '-'}
+                                            </TableCell>
+                                            <TableCell className="text-right font-semibold text-destructive">
+                                                {t.transactionType === 'Gasto' ? formatCurrency(t.amount, false) : '-'}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={5} className="h-24 text-center">No hay transacciones registradas.</TableCell>
@@ -521,4 +525,3 @@ export default function FinancePage() {
     </div>
   );
 }
-
