@@ -189,10 +189,18 @@ export function DayDetailModal({ isOpen, onClose, onRefresh, date, events, rehea
                                         Completar
                                     </Button>
                                 )}
-                                {event.status === 'completed' && event.receiptUrlPDF && (
-                                    <a href={event.receiptUrlPDF} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                                        Ver Recibo <FileText className="h-4 w-4" />
-                                    </a>
+                                {event.status === 'completed' && (
+                                    event.receiptUrlPDF ? (
+                                        <a href={event.receiptUrlPDF} target="_blank" rel="noopener noreferrer" title="Ver Recibo PDF" className="text-primary hover:text-primary/80">
+                                            <FileText className="h-5 w-5" />
+                                            <span className="sr-only">Ver Recibo</span>
+                                        </a>
+                                    ) : (
+                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            <span>Generando...</span>
+                                        </div>
+                                    )
                                 )}
                             </div>
                         </div>
