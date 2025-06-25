@@ -10,116 +10,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Define the structure of the event creation tool
-const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
-  {
-    type: 'function',
-    function: {
-      name: 'create_event',
-      description: 'Crea un nuevo evento. IMPORTANTE: La fecha de hoy es 25 de junio de 2025. Calcula cualquier fecha relativa (como "hoy" o "mañana") a partir de esa fecha base.',
-      parameters: {
-        type: 'object',
-        properties: {
-          clientName: {
-            type: 'string',
-            description: 'El nombre del cliente para quien es el evento.',
-          },
-          clientPhone: {
-            type: 'string',
-            description: 'El número de teléfono del cliente.',
-          },
-          eventType: {
-            type: 'string',
-            description: 'El tipo de evento (ej. cumpleaños, boda, serenata).',
-          },
-          eventDate: {
-            type: 'string',
-            description: 'La fecha del evento en formato YYYY-MM-DD. Si el usuario dice "hoy", "mañana" o similar, debes calcular y usar la fecha correspondiente.',
-          },
-          eventTime: {
-            type: 'string',
-            description: 'La hora del evento (ej. 8:00 PM).',
-          },
-          plan: {
-             type: 'string',
-             description: 'El plan contratado. Debe ser uno de los valores permitidos: express, 30_min, 1_hora.',
-             enum: ['express', '30_min', '1_hora', 'personalizado']
-          },
-          location: {
-            type: 'string',
-            description: 'La dirección o lugar del evento.',
-          },
-          sector: {
-            type: 'string',
-            description: 'El sector o zona donde se realizará el evento.',
-          },
-        },
-        required: ['clientName', 'clientPhone', 'eventType', 'eventDate', 'eventTime', 'location', 'sector', 'plan'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-        name: 'create_rehearsal',
-        description: 'Crea un nuevo ensayo para la banda. IMPORTANTE: La fecha de hoy es 25 de junio de 2025. Calcula cualquier fecha relativa (como "hoy" o "mañana") a partir de esa fecha base.',
-        parameters: {
-            type: 'object',
-            properties: {
-                focus: {
-                    type: 'string',
-                    description: 'El tema o enfoque principal del ensayo (ej. "Repertorio para bodas", "Nuevas canciones").',
-                },
-                date: {
-                    type: 'string',
-                    description: 'La fecha del ensayo en formato YYYY-MM-DD. Si el usuario dice "hoy", "mañana" o similar, debes calcular y usar la fecha correspondiente.',
-                },
-                time: {
-                    type: 'string',
-                    description: 'La hora del ensayo (ej. 5:00 PM).',
-                },
-                location: {
-                    type: 'string',
-                    description: 'El lugar donde se realizará el ensayo (ej. "Estudio de Luis", "Casa de Juan").',
-                },
-            },
-            required: ['focus', 'date', 'time', 'location'],
-        },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-        name: 'get_schedule_for_dates',
-        description: 'Recupera una lista de eventos y ensayos para un rango de fechas. IMPORTANTE: La fecha de hoy es 25 de junio de 2025. Calcula startDate y endDate basándote en esa fecha. Para un solo día (como "hoy" o "mañana"), ambas fechas deben ser la misma.',
-        parameters: {
-            type: 'object',
-            properties: {
-                startDate: { type: 'string', description: 'La fecha de inicio para la búsqueda en formato YYYY-MM-DD.' },
-                endDate: { type: 'string', description: 'La fecha de fin para la búsqueda en formato YYYY-MM-DD.' }
-            },
-            required: ['startDate', 'endDate']
-        }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-        name: 'get_financial_summary_for_dates',
-        description: 'Proporciona un resumen financiero (ingresos, gastos, balance) para un período de tiempo determinado. Utiliza esta herramienta para responder preguntas sobre el estado financiero.',
-        parameters: {
-            type: 'object',
-            properties: {
-                startDate: { type: 'string', description: 'La fecha de inicio para el resumen en formato YYYY-MM-DD.' },
-                endDate: { type: 'string', description: 'La fecha de fin para el resumen en formato YYYY-MM-DD.' }
-            },
-            required: ['startDate', 'endDate']
-        }
-    }
-  }
-];
-
-const newSystemPrompt = `
+const baseSystemPrompt = `
 🎩 PROMPT MAESTRO COMPLETO – MANY AI (Asistente Virtual para Mariachi Reyes de México)
 🧠 Perfil del asistente:
 
@@ -233,10 +124,97 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No se recibió ningún prompt.' }, { status: 400 });
   }
 
+  const today = new Date();
+  const formattedDate = today.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const dateContext = `IMPORTANTE: La fecha de hoy es ${formattedDate}. Calcula cualquier fecha relativa (como "hoy" o "mañana") a partir de esa fecha base.`;
+
+  const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
+    {
+      type: 'function',
+      function: {
+        name: 'create_event',
+        description: `Crea un nuevo evento. ${dateContext}`,
+        parameters: {
+          type: 'object',
+          properties: {
+            clientName: { type: 'string', description: 'El nombre del cliente para quien es el evento.' },
+            clientPhone: { type: 'string', description: 'El número de teléfono del cliente.' },
+            eventType: { type: 'string', description: 'El tipo de evento (ej. cumpleaños, boda, serenata).' },
+            eventDate: { type: 'string', description: 'La fecha del evento en formato YYYY-MM-DD. Si el usuario dice "hoy", "mañana" o similar, debes calcular y usar la fecha correspondiente.' },
+            eventTime: { type: 'string', description: 'La hora del evento (ej. 8:00 PM).' },
+            plan: { type: 'string', description: 'El plan contratado. Debe ser uno de los valores permitidos: express, 30_min, 1_hora.', enum: ['express', '30_min', '1_hora', 'personalizado'] },
+            location: { type: 'string', description: 'La dirección o lugar del evento.' },
+            sector: { type: 'string', description: 'El sector o zona donde se realizará el evento.' },
+          },
+          required: ['clientName', 'clientPhone', 'eventType', 'eventDate', 'eventTime', 'location', 'sector', 'plan'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+          name: 'create_rehearsal',
+          description: `Crea un nuevo ensayo para la banda. ${dateContext}`,
+          parameters: {
+              type: 'object',
+              properties: {
+                  focus: { type: 'string', description: 'El tema o enfoque principal del ensayo (ej. "Repertorio para bodas", "Nuevas canciones").' },
+                  date: { type: 'string', description: 'La fecha del ensayo en formato YYYY-MM-DD. Si el usuario dice "hoy", "mañana" o similar, debes calcular y usar la fecha correspondiente.' },
+                  time: { type: 'string', description: 'La hora del ensayo (ej. 5:00 PM).' },
+                  location: { type: 'string', description: 'El lugar donde se realizará el ensayo (ej. "Estudio de Luis", "Casa de Juan").' },
+              },
+              required: ['focus', 'date', 'time', 'location'],
+          },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+          name: 'get_schedule_for_dates',
+          description: `Recupera una lista de eventos y ensayos para un rango de fechas. ${dateContext} Para un solo día (como "hoy" o "mañana"), ambas fechas deben ser la misma.`,
+          parameters: {
+              type: 'object',
+              properties: {
+                  startDate: { type: 'string', description: 'La fecha de inicio para la búsqueda en formato YYYY-MM-DD.' },
+                  endDate: { type: 'string', description: 'La fecha de fin para la búsqueda en formato YYYY-MM-DD.' }
+              },
+              required: ['startDate', 'endDate']
+          }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+          name: 'get_financial_summary_for_dates',
+          description: `Proporciona un resumen financiero (ingresos, gastos, balance) para un período de tiempo determinado. ${dateContext} Utiliza esta herramienta para responder preguntas sobre el estado financiero.`,
+          parameters: {
+              type: 'object',
+              properties: {
+                  startDate: { type: 'string', description: 'La fecha de inicio para el resumen en formato YYYY-MM-DD.' },
+                  endDate: { type: 'string', description: 'La fecha de fin para el resumen en formato YYYY-MM-DD.' }
+              },
+              required: ['startDate', 'endDate']
+          }
+      }
+    }
+  ];
+
+  const systemPrompt = `${baseSystemPrompt}
+
+  CONTEXTO DE FECHA ACTUAL:
+  La fecha de hoy es: ${formattedDate}.
+  Todas las referencias de tiempo relativas (como "hoy", "mañana", "este mes") deben basarse en esta fecha.
+  `;
+
   const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
-      content: newSystemPrompt,
+      content: systemPrompt,
     },
     // Add previous messages for context
     ...history,
