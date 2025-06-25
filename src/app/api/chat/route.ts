@@ -1,260 +1,183 @@
 
 import {NextRequest, NextResponse} from 'next/server';
 import OpenAI from 'openai';
-import { add, format, nextDay } from 'date-fns';
-import type { Day } from 'date-fns';
-import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import {type ChatCompletionMessageParam} from 'openai/resources/chat/completions';
+import {createEvent} from '@/services/eventService';
+import {EVENT_PLANS} from '@/lib/constants';
 
-
+// Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  baseURL: 'https://api.openai.com/v1', // Force the correct API endpoint
 });
 
-interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
-
-interface RequestBody {
-  prompt: string;
-  history: ChatMessage[];
-}
-
-// Helper function to remove undefined properties from an object before sending to Firestore
-const cleanForFirestore = (data: any): any => {
-    if (data === null || data === undefined) {
-        return null; // Return null for undefined or null values
-    }
-    if (Array.isArray(data)) {
-        return data.map(item => cleanForFirestore(item));
-    }
-    if (typeof data === 'object' && !(data instanceof Date) && typeof data.toDate !== 'function') {
-        const cleaned: { [key: string]: any } = {};
-        for (const key of Object.keys(data)) {
-            if (data[key] !== undefined) {
-                cleaned[key] = cleanForFirestore(data[key]);
-            }
-        }
-        return cleaned;
-    }
-    return data;
-};
-
-
-function parseDetailsFromPrompt(prompt: string): { eventDate: Date; eventTime: string; location: string; focus: string; } {
-    const today = new Date();
-    let eventDate = new Date();
-    const lowerPrompt = prompt.toLowerCase();
-
-    const dayMap: { [key: string]: number } = {
-        'domingo': 0, 'lunes': 1, 'martes': 2, 'miércoles': 3, 'miercoles': 3, 'jueves': 4, 'viernes': 5, 'sábado': 6, 'sabado': 6
-    };
-
-    if (lowerPrompt.includes('pasado mañana')) {
-        eventDate = add(today, { days: 2 });
-    } else if (lowerPrompt.includes('mañana')) {
-        eventDate = add(today, { days: 1 });
-    } else if (lowerPrompt.includes('hoy')) {
-        eventDate = today;
-    } else {
-        for (const dayName in dayMap) {
-            if (lowerPrompt.includes(dayName)) {
-                eventDate = nextDay(today, dayMap[dayName] as Day);
-                break;
-            }
-        }
-    }
-
-    let eventTime = 'Hora no especificada';
-    const tardeNoche = lowerPrompt.includes('tarde') || lowerPrompt.includes('noche');
-    const mediodia = lowerPrompt.includes('mediodía') || lowerPrompt.includes('12 pm') || lowerPrompt.includes('12pm');
-    const timeMatch = lowerPrompt.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
-
-    if (mediodia) {
-        eventTime = '12:00';
-    } else if (timeMatch) {
-        let hour = parseInt(timeMatch[1], 10);
-        const minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-        const period = timeMatch[3] ? timeMatch[3].toLowerCase() : '';
-
-        if ((period === 'pm' || (tardeNoche && hour < 12)) && hour < 12) {
-            hour += 12;
-        }
-        if (period === 'am' && hour === 12) {
-            hour = 0;
-        }
-        eventTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-    }
-
-    let location = 'Ubicación por definir';
-    const locationMatch = lowerPrompt.match(/en (?:el |la )?(.+?)(?=a las|para|con|canciones de|tema|enfocado|,|$)/i);
-    if (locationMatch && locationMatch[1]) {
-        const cleaned = locationMatch[1].trim().replace(/,$/, '').trim();
-        if (cleaned) {
-            location = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-        }
-    }
-    
-    let focus = 'Ensayo General';
-    const focusMatch = lowerPrompt.match(/(?:tema(?: del ensayo (?:es|son|serian|será))?|canciones de|enfocado en) (.+?)(?=a las|en |para|con|,|$)/i);
-    if (focusMatch && focusMatch[1]) {
-        const value = focusMatch[1].trim();
-        if(value) {
-            const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1);
-            if (lowerPrompt.includes('canciones de')) {
-                focus = `Canciones de ${capitalizedValue}`;
-            } else {
-                focus = capitalizedValue;
-            }
-        }
-    }
-    
-    return {
-        eventDate,
-        eventTime,
-        location,
-        focus,
-    };
-}
+// Define the structure of the event creation tool
+const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
+  {
+    type: 'function',
+    function: {
+      name: 'create_event',
+      description: 'Crea un nuevo evento en el calendario del mariachi. Utiliza la fecha actual si el usuario no especifica una. Extrae todos los parámetros posibles de la conversación.',
+      parameters: {
+        type: 'object',
+        properties: {
+          clientName: {
+            type: 'string',
+            description: 'El nombre del cliente para quien es el evento.',
+          },
+          clientPhone: {
+            type: 'string',
+            description: 'El número de teléfono del cliente.',
+          },
+          eventType: {
+            type: 'string',
+            description: 'El tipo de evento (ej. cumpleaños, boda, serenata).',
+          },
+          eventDate: {
+            type: 'string',
+            description: 'La fecha del evento en formato YYYY-MM-DD. Si el usuario dice "hoy" o similar, usa la fecha actual.',
+          },
+          eventTime: {
+            type: 'string',
+            description: 'La hora del evento (ej. 8:00 PM).',
+          },
+          plan: {
+             type: 'string',
+             description: 'El plan contratado. Debe ser uno de los valores permitidos: express, 30_min, 1_hora.',
+             enum: ['express', '30_min', '1_hora', 'personalizado']
+          },
+          location: {
+            type: 'string',
+            description: 'La dirección o lugar del evento.',
+          },
+          sector: {
+            type: 'string',
+            description: 'El sector o zona donde se realizará el evento.',
+          },
+        },
+        required: ['clientName', 'clientPhone', 'eventType', 'eventDate', 'eventTime', 'location', 'sector', 'plan'],
+      },
+    },
+  },
+];
 
 
 export async function POST(req: NextRequest) {
+  // Check for API key
+  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "YOUR_API_KEY_HERE") {
+    return NextResponse.json(
+      { error: 'La API key de OpenAI no está configurada. Por favor, añádela a tu archivo .env.' },
+      { status: 500 }
+    );
+  }
+
+  const { prompt, history } = await req.json();
+
+  if (!prompt) {
+    return NextResponse.json({ error: 'No se recibió ningún prompt.' }, { status: 400 });
+  }
+
+  const messages: ChatCompletionMessageParam[] = [
+    {
+      role: 'system',
+      content: `Eres "Maestro Mariachi AI", un asistente experto en la gestión de la agenda del grupo "Mariachi Reyes de México". Tu objetivo es ayudar a coordinar y agendar eventos de forma eficiente. Eres amable, profesional y muy organizado. Hoy es ${new Date().toLocaleDateString('es-DO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. Cuando un usuario quiera agendar un evento, utiliza la herramienta 'create_event' y pide cualquier información que falte. No inventes datos. Siempre confirma la creación del evento al usuario.`,
+    },
+    // Add previous messages for context
+    ...history,
+    {
+      role: 'user',
+      content: prompt,
+    },
+  ];
+
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        {error: 'OpenAI API key not configured'},
-        {status: 500}
-      );
-    }
-
-    const {prompt, history} = (await req.json()) as RequestBody;
-
-    if (!prompt) {
-      return NextResponse.json({error: 'Prompt is required'}, {status: 400});
-    }
-
-    const systemPrompt: ChatMessage = {
-        role: 'system',
-        content: `Eres "Maestro Mariachi AI", el asistente virtual personal del dueño de una agrupación de mariachis. Tu función principal es ayudar a gestionar todas las operaciones del grupo de manera rápida, precisa y eficiente. Solo el administrador (yo) te da instrucciones. Los clientes no te hablan directamente.
-
-Tu comportamiento debe seguir estas reglas:
-
-1. **Comprensión flexible:** Interpreta correctamente cualquier instrucción que te dé el administrador, aunque sea escrita de forma informal, resumida o con errores gramaticales. Ejemplos válidos:
-   - "agenda ensayo mañana a las 5"
-   - "ponme algo con manuel el viernes"
-   - "haz evento para cumpleaños a las 3"
-
-2. **Toma de acción:** Si detectas que el administrador te pide crear un ensayo, evento, cliente o nota:
-   - Responde confirmando con un mensaje profesional y amable.
-   - Incluye al final una línea separada y clara: \`INTENT: crear_ensayo\`, \`INTENT: crear_evento\`, \`INTENT: crear_cliente\`, \`INTENT: agregar_nota\`, etc., según corresponda.
-
-3. **Contexto inteligente:** Si se menciona algo como "hoy", "mañana", "pasado mañana", "el viernes", o "en el estudio de Luis", interpreta y convierte eso a una fecha y ubicación concreta para crear el evento.
-
-4. **Formato de hora:** Interpreta frases como "a las 5", "cinco pm", "3 de la tarde", "mediodía", y conviértelas en formato 24 horas (por ejemplo: 17:00).
-
-5. **Respuesta estructurada:** Siempre responde en español. Tu mensaje debe tener dos partes:
-   - Un mensaje natural y cordial para el administrador confirmando la acción.
-   - Una línea al final con el INTENT como comando para la lógica del sistema.
-
-6. **Ejemplo de respuesta esperada:**
-
----
-¡Perfecto! He registrado un ensayo para mañana a las 5:00 p.m. en el estudio de Luis. Los músicos serán notificados y todo estará listo para ese día. Si deseas hacer algún ajuste, solo dímelo.
-
-INTENT: crear_ensayo
----
-
-Tu objetivo es facilitar la gestión del mariachi como si fueras un asistente humano proactivo, entendiendo lenguaje natural y ayudando a automatizar todo lo posible.`,
-    };
-
-    const messages: ChatMessage[] = [
-      systemPrompt,
-      ...(history || []),
-      {role: 'user', content: prompt},
-    ];
-
-    const chatResponse = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: messages,
+    const initialResponse = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages,
+      tools,
+      tool_choice: 'auto',
     });
 
-    let reply =
-      chatResponse.choices[0]?.message?.content ||
-      'No pude obtener una respuesta.';
-    
+    const responseMessage = initialResponse.choices[0].message;
+    const toolCalls = responseMessage.tool_calls;
+
     let eventCreated = false;
 
-    const intentRegex = /INTENT:\s*(\w+)/;
-    const intentMatch = reply.match(intentRegex);
-    
-    if (intentMatch) {
-        const intent = intentMatch[1];
-        
-        try {
-            if (intent === 'crear_ensayo') {
-                const parsedDetails = parseDetailsFromPrompt(prompt); 
+    if (toolCalls) {
+      messages.push(responseMessage); // Add assistant's tool-calling message to history
 
-                const rehearsalData = {
-                    date: format(parsedDetails.eventDate, 'yyyy-MM-dd'),
-                    time: parsedDetails.eventTime,
-                    location: parsedDetails.location,
-                    focus: parsedDetails.focus,
-                    songs: [],
-                    notes: `Creado por AI a partir del prompt: "${prompt}"`,
-                    status: 'pending' as const,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                };
-                
-                await addDoc(collection(db, 'rehearsals'), cleanForFirestore(rehearsalData));
-                eventCreated = true;
+      for (const toolCall of toolCalls) {
+        const functionName = toolCall.function.name;
+        if (functionName === 'create_event') {
+          const functionArgs = JSON.parse(toolCall.function.arguments);
+          
+          // The model might send a relative date like "hoy". Convert it to YYYY-MM-DD.
+          if (functionArgs.eventDate.toLowerCase() === 'hoy') {
+            functionArgs.eventDate = new Date().toISOString().split('T')[0];
+          }
 
-            } else if (intent === 'crear_evento') {
-                const parsedDetails = parseDetailsFromPrompt(prompt);
-                const eventData = {
-                  clientName: 'Evento por definir',
-                  clientPhone: 'N/A',
-                  eventType: 'evento',
-                  eventDate: format(parsedDetails.eventDate, 'yyyy-MM-dd'),
-                  eventTime: parsedDetails.eventTime,
-                  location: parsedDetails.location,
-                  sector: 'Sector por definir',
-                  plan: 'personalizado',
-                  paymentMethod: 'other',
-                  contractedAmount: 0,
-                  amountPaid: 0,
-                  pendingBalance: 0,
-                  musiciansPay: 5000,
-                  externalGroup: false,
-                  notes: `Creado por AI a partir del prompt: "${prompt}"`,
-                  status: 'pending' as const,
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                };
+          // Use a default plan if not specified or invalid
+          const validPlans = EVENT_PLANS.map(p => p.value);
+          if (!functionArgs.plan || !validPlans.includes(functionArgs.plan)) {
+            functionArgs.plan = 'personalizado'; 
+          }
+          const selectedPlan = EVENT_PLANS.find(p => p.value === functionArgs.plan);
 
-                await addDoc(collection(db, 'events'), cleanForFirestore(eventData));
-                eventCreated = true;
-            }
-        } catch (e: any) {
-            console.error('Error trying to create from prompt:', e);
-            console.error('Error name:', e.name);
-            console.error('Error message:', e.message);
-            console.error('Error stack:', e.stack);
-            reply += "\n\n(Advertencia: No pude guardar la acción en la base de datos.)";
+          // Create the event payload
+          const eventPayload = {
+            ...functionArgs,
+            paymentMethod: 'cash', // Default payment method
+            contractedAmount: selectedPlan?.price || 0,
+            amountPaid: 0,
+            musiciansPay: selectedPlan?.musicianPay || 0,
+            externalGroup: false,
+            notes: `Evento agendado por Maestro Mariachi AI.`,
+          };
+          
+          const result = await createEvent(eventPayload);
+          
+          let functionResponseContent = '';
+          if (result.success) {
+            functionResponseContent = `El evento para ${functionArgs.clientName} ha sido creado exitosamente con el ID: ${result.eventId}. Notifica al usuario que todo está confirmado.`;
+            eventCreated = true;
+          } else {
+            functionResponseContent = `Hubo un error al crear el evento: ${result.error}. Informa al usuario del problema.`;
+          }
+
+          messages.push({
+            tool_call_id: toolCall.id,
+            role: 'tool',
+            name: functionName,
+            content: functionResponseContent,
+          });
         }
+      }
+
+      // Make a second call with the tool response to get the final text reply
+      const finalResponse = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages,
+      });
+
+      return NextResponse.json({
+        reply: finalResponse.choices[0].message.content,
+        eventCreated,
+      });
+    } else {
+      // No tool was called, just return the text response
+      return NextResponse.json({
+        reply: responseMessage.content,
+        eventCreated,
+      });
     }
-
-    return NextResponse.json({reply, eventCreated}, {status: 200});
-
   } catch (error: any) {
-    console.error('Error in API route:', error);
-    let errorMessage = 'An internal error occurred.';
-    if (error.message) {
-      errorMessage = error.message;
+    console.error('OpenAI API error:', error);
+    let errorMessage = 'Lo siento, ha ocurrido un error al comunicarme con la IA.';
+    if (error.status === 401) {
+        errorMessage = 'La API key de OpenAI no es válida o ha expirado. Por favor, verifica tu clave en el archivo .env.'
+    } else if (error instanceof OpenAI.APIError) {
+        errorMessage = `Error de OpenAI: ${error.message}`;
     }
-    const status = error.status || 500;
-    return NextResponse.json({error: errorMessage}, {status});
+    
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
