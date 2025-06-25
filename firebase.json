@@ -3,8 +3,6 @@
   "hosting": {
     "site": "mariachiappdefirebase",
     "source": ".",
-    "frameworksBackend": {
-      "region": "us-central1"
-    }
+    "appAssociation": "AUTO"
   }
 }
