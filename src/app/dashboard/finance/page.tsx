@@ -57,17 +57,20 @@ interface Transaction {
     type: 'Ingreso' | 'Gasto';
     amount: number;
     id: string;
+    createdAt: any;
 }
 
 const safeParseDate = (dateString: string) => {
-    if (!dateString) return new Date(); // Fallback for invalid date
+    if (!dateString) return new Date(0); // Fallback to epoch for invalid date
     try {
+      // Handles 'YYYY-MM-DD' and full ISO strings
       return parseISO(dateString);
     } catch (e) {
-      const parts = dateString.split('T')[0].split('-').map(Number);
-      return new Date(parts[0], parts[1] - 1, parts[2]);
+      // Fallback for potentially malformed dates
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? new Date(0) : date;
     }
-  }
+}
 
 
 export default function FinancePage() {
@@ -197,7 +200,8 @@ export default function FinancePage() {
                 category: event.externalGroup ? 'Referido Externo' : 'Presentación Mariachi',
                 type: 'Ingreso',
                 amount: event.contractedAmount,
-                id: `evt-in-${event.id}`
+                id: `evt-in-${event.id}`,
+                createdAt: event.createdAt,
             }));
 
         const eventExpenseTransactions: Transaction[] = events
@@ -208,7 +212,8 @@ export default function FinancePage() {
                 category: 'Pago a Músicos',
                 type: 'Gasto',
                 amount: event.musiciansPay!,
-                id: `evt-out-${event.id}`
+                id: `evt-out-${event.id}`,
+                createdAt: event.createdAt,
             }));
 
         const manualTransactions: Transaction[] = manualEntries.map(entry => ({
@@ -217,11 +222,22 @@ export default function FinancePage() {
             category: entry.category || 'Otro',
             type: entry.type === 'income' ? 'Ingreso' : 'Gasto',
             amount: entry.amount,
-            id: `man-${entry.id}`
+            id: `man-${entry.id}`,
+            createdAt: entry.createdAt,
         }));
         
         const transactionHistory = [...eventIncomeTransactions, ...eventExpenseTransactions, ...manualTransactions];
-        transactionHistory.sort((a, b) => safeParseDate(b.date).getTime() - safeParseDate(a.date).getTime());
+        transactionHistory.sort((a, b) => {
+            const dateA = safeParseDate(a.date);
+            const dateB = safeParseDate(b.date);
+            if (dateB.getTime() !== dateA.getTime()) {
+                return dateB.getTime() - dateA.getTime();
+            }
+            // If dates are the same, sort by creation time (most recent first)
+            const createdAtA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const createdAtB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return createdAtB - createdAtA;
+        });
         
         return { incomeHistory, eventTypeDistribution, pieChartConfig, barChartData, transactionHistory, currentMonthIncome, currentMonthExpenses, netBalance };
 
@@ -505,3 +521,4 @@ export default function FinancePage() {
     </div>
   );
 }
+
