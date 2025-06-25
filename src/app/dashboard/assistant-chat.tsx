@@ -31,6 +31,7 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesRef = useRef(messages);
+  const finalTranscriptRef = useRef('');
   const { toast } = useToast();
   const router = useRouter();
 
@@ -42,11 +43,11 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       setIsSpeechSupported(true);
-      recognitionRef.current = new SpeechRecognition();
-      const recognition = recognitionRef.current;
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
       recognition.lang = 'es-ES';
       recognition.interimResults = true;
-      recognition.continuous = false;
+      recognition.continuous = false; // Browser detects end of speech
 
       recognition.onresult = (event) => {
         let interimTranscript = '';
@@ -60,18 +61,17 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
           }
         }
         
-        const transcript = finalTranscript || interimTranscript;
-        setInput(transcript);
-
-        if (finalTranscript.toLowerCase().trim().endsWith('enviar')) {
-            const command = finalTranscript.slice(0, finalTranscript.toLowerCase().lastIndexOf('enviar')).trim();
-            handleSendMessage(command);
-            recognition.stop();
-        }
+        finalTranscriptRef.current = finalTranscript;
+        setInput(finalTranscript || interimTranscript);
       };
 
       recognition.onend = () => {
         setIsListening(false);
+        const transcript = finalTranscriptRef.current.trim();
+        if (transcript) {
+          handleSendMessage(transcript);
+        }
+        finalTranscriptRef.current = ''; // Reset for next time
       };
 
       recognition.onerror = (event) => {
@@ -123,6 +123,25 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
         router.refresh();
       }
 
+      // Auto-activate microphone for confirmations
+      const replyText = (data.reply || '').toLowerCase();
+      const confirmationKeywords = ['¿confirmar', '¿deseas', '¿quieres', '¿estás seguro'];
+      const isConfirmationQuestion = confirmationKeywords.some(keyword => replyText.includes(keyword)) && replyText.endsWith('?');
+
+      if (isConfirmationQuestion && recognitionRef.current) {
+          setTimeout(() => {
+              try {
+                  finalTranscriptRef.current = ''; // Reset transcript before listening
+                  recognitionRef.current?.start();
+                  setIsListening(true);
+              } catch(e) {
+                  // This can happen if recognition is already in an error state or similar.
+                  console.log("Recognition could not be started:", e);
+                  setIsListening(false);
+              }
+          }, 500); // Small delay for user to process the question
+      }
+
     } catch (error: any) {
       console.error('Failed to fetch assistant reply:', error);
       let displayMessage = `Lo siento, ha ocurrido un error: ${error.message || 'Por favor, inténtalo de nuevo.'}`;
@@ -142,8 +161,8 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
   const handleMicClick = () => {
     if (isListening) {
       recognitionRef.current?.stop();
-      setIsListening(false);
     } else {
+      finalTranscriptRef.current = ''; // Reset transcript before starting
       recognitionRef.current?.start();
       setIsListening(true);
     }
