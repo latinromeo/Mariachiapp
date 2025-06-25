@@ -67,13 +67,8 @@ export default function MediaPage() {
     
     setIsUploading(true);
 
-    let toastTitle = "Función no implementada";
-    let toastDescription = "La subida de archivos generales es solo una demostración visual por ahora.";
-
-    if (activeTab === 'invoices') {
-        toastTitle = "Análisis de Facturas Desactivado";
-        toastDescription = "Esta función se ha desactivado temporalmente para resolver un problema de instalación. La carga de archivos es solo una demostración.";
-    }
+    let toastTitle = "Análisis de Facturas Desactivado";
+    let toastDescription = "Esta función se ha desactivado temporalmente para resolver un problema de instalación. La carga de archivos es solo una demostración.";
 
      setTimeout(() => {
         setIsUploading(false);
@@ -182,3 +177,4 @@ export default function MediaPage() {
     </div>
   );
 }
+
