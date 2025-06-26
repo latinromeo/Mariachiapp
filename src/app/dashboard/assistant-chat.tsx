@@ -32,6 +32,7 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
   
   const [receiptData, setReceiptData] = useState<Partial<EventData> | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [pendingReply, setPendingReply] = useState<string | null>(null);
 
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -190,38 +191,38 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
         throw new Error(data.error || `API error: ${res.statusText}`);
       }
 
-      const assistantMessage: Message = { role: 'assistant', content: data.reply };
-      setMessages((prev) => [...prev, assistantMessage]);
-
       if (data.refreshAgenda) {
         window.dispatchEvent(new Event('agendaUpdated'));
       }
       
       if (data.newEventData) {
+        setPendingReply(data.reply);
         setReceiptData(data.newEventData);
         setIsReceiptModalOpen(true);
-      }
+      } else {
+        const assistantMessage: Message = { role: 'assistant', content: data.reply };
+        setMessages((prev) => [...prev, assistantMessage]);
 
+        // Auto-activate microphone for confirmations
+        const replyText = (data.reply || '').toLowerCase();
+        const confirmationKeywords = [
+          'confirmar', 'confirmamos', 'confirma',
+          'deseas', 'quieres', 'quieres que',
+          'seguro', 'segura',
+          'procedo', 'procedemos',
+          'elimino', 'eliminarlo',
+          'modifico',
+          'cancelo',
+          'actualizo',
+          'registro',
+        ];
+        const isConfirmationQuestion = replyText.includes('?') && confirmationKeywords.some(keyword => replyText.includes(keyword));
 
-      // Auto-activate microphone for confirmations
-      const replyText = (data.reply || '').toLowerCase();
-      const confirmationKeywords = [
-        'confirmar', 'confirmamos', 'confirma',
-        'deseas', 'quieres', 'quieres que',
-        'seguro', 'segura',
-        'procedo', 'procedemos',
-        'elimino', 'eliminarlo',
-        'modifico',
-        'cancelo',
-        'actualizo',
-        'registro',
-      ];
-      const isConfirmationQuestion = replyText.includes('?') && confirmationKeywords.some(keyword => replyText.includes(keyword));
-
-      if (isConfirmationQuestion) {
-          setTimeout(() => {
-              startListening();
-          }, 500);
+        if (isConfirmationQuestion) {
+            setTimeout(() => {
+                startListening();
+            }, 500);
+        }
       }
 
     } catch (error: any) {
@@ -335,6 +336,34 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
         onClose={() => {
             setIsReceiptModalOpen(false);
             setReceiptData(null);
+            
+            if (pendingReply) {
+                const assistantMessage: Message = { role: 'assistant', content: pendingReply };
+                setMessages((prev) => [...prev, assistantMessage]);
+
+                const replyText = (pendingReply || '').toLowerCase();
+                const confirmationKeywords = [
+                    'confirmar', 'confirmamos', 'confirma',
+                    'deseas', 'quieres', 'quieres que',
+                    'seguro', 'segura',
+                    'procedo', 'procedemos',
+                    'elimino', 'eliminarlo',
+                    'modifico',
+                    'cancelo',
+                    'actualizo',
+                    'registro',
+                ];
+                const isConfirmationQuestion = replyText.includes('?') && confirmationKeywords.some(keyword => replyText.includes(keyword));
+                const isStandardFollowUp = replyText.includes('¿puedo ayudarte en algo más?');
+
+                if (isConfirmationQuestion || isStandardFollowUp) {
+                    setTimeout(() => {
+                        startListening();
+                    }, 500);
+                }
+                
+                setPendingReply(null);
+            }
         }}
         eventData={receiptData}
       />
