@@ -82,15 +82,26 @@ function UserSwitcher() {
 
 function BottomNav() {
     const pathname = usePathname();
-    const { permissions } = useUser();
+    const { user, permissions } = useUser();
 
-    const navItems = [
-        { href: '/dashboard', icon: LayoutGrid, label: 'Panel' },
-        { href: '/dashboard/clients', icon: Users, label: 'Clientes' },
-        { href: '/dashboard/events', icon: Calendar, label: 'Calendario' },
-        { href: '/dashboard/finance', icon: DollarSign, label: 'Finanzas' },
-        { href: '/dashboard/profile', icon: UserCircle2, label: 'Perfil' },
-    ];
+    let navItems;
+
+    if (user.role === 'Músico') {
+        navItems = [
+            { href: '/dashboard', icon: LayoutGrid, label: 'Panel' },
+            { href: '/dashboard/events', icon: Calendar, label: 'Calendario' },
+            { href: '/dashboard/rehearsals', icon: Music, label: 'Ensayos' },
+            { href: '/dashboard/my-income', icon: DollarSign, label: 'Finanzas' },
+        ];
+    } else {
+        navItems = [
+            { href: '/dashboard', icon: LayoutGrid, label: 'Panel' },
+            { href: '/dashboard/clients', icon: Users, label: 'Clientes' },
+            { href: '/dashboard/events', icon: Calendar, label: 'Calendario' },
+            { href: '/dashboard/finance', icon: DollarSign, label: 'Finanzas' },
+            { href: '/dashboard/profile', icon: UserCircle2, label: 'Perfil' },
+        ];
+    }
 
     const visibleNavItems = navItems.filter(item => permissions.hasAccess(item.href));
     
