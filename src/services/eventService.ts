@@ -335,7 +335,7 @@ export async function createEvent(data: EventInputData): Promise<{ success: bool
     if (client) {
       clientId = client.id;
     } else {
-      const clientResult = await createClient({ name: data.clientName, phone: data.clientPhone, sector: data.sector });
+      const clientResult = await createClient({ name: data.clientName, phone: data.clientPhone });
       if (!clientResult.success || !clientResult.clientId) {
         return { success: false, error: "No se pudo crear el cliente asociado al evento." };
       }
