@@ -61,16 +61,15 @@ export async function POST(req: NextRequest) {
   let invoiceUrl = '';
   try {
     const bucket = storage.bucket();
-    // Regex updated to be more flexible with image mime types.
-    const match = imageDataUri.match(/^data:(image\/[a-zA-Z0-9.-]+);base64,(.+)$/);
+    // Use a more robust regex to handle various image mime types, including 'svg+xml'.
+    const match = imageDataUri.match(/^data:(image\/.+);base64,(.+)$/);
     if (!match) {
-        throw new Error('Invalid image data URI format.');
+        throw new Error('Formato de imagen no válido. El archivo debe ser un data URI de imagen.');
     }
     const mimeType = match[1];
     const base64Data = match[2];
     const buffer = Buffer.from(base64Data, 'base64');
     
-    // Improved extension extraction to handle types like 'svg+xml'.
     const extension = mimeType.split('/')[1]?.split('+')[0] || 'bin';
     const fileName = `invoices/${uuidv4()}.${extension}`;
     const file = bucket.file(fileName);
@@ -85,8 +84,12 @@ export async function POST(req: NextRequest) {
     });
     invoiceUrl = signedUrl;
   } catch (uploadError: any) {
-    console.error('Error uploading invoice to storage:', uploadError);
-    return NextResponse.json({ success: false, error: 'Ocurrió un error al guardar la factura.' }, { status: 500 });
+    console.error('Error subiendo la factura a Firebase Storage:', uploadError);
+    // Return a more descriptive error to the client.
+    return NextResponse.json({ 
+        success: false, 
+        error: `Error al procesar la imagen de la factura: ${uploadError.message}` 
+    }, { status: 500 });
   }
 
   try {
