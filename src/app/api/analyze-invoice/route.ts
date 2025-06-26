@@ -3,6 +3,8 @@ import {NextRequest, NextResponse} from 'next/server';
 import OpenAI from 'openai';
 import { createManualFinanceEntry } from '@/services/eventService';
 import { FINANCE_CATEGORIES } from '@/lib/constants';
+import { storage } from '@/lib/firebase-admin';
+import { v4 as uuidv4 } from 'uuid';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -55,6 +57,34 @@ export async function POST(req: NextRequest) {
   if (!imageDataUri) {
     return NextResponse.json({ error: 'No se recibió la imagen de la factura.' }, { status: 400 });
   }
+  
+  let invoiceUrl = '';
+  try {
+    const bucket = storage.bucket();
+    const match = imageDataUri.match(/^data:(image\/[a-z]+);base64,(.+)$/);
+    if (!match) {
+        throw new Error('Invalid image data URI format.');
+    }
+    const mimeType = match[1];
+    const base64Data = match[2];
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    const fileName = `invoices/${uuidv4()}.${mimeType.split('/')[1]}`;
+    const file = bucket.file(fileName);
+
+    await file.save(buffer, {
+        metadata: { contentType: mimeType },
+    });
+
+    const [signedUrl] = await file.getSignedUrl({
+      action: 'read',
+      expires: '01-01-2100',
+    });
+    invoiceUrl = signedUrl;
+  } catch (uploadError: any) {
+    console.error('Error uploading invoice to storage:', uploadError);
+    return NextResponse.json({ success: false, error: 'Ocurrió un error al guardar la factura.' }, { status: 500 });
+  }
 
   try {
     const response = await openai.chat.completions.create({
@@ -81,7 +111,8 @@ export async function POST(req: NextRequest) {
       
       const result = await createManualFinanceEntry({
         ...args,
-        type: 'expense'
+        type: 'expense',
+        invoiceUrl: invoiceUrl,
       });
 
       if (result.success) {

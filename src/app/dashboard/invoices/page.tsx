@@ -1,14 +1,26 @@
 
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Loader2, Receipt } from "lucide-react";
+import { Upload, Loader2, Search, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { type ManualFinanceEntry, getManualFinanceEntries } from "@/services/eventService";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
+import { FINANCE_CATEGORIES } from "@/lib/constants";
+
+const formatCurrency = (value: number | undefined) => {
+    if (typeof value !== 'number' || isNaN(value)) {
+        return "RD$0.00";
+    }
+    return `RD$${(value).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
 export default function InvoicesPage() {
   const { toast } = useToast();
@@ -17,17 +29,53 @@ export default function InvoicesPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [fileName, setFileName] = useState("");
 
-  const months = Array.from({ length: 12 }, (_, i) => ({
-    value: String(i + 1),
-    label: new Date(2000, i).toLocaleString('es-ES', { month: 'long', timeZone: 'UTC' })
-  }));
+  const [invoices, setInvoices] = useState<ManualFinanceEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+  const fetchInvoices = useCallback(async () => {
+    setIsLoading(true);
+    try {
+        const allEntries = await getManualFinanceEntries();
+        const invoiceEntries = allEntries.filter(entry => entry.type === 'expense' && entry.invoiceUrl);
+        setInvoices(invoiceEntries);
+    } catch (error) {
+        console.error("Failed to fetch invoices", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar las facturas.' });
+    } finally {
+        setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchInvoices();
+    
+    const handleAgendaUpdate = () => fetchInvoices();
+    window.addEventListener('agendaUpdated', handleAgendaUpdate);
+    return () => {
+        window.removeEventListener('agendaUpdated', handleAgendaUpdate);
+    };
+  }, [fetchInvoices]);
+
+  const filteredInvoices = useMemo(() => {
+    if (!searchTerm) return invoices;
+    return invoices.filter(invoice => 
+        invoice.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (invoice.category && invoice.category.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [invoices, searchTerm]);
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
+        if (!selectedFile.type.startsWith('image/')) {
+            toast({
+                variant: 'destructive',
+                title: 'Archivo no válido',
+                description: 'Por favor, selecciona un archivo de imagen (JPG, PNG, etc.).',
+            });
+            return;
+        }
         setFile(selectedFile);
         setFileName(selectedFile.name);
     }
@@ -66,7 +114,6 @@ export default function InvoicesPage() {
           description: data.message,
         });
         
-        // Dispatch event to update finance page if it's open
         window.dispatchEvent(new Event('agendaUpdated'));
 
       } catch (error: any) {
@@ -115,7 +162,7 @@ export default function InvoicesPage() {
           </CardHeader>
           <CardContent>
               <div className="grid w-full max-w-sm items-center gap-1.5">
-                  <Label htmlFor="file-upload">Seleccionar factura</Label>
+                  <Label htmlFor="file-upload">Seleccionar factura (imagen)</Label>
                   <Input id="file-upload" type="file" onChange={handleFileChange} accept="image/*" disabled={isUploading} />
                   {fileName && <p className="text-sm text-muted-foreground">Archivo: {fileName}</p>}
               </div>
@@ -128,48 +175,74 @@ export default function InvoicesPage() {
           </CardFooter>
       </Card>
 
-      <div className="space-y-8 mt-8">
-          <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex items-center gap-2">
-              <Label htmlFor="filter-month">Filtrar por Mes:</Label>
-              <Select defaultValue="all">
-                  <SelectTrigger id="filter-month" className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Todos los Meses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                  <SelectItem value="all">Todos los Meses</SelectItem>
-                  {months.map(month => (
-                      <SelectItem key={month.value} value={month.value} className="capitalize">{month.label}</SelectItem>
-                  ))}
-                  </SelectContent>
-              </Select>
-              </div>
-              <div className="flex items-center gap-2">
-              <Label htmlFor="filter-year">Filtrar por Año:</Label>
-              <Select defaultValue="all">
-                  <SelectTrigger id="filter-year" className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Todos los Años" />
-                  </SelectTrigger>
-                  <SelectContent>
-                  <SelectItem value="all">Todos los Años</SelectItem>
-                  {years.map(year => (
-                      <SelectItem key={year} value={String(year)}>{String(year)}</SelectItem>
-                  ))}
-                  </SelectContent>
-              </Select>
-              </div>
-          </div>
-          
-          <div>
-              <h3 className="text-xl font-semibold mt-6">Listado de Facturas (0)</h3>
-              <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg mt-4">
-                <p>No hay archivos en esta categoría o que coincidan con el filtro actual.</p>
-                <p className="text-xs">Los gastos registrados desde aquí aparecerán en la sección de Finanzas.</p>
-              </div>
-          </div>
-          </div>
-      </div>
+      <Card className="mt-8">
+        <CardHeader>
+            <CardTitle>Listado de Facturas ({filteredInvoices.length})</CardTitle>
+             <div className="relative mt-4">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                type="search"
+                placeholder="Buscar por descripción o categoría..."
+                className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px]"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+        </CardHeader>
+        <CardContent>
+             <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Descripción</TableHead>
+                        <TableHead>Categoría</TableHead>
+                        <TableHead className="text-right">Monto</TableHead>
+                        <TableHead className="text-right">Acción</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {isLoading ? (
+                        Array.from({length: 3}).map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell><Skeleton className="h-4 w-20"/></TableCell>
+                                <TableCell><Skeleton className="h-4 w-48"/></TableCell>
+                                <TableCell><Skeleton className="h-4 w-24"/></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-4 w-24 ml-auto"/></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto"/></TableCell>
+                            </TableRow>
+                        ))
+                    ) : filteredInvoices.length > 0 ? (
+                        filteredInvoices.map(invoice => {
+                            const categoryLabel = FINANCE_CATEGORIES.find(c => c.value === invoice.category)?.label || invoice.category;
+                            return (
+                                <TableRow key={invoice.id}>
+                                    <TableCell>{format(parseISO(invoice.date), 'dd/MM/yyyy', { locale: es })}</TableCell>
+                                    <TableCell className="font-medium">{invoice.description}</TableCell>
+                                    <TableCell className="capitalize">{categoryLabel}</TableCell>
+                                    <TableCell className="text-right font-semibold text-destructive">{formatCurrency(invoice.amount)}</TableCell>
+                                    <TableCell className="text-right">
+                                        {invoice.invoiceUrl && (
+                                            <Button asChild variant="outline" size="icon">
+                                                <a href={invoice.invoiceUrl} target="_blank" rel="noopener noreferrer" title="Ver/Descargar Factura">
+                                                    <Download className="h-4 w-4" />
+                                                </a>
+                                            </Button>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })
+                    ) : (
+                        <TableRow>
+                            <TableCell colSpan={5} className="h-24 text-center">
+                                No se encontraron facturas. Sube una para comenzar.
+                            </TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

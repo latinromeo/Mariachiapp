@@ -160,6 +160,7 @@ export interface ManualFinanceEntry {
   amount: number;
   date: string; // Stored as 'YYYY-MM-DD'
   category?: string;
+  invoiceUrl?: string;
   createdBy: string;
   createdAt: any;
 }
