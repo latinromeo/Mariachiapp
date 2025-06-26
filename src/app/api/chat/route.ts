@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
             eventDate: { type: 'string', description: 'La fecha del evento en formato YYYY-MM-DD. Si el usuario dice "hoy", "mañana" o similar, debes calcular y usar la fecha correspondiente.' },
             eventTime: { type: 'string', description: 'La hora del evento (ej. 8:00 PM).' },
             plan: { type: 'string', description: 'El plan contratado. Debe ser uno de los valores permitidos: express, 30_min, 1_hora.', enum: ['express', '30_min', '1_hora', 'personalizado'] },
-            contractedAmount: { type: 'number', description: 'El monto total acordado para el evento. Si se especifica un plan estándar, este valor se puede omitir y se usará el precio del plan. Si el plan es "personalizado", este valor es obligatorio.' },
+            contractedAmount: { type: 'number', description: 'El monto total acordado para el evento. **IGNORA este campo si se especifica un plan estándar** (express, 30_min, 1_hora), ya que se usará el precio del plan automáticamente. Este valor solo es necesario si el plan es "personalizado".' },
             amountPaid: { type: 'number', description: 'El monto que el cliente pagó por adelantado (abono). Si no se especifica, se asume 0.' },
             location: { type: 'string', description: 'La dirección o lugar del evento.' },
             sector: { type: 'string', description: 'El sector o zona donde se realizará el evento.' },
@@ -293,8 +293,16 @@ export async function POST(req: NextRequest) {
           }
           const selectedPlan = EVENT_PLANS.find(p => p.value === functionArgs.plan);
 
-          const contractedAmount = functionArgs.contractedAmount || selectedPlan?.price || 0;
-
+          // If a standard plan is selected, its price MUST be the contracted amount.
+          // This prevents the AI from overriding it if the user mentions another number (e.g., the deposit amount).
+          let contractedAmount;
+          if (selectedPlan && selectedPlan.value !== 'personalizado') {
+              contractedAmount = selectedPlan.price;
+          } else {
+              // For custom plans, use the amount specified by the AI.
+              contractedAmount = functionArgs.contractedAmount || 0;
+          }
+          
           const eventPayload = {
             ...functionArgs,
             paymentMethod: 'cash', // Can be parameterized later if needed
