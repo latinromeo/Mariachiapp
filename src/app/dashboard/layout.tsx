@@ -99,7 +99,7 @@ function BottomNav() {
             { href: '/dashboard/clients', icon: Users, label: 'Clientes' },
             { href: '/dashboard/events', icon: Calendar, label: 'Calendario' },
             { href: '/dashboard/finance', icon: DollarSign, label: 'Finanzas' },
-            { href: '/dashboard/profile', icon: UserCircle2, label: 'Perfil' },
+            { href: '/dashboard/invoices', icon: Receipt, label: 'Facturas' },
         ];
     }
 
