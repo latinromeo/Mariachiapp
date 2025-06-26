@@ -61,7 +61,8 @@ export async function POST(req: NextRequest) {
   let invoiceUrl = '';
   try {
     const bucket = storage.bucket();
-    const match = imageDataUri.match(/^data:(image\/[a-z]+);base64,(.+)$/);
+    // Regex updated to be more flexible with image mime types.
+    const match = imageDataUri.match(/^data:(image\/[a-zA-Z0-9.-]+);base64,(.+)$/);
     if (!match) {
         throw new Error('Invalid image data URI format.');
     }
@@ -69,7 +70,9 @@ export async function POST(req: NextRequest) {
     const base64Data = match[2];
     const buffer = Buffer.from(base64Data, 'base64');
     
-    const fileName = `invoices/${uuidv4()}.${mimeType.split('/')[1]}`;
+    // Improved extension extraction to handle types like 'svg+xml'.
+    const extension = mimeType.split('/')[1]?.split('+')[0] || 'bin';
+    const fileName = `invoices/${uuidv4()}.${extension}`;
     const file = bucket.file(fileName);
 
     await file.save(buffer, {
