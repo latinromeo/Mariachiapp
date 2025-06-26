@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useContext } from 'react';
@@ -23,7 +24,7 @@ export const USERS: Record<string, User> = {
 
 export const ROLES_CONFIG: Record<UserRole, { pages: string[], canCreateEvents: boolean, canCreateClients: boolean, canCreateRehearsals: boolean, canCompleteRehearsals: boolean, canCreateSongs: boolean, canManageUsers: boolean, canSeeFinance: boolean }> = {
     'Administrador General': {
-        pages: ['/dashboard', '/dashboard/clients', '/dashboard/events', '/dashboard/rehearsals', '/dashboard/repertoire', '/dashboard/media', '/dashboard/finance', '/dashboard/users', '/dashboard/profile'],
+        pages: ['/dashboard', '/dashboard/clients', '/dashboard/events', '/dashboard/rehearsals', '/dashboard/repertoire', '/dashboard/media', '/dashboard/invoices', '/dashboard/finance', '/dashboard/users', '/dashboard/profile'],
         canCreateEvents: true, canCreateClients: true, canCreateRehearsals: true, canCompleteRehearsals: true, canCreateSongs: true, canManageUsers: true, canSeeFinance: true
     },
     'Director Musical': {
@@ -39,11 +40,11 @@ export const ROLES_CONFIG: Record<UserRole, { pages: string[], canCreateEvents: 
         canCreateEvents: false, canCreateClients: false, canCreateRehearsals: false, canCompleteRehearsals: false, canCreateSongs: false, canManageUsers: false, canSeeFinance: false
     },
     'Contador': {
-        pages: ['/dashboard/media', '/dashboard/profile'],
+        pages: ['/dashboard/invoices', '/dashboard/profile'],
         canCreateEvents: false, canCreateClients: false, canCreateRehearsals: false, canCompleteRehearsals: false, canCreateSongs: false, canManageUsers: false, canSeeFinance: false
     },
     'Beta Tester': {
-        pages: ['/dashboard', '/dashboard/clients', '/dashboard/events', '/dashboard/rehearsals', '/dashboard/repertoire', '/dashboard/media', '/dashboard/finance', '/dashboard/profile'],
+        pages: ['/dashboard', '/dashboard/clients', '/dashboard/events', '/dashboard/rehearsals', '/dashboard/repertoire', '/dashboard/media', '/dashboard/invoices', '/dashboard/finance', '/dashboard/profile'],
         canCreateEvents: true, canCreateClients: true, canCreateRehearsals: true, canCompleteRehearsals: true, canCreateSongs: true, canManageUsers: false, canSeeFinance: true
     }
 };

@@ -17,6 +17,7 @@ import {
   Moon,
   Bot,
   Menu,
+  Receipt,
 } from "lucide-react"
 import { useState, type ReactNode } from "react"
 
@@ -217,6 +218,16 @@ function DashboardLayoutContent({
               
                 <SidebarGroup>
                   <SidebarGroupLabel>ADMINISTRACIÓN</SidebarGroupLabel>
+                  {permissions.hasAccess("/dashboard/invoices") && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={isActive("/dashboard/invoices")}>
+                            <Link href="/dashboard/invoices">
+                                <Receipt />
+                                <span>Facturas de Gastos</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   {permissions.hasAccess("/dashboard/finance") && (
                     <SidebarMenuItem>
                         <SidebarMenuButton asChild isActive={isActive("/dashboard/finance")}>
