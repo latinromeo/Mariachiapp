@@ -226,8 +226,8 @@ export default function MyIncomePage() {
         const pieChartColors = [
             "hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))",
             "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--chart-1) / 0.7)",
-            "hsl(var(--chart-2) / 0.7)", "hsl(var(--chart-3) / 0.7)", "hsl(var(--chart-4) / 0.7)",
-            "hsl(var(--chart-5) / 0.7)",
+            "hsl(var(--chart-2) / 0.7)", "hsl(var(--chart-3) / 0.7)",
+            "hsl(var(--chart-4) / 0.7)", "hsl(var(--chart-5) / 0.7)",
         ];
 
         const pieChartConfig = expensePieData.reduce((acc, entry, index) => {
@@ -441,9 +441,9 @@ export default function MyIncomePage() {
                     <CardTitle>Distribución de Gastos</CardTitle>
                      <CardDescription>Visualización de en qué se gasta más.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex-1 flex items-center justify-center">
+                <CardContent className="flex-1 flex items-center justify-center min-h-[300px]">
                    {expensePieData.length > 0 ? (
-                        <ChartContainer config={pieChartConfig} className="mx-auto aspect-square h-[250px]">
+                        <ChartContainer config={pieChartConfig} className="mx-auto w-full h-full">
                             <PieChart>
                                 <ChartTooltip
                                     cursor={false}
@@ -460,30 +460,12 @@ export default function MyIncomePage() {
                                     cy="50%"
                                     outerRadius={80}
                                     strokeWidth={2}
-                                    labelLine={false}
-                                    label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-                                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                                        const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                                        const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-                                        return (
-                                            <text
-                                                x={x}
-                                                y={y}
-                                                fill="white"
-                                                textAnchor={x > cx ? 'start' : 'end'}
-                                                dominantBaseline="central"
-                                                className="text-xs font-bold"
-                                            >
-                                                {`${(percent * 100).toFixed(0)}%`}
-                                            </text>
-                                        );
-                                    }}
                                 >
-                                    {expensePieData.map((entry) => (
-                                        <Cell key={`cell-${entry.name}`} fill={pieChartConfig[entry.name]?.color} />
+                                    {expensePieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={pieChartConfig[entry.name]?.color} />
                                     ))}
                                 </Pie>
-                                <ChartLegend content={<ChartLegendContent nameKey="name" className="flex-wrap" />} />
+                                <ChartLegend content={<ChartLegendContent nameKey="name" className="flex-wrap gap-x-4 gap-y-1 justify-center" />} />
                             </PieChart>
                         </ChartContainer>
                     ) : (

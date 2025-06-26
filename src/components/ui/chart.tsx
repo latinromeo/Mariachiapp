@@ -12,6 +12,8 @@ const THEMES = { light: "", dark: ".dark" } as const
 const slugify = (str: string) =>
   str
     .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .replace(/[^\w\s-]/g, "")
     .replace(/[\s_-]+/g, "-")
