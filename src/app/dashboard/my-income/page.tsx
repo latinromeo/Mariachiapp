@@ -26,6 +26,8 @@ import { ExpenseForm } from "./expense-form"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { MUSICIAN_EXPENSE_CATEGORIES } from "@/lib/constants"
 import { Badge } from "@/components/ui/badge"
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart"
 
 
 const formatCurrency = (value: number | undefined) => {
@@ -187,10 +189,12 @@ export default function MyIncomePage() {
         filteredExpenses,
         totalIncome,
         totalExpenses,
-        netBalance
+        netBalance,
+        expensePieData,
+        pieChartConfig,
     } = useMemo(() => {
         if (typeof selectedYear === 'undefined' || typeof selectedMonth === 'undefined') {
-            return { filteredEvents: [], filteredExpenses: [], totalIncome: 0, totalExpenses: 0, netBalance: 0 };
+            return { filteredEvents: [], filteredExpenses: [], totalIncome: 0, totalExpenses: 0, netBalance: 0, expensePieData: [], pieChartConfig: {} };
         }
 
         const monthString = String(selectedMonth + 1).padStart(2, '0');
@@ -203,7 +207,7 @@ export default function MyIncomePage() {
             return itemDateStr.startsWith(yearMonthPrefix);
         };
 
-        const currentFilteredEvents = events.filter(e => filterByMonthAndYear(e.eventDate));
+        const currentFilteredEvents = events.filter(e => !e.externalGroup && filterByMonthAndYear(e.eventDate));
         const currentFilteredIncomes = incomes.filter(i => filterByMonthAndYear(i.date));
         const currentFilteredExpenses = expenses.filter(e => filterByMonthAndYear(e.date));
 
@@ -211,12 +215,37 @@ export default function MyIncomePage() {
         const totalExpenses = currentFilteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
         const netBalance = totalIncome - totalExpenses;
 
+        const expenseDistribution = currentFilteredExpenses.reduce((acc, expense) => {
+            const categoryLabel = MUSICIAN_EXPENSE_CATEGORIES.find(c => c.value === expense.category)?.label || expense.category || 'Sin Categoría';
+            acc[categoryLabel] = (acc[categoryLabel] || 0) + expense.amount;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const expensePieData = Object.entries(expenseDistribution).map(([name, value]) => ({ name, value }));
+
+        const pieChartColors = [
+            "hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))",
+            "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--chart-1) / 0.7)",
+            "hsl(var(--chart-2) / 0.7)", "hsl(var(--chart-3) / 0.7)", "hsl(var(--chart-4) / 0.7)",
+            "hsl(var(--chart-5) / 0.7)",
+        ];
+
+        const pieChartConfig = expensePieData.reduce((acc, entry, index) => {
+            acc[entry.name] = {
+                label: entry.name,
+                color: pieChartColors[index % pieChartColors.length],
+            };
+            return acc;
+        }, {} as ChartConfig);
+
         return {
             filteredEvents: currentFilteredEvents,
             filteredExpenses: currentFilteredExpenses,
             totalIncome,
             totalExpenses,
-            netBalance
+            netBalance,
+            expensePieData,
+            pieChartConfig,
         };
     }, [selectedYear, selectedMonth, events, incomes, expenses]);
 
@@ -338,7 +367,7 @@ export default function MyIncomePage() {
         
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-green-600"/>Ingresos por Eventos del Mes</CardTitle>
+                <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-green-600"/>Eventos del Mes (Registra tu pago)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
                 {filteredEvents.length > 0 ? filteredEvents.map(event => {
@@ -365,45 +394,107 @@ export default function MyIncomePage() {
                         </div>
                     )
                 }) : (
-                     <p className="text-sm text-muted-foreground text-center py-4">No hay eventos programados para este período.</p>
+                     <p className="text-sm text-muted-foreground text-center py-4">No hay eventos del mariachi programados para este período.</p>
                 )}
             </CardContent>
         </Card>
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><TrendingDown className="h-5 w-5 text-red-600"/>Gastos del Mes</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>Descripción</TableHead>
-                            <TableHead>Categoría</TableHead>
-                            <TableHead className="text-right">Monto</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredExpenses.length > 0 ? filteredExpenses.map(expense => {
-                             const expenseDate = robustParseDate(expense.date);
-                            return (
-                            <TableRow key={expense.id}>
-                                <TableCell>{expenseDate ? format(expenseDate, 'dd/MM/yyyy') : '-'}</TableCell>
-                                <TableCell className="font-medium">{expense.description}</TableCell>
-                                <TableCell>
-                                    <Badge variant="outline">{MUSICIAN_EXPENSE_CATEGORIES.find(c => c.value === expense.category)?.label || expense.category}</Badge>
-                                </TableCell>
-                                <TableCell className="text-right font-semibold text-red-600">{formatCurrency(expense.amount)}</TableCell>
-                            </TableRow>
-                        )}) : (
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="lg:col-span-1">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><TrendingDown className="h-5 w-5 text-red-600"/>Gastos del Mes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
                             <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">No hay gastos registrados para este período.</TableCell>
+                                <TableHead>Fecha</TableHead>
+                                <TableHead>Descripción</TableHead>
+                                <TableHead>Categoría</TableHead>
+                                <TableHead className="text-right">Monto</TableHead>
                             </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredExpenses.length > 0 ? filteredExpenses.map(expense => {
+                                const expenseDate = robustParseDate(expense.date);
+                                return (
+                                <TableRow key={expense.id}>
+                                    <TableCell>{expenseDate ? format(expenseDate, 'dd/MM/yyyy') : '-'}</TableCell>
+                                    <TableCell className="font-medium">{expense.description}</TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline">{MUSICIAN_EXPENSE_CATEGORIES.find(c => c.value === expense.category)?.label || expense.category}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right font-semibold text-red-600">{formatCurrency(expense.amount)}</TableCell>
+                                </TableRow>
+                            )}) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">No hay gastos registrados para este período.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-1 flex flex-col">
+                 <CardHeader>
+                    <CardTitle>Distribución de Gastos</CardTitle>
+                     <CardDescription>Visualización de en qué se gasta más.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 flex items-center justify-center">
+                   {expensePieData.length > 0 ? (
+                        <ChartContainer config={pieChartConfig} className="mx-auto aspect-square h-[250px]">
+                            <PieChart>
+                                <ChartTooltip
+                                    cursor={false}
+                                    content={<ChartTooltipContent 
+                                        formatter={(value, name) => `${name}: ${formatCurrency(value as number)}`}
+                                        hideLabel 
+                                    />}
+                                />
+                                <Pie
+                                    data={expensePieData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    outerRadius={80}
+                                    strokeWidth={2}
+                                    labelLine={false}
+                                    label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                                        const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+                                        const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+                                        return (
+                                            <text
+                                                x={x}
+                                                y={y}
+                                                fill="white"
+                                                textAnchor={x > cx ? 'start' : 'end'}
+                                                dominantBaseline="central"
+                                                className="text-xs font-bold"
+                                            >
+                                                {`${(percent * 100).toFixed(0)}%`}
+                                            </text>
+                                        );
+                                    }}
+                                >
+                                    {expensePieData.map((entry) => (
+                                        <Cell key={`cell-${entry.name}`} fill={pieChartConfig[entry.name]?.color} />
+                                    ))}
+                                </Pie>
+                                <ChartLegend content={<ChartLegendContent nameKey="name" className="flex-wrap" />} />
+                            </PieChart>
+                        </ChartContainer>
+                    ) : (
+                        <div className="h-[250px] flex flex-col items-center justify-center text-center text-muted-foreground p-4">
+                            <p>No hay datos de gastos para mostrar en el gráfico.</p>
+                            <p className="text-xs mt-2">Añade un gasto para ver la distribución.</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
     </div>
   );
 }
