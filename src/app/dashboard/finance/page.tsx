@@ -16,13 +16,14 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ManualEntryForm } from "./manual-entry-form"
-import { endOfMonth, format, startOfMonth, subMonths, parseISO, isWithinInterval } from "date-fns"
+import { endOfMonth, format, startOfMonth, subMonths, parseISO, isWithinInterval, getYear, getMonth } from "date-fns"
 import { es } from "date-fns/locale"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart"
 import { EVENT_TYPES } from "@/lib/constants"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useUser } from "@/lib/auth"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const formatCurrency = (value: number | undefined, compact = false) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -62,6 +63,10 @@ const safeParseDate = (dateString: string) => {
     }
 }
 
+const months = Array.from({ length: 12 }, (_, i) => ({
+  value: i,
+  label: format(new Date(2000, i), "MMMM", { locale: es }),
+}));
 
 export default function FinancePage() {
     const { permissions } = useUser();
@@ -71,6 +76,10 @@ export default function FinancePage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [entryType, setEntryType] = useState<'income' | 'expense'>('expense');
     const [isClient, setIsClient] = useState(false);
+    
+    const [selectedMonth, setSelectedMonth] = useState<number>(getMonth(new Date()));
+    const [selectedYear, setSelectedYear] = useState<number>(getYear(new Date()));
+    const [availableYears, setAvailableYears] = useState<number[]>([]);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -81,6 +90,20 @@ export default function FinancePage() {
             ]);
             setEvents(eventsData);
             setManualEntries(manualEntriesData);
+
+            const years = new Set<number>();
+            const addYearFromString = (dateString: string) => {
+                const date = safeParseDate(dateString);
+                if (date) years.add(getYear(date));
+            };
+            
+            eventsData.forEach(e => addYearFromString(e.eventDate));
+            manualEntriesData.forEach(m => addYearFromString(m.date));
+
+            const currentYear = getYear(new Date());
+            if (!years.has(currentYear)) years.add(currentYear);
+            setAvailableYears(Array.from(years).sort((a, b) => b - a));
+
         } catch (error) {
             console.error("Failed to fetch financial data", error);
         } finally {
@@ -102,44 +125,81 @@ export default function FinancePage() {
         eventTypeDistribution, 
         pieChartConfig,
         barChartData,
-        transactionHistory,
-        currentMonthIncome,
-        currentMonthExpenses,
-        netBalance,
+        filteredTransactionHistory,
+        totalIncomeForPeriod,
+        totalExpensesForPeriod,
+        netBalanceForPeriod,
     } = useMemo(() => {
         const defaultResult = {
             incomeHistory: [], eventTypeDistribution: [], pieChartConfig: {} as ChartConfig, 
-            barChartData: [], transactionHistory: [], currentMonthIncome: 0, 
-            currentMonthExpenses: 0, netBalance: 0
+            barChartData: [], filteredTransactionHistory: [], totalIncomeForPeriod: 0, 
+            totalExpensesForPeriod: 0, netBalanceForPeriod: 0
         };
 
         if (isLoading || !isClient) return defaultResult;
 
         const now = new Date();
-        const firstDayCurrentMonth = startOfMonth(now);
-        const lastDayCurrentMonth = endOfMonth(now);
-        const currentMonthInterval = { start: firstDayCurrentMonth, end: lastDayCurrentMonth };
-        const currentMonthName = format(now, 'MMM', { locale: es });
         
-        // Current Month Totals
-        const currentMonthEvents = events.filter(e => isWithinInterval(safeParseDate(e.eventDate), currentMonthInterval));
-        const currentMonthManualEntries = manualEntries.filter(m => isWithinInterval(safeParseDate(m.date), currentMonthInterval));
+        // --- Period Specific Calculations ---
+        const firstDayOfPeriod = startOfMonth(new Date(selectedYear, selectedMonth));
+        const lastDayOfPeriod = endOfMonth(firstDayOfPeriod);
+        const periodInterval = { start: firstDayOfPeriod, end: lastDayOfPeriod };
+        const periodName = format(firstDayOfPeriod, 'MMM', { locale: es });
 
-        const currentMonthIncome = currentMonthEvents.reduce((acc, e) => acc + (e.externalGroup ? 0 : e.contractedAmount), 0) +
-                       currentMonthManualEntries.filter(m => m.type === 'income').reduce((acc, m) => acc + m.amount, 0);
-
-        const currentMonthExpenses = currentMonthEvents.reduce((acc, e) => acc + (e.externalGroup ? 0 : (e.musiciansPay || 0)), 0) +
-                         currentMonthManualEntries.filter(m => m.type === 'expense').reduce((acc, m) => acc + m.amount, 0);
+        const periodEvents = events.filter(e => isWithinInterval(safeParseDate(e.eventDate), periodInterval));
+        const periodManualEntries = manualEntries.filter(m => isWithinInterval(safeParseDate(m.date), periodInterval));
         
-        const netBalance = currentMonthIncome - currentMonthExpenses;
+        const totalIncomeForPeriod = periodEvents.reduce((acc, e) => acc + (e.externalGroup ? 0 : e.contractedAmount), 0) +
+                       periodManualEntries.filter(m => m.type === 'income').reduce((acc, m) => acc + m.amount, 0);
+
+        const totalExpensesForPeriod = periodEvents.reduce((acc, e) => acc + (e.externalGroup ? 0 : (e.musiciansPay || 0)), 0) +
+                         periodManualEntries.filter(m => m.type === 'expense').reduce((acc, m) => acc + m.amount, 0);
+        
+        const netBalanceForPeriod = totalIncomeForPeriod - totalExpensesForPeriod;
 
         const barChartData = [{
-            name: currentMonthName,
-            ingresos: currentMonthIncome,
-            egresos: currentMonthExpenses
+            name: periodName,
+            ingresos: totalIncomeForPeriod,
+            egresos: totalExpensesForPeriod
         }];
         
-        // Income History (last 6 months)
+        const eventTransactions = periodEvents
+            .map(event => ({
+                type: 'event' as const,
+                date: event.eventDate,
+                description: `${event.eventType} - ${event.clientName}`,
+                id: event.id,
+                createdAt: event.createdAt,
+                income: event.contractedAmount > 0 ? event.contractedAmount : undefined,
+                expense: !event.externalGroup && event.musiciansPay && event.musiciansPay > 0 ? event.musiciansPay : undefined,
+                category: event.externalGroup ? 'Referido Externo' : 'Presentación Mariachi',
+            }))
+            .filter(et => et.income || et.expense);
+
+        const manualTransactions = periodManualEntries.map(entry => ({
+            type: 'manual' as const,
+            date: entry.date,
+            description: entry.description,
+            category: entry.category || 'Otro',
+            transactionType: entry.type === 'income' ? 'Ingreso' : 'Gasto',
+            amount: entry.amount,
+            id: `man-${entry.id}`,
+            createdAt: entry.createdAt,
+        }));
+        
+        const filteredTransactionHistory = [...eventTransactions, ...manualTransactions];
+        filteredTransactionHistory.sort((a, b) => {
+            const dateA = safeParseDate(a.date);
+            const dateB = safeParseDate(b.date);
+            if (dateB.getTime() !== dateA.getTime()) {
+                return dateB.getTime() - dateA.getTime();
+            }
+            const createdAtA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const createdAtB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return createdAtB - createdAtA;
+        });
+
+        // --- All-Time / Trend Calculations ---
         const incomeHistory = Array.from({ length: 6 }).map((_, i) => {
             const monthDate = subMonths(now, 5 - i);
             const monthStart = startOfMonth(monthDate);
@@ -158,8 +218,7 @@ export default function FinancePage() {
                 Ingresos: monthIncome
             };
         });
-
-        // Event Type Distribution
+        
         const eventTypeLabelMap = EVENT_TYPES.reduce((acc, curr) => {
             acc[curr.value] = curr.label;
             return acc;
@@ -184,48 +243,10 @@ export default function FinancePage() {
             };
             return acc;
         }, {} as ChartConfig);
-
-        // Transaction History
-        const eventTransactions = events
-            .map(event => ({
-                type: 'event' as const,
-                date: event.eventDate,
-                description: `${event.eventType} - ${event.clientName}`,
-                id: event.id,
-                createdAt: event.createdAt,
-                income: event.contractedAmount > 0 ? event.contractedAmount : undefined,
-                expense: !event.externalGroup && event.musiciansPay && event.musiciansPay > 0 ? event.musiciansPay : undefined,
-                category: event.externalGroup ? 'Referido Externo' : 'Presentación Mariachi',
-            }))
-            .filter(et => et.income || et.expense);
-
-        const manualTransactions = manualEntries.map(entry => ({
-            type: 'manual' as const,
-            date: entry.date,
-            description: entry.description,
-            category: entry.category || 'Otro',
-            transactionType: entry.type === 'income' ? 'Ingreso' : 'Gasto',
-            amount: entry.amount,
-            id: `man-${entry.id}`,
-            createdAt: entry.createdAt,
-        }));
         
-        const transactionHistory = [...eventTransactions, ...manualTransactions];
-        transactionHistory.sort((a, b) => {
-            const dateA = safeParseDate(a.date);
-            const dateB = safeParseDate(b.date);
-            if (dateB.getTime() !== dateA.getTime()) {
-                return dateB.getTime() - dateA.getTime();
-            }
-            // If dates are the same, sort by creation time (most recent first)
-            const createdAtA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const createdAtB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return createdAtB - createdAtA;
-        });
-        
-        return { incomeHistory, eventTypeDistribution, pieChartConfig, barChartData, transactionHistory, currentMonthIncome, currentMonthExpenses, netBalance };
+        return { incomeHistory, eventTypeDistribution, pieChartConfig, barChartData, filteredTransactionHistory, totalIncomeForPeriod, totalExpensesForPeriod, netBalanceForPeriod };
 
-    }, [events, manualEntries, isLoading, isClient]);
+    }, [events, manualEntries, isLoading, isClient, selectedMonth, selectedYear]);
 
     const handleSuccess = () => {
         setIsDialogOpen(false);
@@ -282,35 +303,69 @@ export default function FinancePage() {
             </div>
         </div>
 
+        <Card>
+            <CardHeader>
+                <CardTitle>Seleccionar Período de Consulta</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
+                 <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <span className="text-sm font-medium">Mes:</span>
+                    <Select value={String(selectedMonth)} onValueChange={(value) => setSelectedMonth(Number(value))}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Mes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {months.map(month => (
+                                <SelectItem key={month.value} value={String(month.value)} className="capitalize">{month.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <span className="text-sm font-medium">Año:</span>
+                    <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
+                        <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Año" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {availableYears.map(year => (
+                                <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Ingresos Generales (Mes)</CardTitle>
+                    <CardTitle className="text-sm font-medium">Ingresos del Período</CardTitle>
                     <TrendingUp className="h-4 w-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
-                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold">{formatCurrency(currentMonthIncome)}</div>}
-                    <p className="text-xs text-muted-foreground">Total de ingresos este mes</p>
+                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold">{formatCurrency(totalIncomeForPeriod)}</div>}
+                    <p className="text-xs text-muted-foreground capitalize">{`${months.find(m => m.value === selectedMonth)?.label || ''} ${selectedYear}`}</p>
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Egresos Generales (Mes)</CardTitle>
+                    <CardTitle className="text-sm font-medium">Egresos del Período</CardTitle>
                     <TrendingDown className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold">{formatCurrency(currentMonthExpenses)}</div>}
-                    <p className="text-xs text-muted-foreground">Total de egresos este mes</p>
+                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold">{formatCurrency(totalExpensesForPeriod)}</div>}
+                    <p className="text-xs text-muted-foreground capitalize">{`${months.find(m => m.value === selectedMonth)?.label || ''} ${selectedYear}`}</p>
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Balance Neto (Mes)</CardTitle>
+                    <CardTitle className="text-sm font-medium">Balance Neto del Período</CardTitle>
                     <Landmark className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold">{formatCurrency(netBalance)}</div>}
-                    <p className="text-xs text-muted-foreground">Ingresos - Egresos</p>
+                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold">{formatCurrency(netBalanceForPeriod)}</div>}
+                     <p className="text-xs text-muted-foreground capitalize">{`${months.find(m => m.value === selectedMonth)?.label || ''} ${selectedYear}`}</p>
                 </CardContent>
             </Card>
         </div>
@@ -319,8 +374,8 @@ export default function FinancePage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5"/>Ingresos vs Egresos (Mes Actual)</CardTitle>
-                    <CardDescription>Comparativa del mes en curso.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5"/>Ingresos vs Egresos ({months.find(m => m.value === selectedMonth)?.label})</CardTitle>
+                    <CardDescription>Comparativa del mes seleccionado.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {showSkeleton ? <Skeleton className="h-[250px] w-full" /> : (
@@ -343,7 +398,7 @@ export default function FinancePage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5"/>Desglose de Ingresos Mensuales</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5"/>Desglose de Ingresos (Últimos 6 Meses)</CardTitle>
                     <CardDescription>Evolución de los ingresos a lo largo de los meses.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -364,7 +419,7 @@ export default function FinancePage() {
 
             <Card className="lg:col-span-2">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5"/>Distribución de Ingresos por Tipo de Evento</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5"/>Distribución de Ingresos por Tipo de Evento (Histórico)</CardTitle>
                     <CardDescription>Cantidad total de eventos realizados por cada tipo.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex items-center justify-center py-6">
@@ -436,7 +491,7 @@ export default function FinancePage() {
 
             <Card className="lg:col-span-2">
                 <CardHeader>
-                    <CardTitle>Historial de Transacciones</CardTitle>
+                    <CardTitle>Historial de Transacciones del Período</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -460,8 +515,8 @@ export default function FinancePage() {
                                         <TableCell className="text-right"><Skeleton className="h-4 w-24 float-right"/></TableCell>
                                     </TableRow>
                                 ))
-                            ) : transactionHistory.length > 0 ? (
-                                transactionHistory.map(t => {
+                            ) : filteredTransactionHistory.length > 0 ? (
+                                filteredTransactionHistory.map(t => {
                                     if (t.type === 'event') {
                                         return (
                                             <TableRow key={t.id}>
@@ -506,7 +561,7 @@ export default function FinancePage() {
                                 })
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">No hay transacciones registradas.</TableCell>
+                                    <TableCell colSpan={5} className="h-24 text-center">No hay transacciones para el período seleccionado.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
