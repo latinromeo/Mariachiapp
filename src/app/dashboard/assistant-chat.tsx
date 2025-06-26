@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { EventReceiptModal } from './events/event-receipt-modal';
+import { type EventData } from '@/services/eventService';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -27,6 +29,10 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeechSupported, setIsSpeechSupported] = useState(false);
+  
+  const [receiptData, setReceiptData] = useState<Partial<EventData> | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -190,6 +196,12 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
       if (data.refreshAgenda) {
         window.dispatchEvent(new Event('agendaUpdated'));
       }
+      
+      if (data.newEventData) {
+        setReceiptData(data.newEventData);
+        setIsReceiptModalOpen(true);
+      }
+
 
       // Auto-activate microphone for confirmations
       const replyText = (data.reply || '').toLowerCase();
@@ -247,75 +259,85 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
   }
 
   return (
-    <Card className="fixed bottom-4 right-4 z-50 w-full max-w-sm shadow-2xl flex flex-col h-[70vh]">
-      <CardHeader className="flex flex-row items-center justify-between border-b">
-        <div className="flex items-center gap-3">
-          <Bot className="h-6 w-6 text-primary" />
-          <CardTitle className="text-lg">Many AI</CardTitle>
-        </div>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </CardHeader>
-      <CardContent className="flex-1 p-0 overflow-hidden">
-        <div ref={scrollAreaRef} className="h-full overflow-y-auto p-4 pb-8 space-y-4">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={cn(
-                  'flex items-start gap-3',
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
-                )}
-              >
-                {message.role === 'assistant' && (
+    <>
+      <Card className="fixed bottom-4 right-4 z-50 w-full max-w-sm shadow-2xl flex flex-col h-[70vh]">
+        <CardHeader className="flex flex-row items-center justify-between border-b">
+          <div className="flex items-center gap-3">
+            <Bot className="h-6 w-6 text-primary" />
+            <CardTitle className="text-lg">Many AI</CardTitle>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </CardHeader>
+        <CardContent className="flex-1 p-0 overflow-hidden">
+          <div ref={scrollAreaRef} className="h-full overflow-y-auto p-4 pb-8 space-y-4">
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={cn(
+                    'flex items-start gap-3',
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  )}
+                >
+                  {message.role === 'assistant' && (
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>AI</AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div
+                    className={cn(
+                      'max-w-xs rounded-lg px-4 py-2 text-sm break-words',
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    )}
+                  >
+                    {message.content}
+                  </div>
+                </div>
+              ))}
+              {isLoading && (
+                <div className="flex items-start gap-3 justify-start">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>AI</AvatarFallback>
                   </Avatar>
-                )}
-                <div
-                  className={cn(
-                    'max-w-xs rounded-lg px-4 py-2 text-sm break-words',
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  )}
-                >
-                  {message.content}
+                  <div className="bg-muted rounded-lg px-4 py-3 flex items-center">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
                 </div>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex items-start gap-3 justify-start">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>AI</AvatarFallback>
-                </Avatar>
-                <div className="bg-muted rounded-lg px-4 py-3 flex items-center">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              </div>
+              )}
+          </div>
+        </CardContent>
+        <CardFooter className="border-t pt-4">
+          <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Pregúntale o díctale algo..."
+              disabled={isLoading}
+              autoComplete="off"
+            />
+            {isSpeechSupported && (
+              <Button type="button" size="icon" variant={isListening ? "destructive" : "outline"} onClick={handleMicClick} disabled={isLoading}>
+                  <Mic className="h-4 w-4" />
+                  <span className="sr-only">{isListening ? 'Detener grabación' : 'Iniciar grabación'}</span>
+              </Button>
             )}
-        </div>
-      </CardContent>
-      <CardFooter className="border-t pt-4">
-        <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Pregúntale o díctale algo..."
-            disabled={isLoading}
-            autoComplete="off"
-          />
-          {isSpeechSupported && (
-            <Button type="button" size="icon" variant={isListening ? "destructive" : "outline"} onClick={handleMicClick} disabled={isLoading}>
-                <Mic className="h-4 w-4" />
-                <span className="sr-only">{isListening ? 'Detener grabación' : 'Iniciar grabación'}</span>
+            <Button type="submit" size="icon" disabled={isLoading || !input}>
+              <Send className="h-4 w-4" />
             </Button>
-          )}
-          <Button type="submit" size="icon" disabled={isLoading || !input}>
-            <Send className="h-4 w-4" />
-          </Button>
-        </form>
-      </CardFooter>
-    </Card>
+          </form>
+        </CardFooter>
+      </Card>
+      <EventReceiptModal 
+        isOpen={isReceiptModalOpen}
+        onClose={() => {
+            setIsReceiptModalOpen(false);
+            setReceiptData(null);
+        }}
+        eventData={receiptData}
+      />
+    </>
   );
 }

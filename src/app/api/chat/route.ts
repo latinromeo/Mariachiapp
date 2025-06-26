@@ -90,6 +90,8 @@ export async function POST(req: NextRequest) {
             eventDate: { type: 'string', description: 'La fecha del evento en formato YYYY-MM-DD. Si el usuario dice "hoy", "mañana" o similar, debes calcular y usar la fecha correspondiente.' },
             eventTime: { type: 'string', description: 'La hora del evento (ej. 8:00 PM).' },
             plan: { type: 'string', description: 'El plan contratado. Debe ser uno de los valores permitidos: express, 30_min, 1_hora.', enum: ['express', '30_min', '1_hora', 'personalizado'] },
+            contractedAmount: { type: 'number', description: 'El monto total acordado para el evento. Si se especifica un plan estándar, este valor se puede omitir y se usará el precio del plan. Si el plan es "personalizado", este valor es obligatorio.' },
+            amountPaid: { type: 'number', description: 'El monto que el cliente pagó por adelantado (abono). Si no se especifica, se asume 0.' },
             location: { type: 'string', description: 'La dirección o lugar del evento.' },
             sector: { type: 'string', description: 'El sector o zona donde se realizará el evento.' },
           },
@@ -271,6 +273,7 @@ export async function POST(req: NextRequest) {
     const toolCalls = responseMessage.tool_calls;
 
     let refreshAgenda = false;
+    let newEventDataForReceipt: any = null;
 
     if (toolCalls) {
       messages.push(responseMessage); // Add assistant's tool-calling message to history
@@ -288,11 +291,13 @@ export async function POST(req: NextRequest) {
           }
           const selectedPlan = EVENT_PLANS.find(p => p.value === functionArgs.plan);
 
+          const contractedAmount = functionArgs.contractedAmount || selectedPlan?.price || 0;
+
           const eventPayload = {
             ...functionArgs,
-            paymentMethod: 'cash',
-            contractedAmount: selectedPlan?.price || 0,
-            amountPaid: 0,
+            paymentMethod: 'cash', // Can be parameterized later if needed
+            contractedAmount: contractedAmount,
+            amountPaid: functionArgs.amountPaid || 0, // Default to 0 if not provided
             musiciansPay: selectedPlan?.musicianPay || 0,
             externalGroup: false,
             notes: `Evento agendado por Maestro Mariachi AI.`,
@@ -300,9 +305,17 @@ export async function POST(req: NextRequest) {
           
           const result = await createEvent(eventPayload);
           
-          if (result.success) {
+          if (result.success && result.eventId) {
             functionResponseContent = `El evento para ${functionArgs.clientName} ha sido creado exitosamente con el ID: ${result.eventId}. Notifica al usuario que todo está confirmado.`;
             refreshAgenda = true;
+
+            // Prepare data for the receipt
+            const pendingBalance = eventPayload.contractedAmount - eventPayload.amountPaid;
+            newEventDataForReceipt = {
+                ...eventPayload,
+                id: result.eventId,
+                pendingBalance,
+            };
           } else {
             functionResponseContent = `Hubo un error al crear el evento: ${result.error}. Informa al usuario del problema.`;
           }
@@ -387,6 +400,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         reply: finalResponse.choices[0].message.content,
         refreshAgenda: refreshAgenda,
+        newEventData: newEventDataForReceipt,
       });
     } else {
       // No tool was called, just return the text response
