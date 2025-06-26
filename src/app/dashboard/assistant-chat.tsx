@@ -130,14 +130,17 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
       
       const closingQuestions = [
         '¿puedo ayudarte en algo más?',
-        '¿algo más?',
-        '¿necesitas algo más?',
+        'algo más',
+        'necesitas algo más',
+        'te puedo ayudar en algo más',
       ];
       
       const negativeResponses = [
         'no',
         'no, gracias',
         'no gracias',
+        'gracias',
+        'muchas gracias',
         'nada más',
         'eso es todo',
         'estamos bien',
