@@ -320,10 +320,10 @@ function DashboardLayoutContent({
               {!isChatOpen && (
                 <Button
                   size="lg"
-                  className="rounded-full h-14 w-14 shadow-lg"
+                  className="group rounded-full h-16 w-16 shadow-2xl bg-gradient-to-br from-primary to-blue-700 text-white transition-all duration-300 ease-in-out hover:scale-110 focus:outline-none focus:ring-4 focus:ring-primary/50"
                   onClick={() => setIsChatOpen(true)}
                 >
-                  <Bot className="h-7 w-7" />
+                  <Bot className="h-8 w-8 transition-transform duration-300 group-hover:rotate-12" />
                   <span className="sr-only">Abrir Asistente AI</span>
                 </Button>
               )}

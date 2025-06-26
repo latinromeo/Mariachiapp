@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, type FormEvent } from 'react';
+import { useState, useRef, useEffect, type FormEvent, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bot, Loader2, Send, X, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,25 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  // --- Mic Control Logic ---
+  const startListening = useCallback(() => {
+    if (isSpeechSupported && recognitionRef.current && !isListening) {
+      try {
+        finalTranscriptRef.current = '';
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (e) {
+        console.error("Speech recognition could not be started:", e);
+      }
+    }
+  }, [isSpeechSupported, isListening]);
+
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+    }
+  }, [isListening]);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -87,6 +106,18 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
       };
     }
   }, [toast]);
+
+  // Effect to start listening when chat opens
+  useEffect(() => {
+    if (isOpen) {
+      // Use a timeout to allow UI to settle and not be too abrupt
+      const timer = setTimeout(() => {
+        startListening();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, startListening]);
   
   const handleSendMessage = async (prompt: string) => {
     if (!prompt || isLoading) return;
@@ -120,7 +151,6 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
 
       // Auto-activate microphone for confirmations
       const replyText = (data.reply || '').toLowerCase();
-      // Expanded keywords for more robust detection
       const confirmationKeywords = [
         'confirmar', 'confirmamos', 'confirma',
         'deseas', 'quieres', 'quieres que',
@@ -134,19 +164,10 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
       ];
       const isConfirmationQuestion = replyText.includes('?') && confirmationKeywords.some(keyword => replyText.includes(keyword));
 
-      if (isConfirmationQuestion && recognitionRef.current) {
+      if (isConfirmationQuestion) {
           setTimeout(() => {
-              try {
-                  // Safeguard: Stop any lingering recognition before starting a new one.
-                  recognitionRef.current?.stop();
-                  finalTranscriptRef.current = ''; // Reset transcript before listening
-                  recognitionRef.current?.start();
-                  setIsListening(true);
-              } catch(e) {
-                  console.error("Speech recognition could not be started:", e);
-                  setIsListening(false);
-              }
-          }, 500); // Small delay for user to process the question
+              startListening();
+          }, 500);
       }
 
     } catch (error: any) {
@@ -167,11 +188,9 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
   
   const handleMicClick = () => {
     if (isListening) {
-      recognitionRef.current?.stop();
+      stopListening();
     } else {
-      finalTranscriptRef.current = ''; // Reset transcript before starting
-      recognitionRef.current?.start();
-      setIsListening(true);
+      startListening();
     }
   };
 
