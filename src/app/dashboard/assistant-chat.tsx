@@ -122,6 +122,45 @@ export function AssistantChat({ isOpen, onClose }: AssistantChatProps) {
   const handleSendMessage = async (prompt: string) => {
     if (!prompt || isLoading) return;
 
+    // --- Auto-close logic ---
+    const lastMessage = messagesRef.current[messagesRef.current.length - 1];
+    if (lastMessage?.role === 'assistant') {
+      const assistantLastWords = lastMessage.content.toLowerCase();
+      const userCurrentWords = prompt.toLowerCase().trim();
+      
+      const closingQuestions = [
+        '¿puedo ayudarte en algo más?',
+        '¿algo más?',
+        '¿necesitas algo más?',
+      ];
+      
+      const negativeResponses = [
+        'no',
+        'no, gracias',
+        'no gracias',
+        'nada más',
+        'eso es todo',
+        'estamos bien',
+        'ya no',
+        'listo',
+      ];
+
+      const isClosingQuestion = closingQuestions.some(q => assistantLastWords.includes(q));
+      const isNegativeResponse = negativeResponses.includes(userCurrentWords);
+
+      if (isClosingQuestion && isNegativeResponse) {
+        stopListening();
+        const userMessage: Message = { role: 'user', content: prompt };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput('');
+        setTimeout(() => {
+          onClose();
+        }, 1200); // Close after a short delay
+        return; // Stop further processing
+      }
+    }
+    // --- End auto-close logic ---
+
     const userMessage: Message = { role: 'user', content: prompt };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
