@@ -58,40 +58,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No se recibió la imagen de la factura.' }, { status: 400 });
   }
   
-  let invoiceUrl = '';
-  try {
-    const bucket = storage.bucket();
-    // Use a more robust regex to handle various image mime types, including 'svg+xml'.
-    const match = imageDataUri.match(/^data:(image\/.+);base64,(.+)$/);
-    if (!match) {
-        throw new Error('Formato de imagen no válido. El archivo debe ser un data URI de imagen.');
-    }
-    const mimeType = match[1];
-    const base64Data = match[2];
-    const buffer = Buffer.from(base64Data, 'base64');
-    
-    const extension = mimeType.split('/')[1]?.split('+')[0] || 'bin';
-    const fileName = `invoices/${uuidv4()}.${extension}`;
-    const file = bucket.file(fileName);
-
-    await file.save(buffer, {
-        metadata: { contentType: mimeType },
-    });
-
-    const [signedUrl] = await file.getSignedUrl({
-      action: 'read',
-      expires: '01-01-2100',
-    });
-    invoiceUrl = signedUrl;
-  } catch (uploadError: any) {
-    console.error('Error subiendo la factura a Firebase Storage:', uploadError);
-    // Return a more descriptive error to the client.
-    return NextResponse.json({ 
-        success: false, 
-        error: `Error al procesar la imagen de la factura: ${uploadError.message}` 
-    }, { status: 500 });
-  }
-
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -114,6 +80,35 @@ export async function POST(req: NextRequest) {
 
     if (toolCall?.function.name === 'register_expense') {
       const args = JSON.parse(toolCall.function.arguments);
+      
+      let invoiceUrl = '';
+      try {
+        const bucket = storage.bucket();
+        const match = imageDataUri.match(/^data:(image\/.+);base64,(.+)$/);
+        if (!match) {
+            throw new Error('Formato de imagen no válido. El archivo debe ser un data URI de imagen.');
+        }
+        const mimeType = match[1];
+        const base64Data = match[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        const extension = mimeType.split('/')[1]?.split('+')[0] || 'bin';
+        const fileName = `invoices/${uuidv4()}.${extension}`;
+        const file = bucket.file(fileName);
+
+        await file.save(buffer, {
+            metadata: { contentType: mimeType },
+        });
+
+        const [signedUrl] = await file.getSignedUrl({
+          action: 'read',
+          expires: '01-01-2100',
+        });
+        invoiceUrl = signedUrl;
+      } catch (uploadError: any) {
+        console.error('Error subiendo la factura a Firebase Storage (la operación continuará):', uploadError.message);
+        // The expense will be created without an invoiceUrl, but the request won't fail.
+      }
       
       const result = await createManualFinanceEntry({
         ...args,
