@@ -24,6 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { useUser } from "@/lib/auth"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 
 const formatCurrency = (value: number | undefined, compact = false) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -344,7 +345,7 @@ export default function FinancePage() {
                     <TrendingUp className="h-4 w-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
-                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold">{formatCurrency(totalIncomeForPeriod)}</div>}
+                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold text-green-600">{formatCurrency(totalIncomeForPeriod)}</div>}
                     <p className="text-xs text-muted-foreground capitalize">{`${months.find(m => m.value === selectedMonth)?.label || ''} ${selectedYear}`}</p>
                 </CardContent>
             </Card>
@@ -354,7 +355,7 @@ export default function FinancePage() {
                     <TrendingDown className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold">{formatCurrency(totalExpensesForPeriod)}</div>}
+                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold text-destructive">{formatCurrency(totalExpensesForPeriod)}</div>}
                     <p className="text-xs text-muted-foreground capitalize">{`${months.find(m => m.value === selectedMonth)?.label || ''} ${selectedYear}`}</p>
                 </CardContent>
             </Card>
@@ -364,7 +365,7 @@ export default function FinancePage() {
                     <Landmark className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className="text-2xl font-bold">{formatCurrency(netBalanceForPeriod)}</div>}
+                    {showSkeleton ? <Skeleton className="h-8 w-3/4 mt-1" /> : <div className={cn("text-2xl font-bold", netBalanceForPeriod > 0 ? "text-green-600" : netBalanceForPeriod < 0 ? "text-destructive" : "")}>{formatCurrency(netBalanceForPeriod)}</div>}
                      <p className="text-xs text-muted-foreground capitalize">{`${months.find(m => m.value === selectedMonth)?.label || ''} ${selectedYear}`}</p>
                 </CardContent>
             </Card>
@@ -584,3 +585,5 @@ export default function FinancePage() {
     </div>
   );
 }
+
+    
