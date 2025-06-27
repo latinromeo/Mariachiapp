@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     // Upload the original invoice image to Firebase Storage
     let invoiceUrl = '';
     try {
-      const bucket = storage.bucket();
+      const bucket = storage.bucket("mariachi-app-ygp7h.appspot.com");
       const match = imageDataUri.match(/^data:(image\/.+);base64,(.+)$/);
       if (!match) {
           throw new Error('Formato de imagen no válido.');

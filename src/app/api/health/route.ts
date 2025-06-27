@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     // --- Check Storage Connection ---
     try {
         // Get the metadata of a non-existent file to verify bucket access without creating files.
-        const bucket = storage.bucket();
+        const bucket = storage.bucket("mariachi-app-ygp7h.appspot.com");
         await bucket.file('health_check_test.txt').getMetadata().catch(e => {
             // We expect a "Not Found" error (code 404), which means we successfully communicated with the bucket.
             if (e.code !== 404) {

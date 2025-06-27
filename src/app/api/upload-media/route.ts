@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
         const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
         const filePath = `media/${category}/${uuidv4()}-${sanitizedFileName}`;
         
-        const bucket = storage.bucket();
+        const bucket = storage.bucket("mariachi-app-ygp7h.appspot.com");
         const file = bucket.file(filePath);
 
         await file.save(buffer, { metadata: { contentType: mimeType } });

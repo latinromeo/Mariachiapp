@@ -50,7 +50,7 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   try {
-    const bucket = storage.bucket();
+    const bucket = storage.bucket("mariachi-app-ygp7h.appspot.com");
     const logoFile = bucket.file("logo.png");
     const [logoExists] = await logoFile.exists();
     if (logoExists) {
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
         const pdfBuffer = await generateReceipt(eventData);
         
         console.log("Step 5: PDF buffer created. Uploading to Firebase Storage.");
-        const bucket = storage.bucket();
+        const bucket = storage.bucket("mariachi-app-ygp7h.appspot.com");
         const clientNameForFile = eventData.clientName || "sin_nombre";
         const sanitizedClientName = sanitizeFilename(clientNameForFile);
         const filePath = `receipts/recibo-${sanitizedClientName}-${eventData.eventDate}.pdf`;
