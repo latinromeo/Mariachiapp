@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, storage } from '@/lib/firebase-admin';
+import admin, { db } from '@/lib/firebase-admin';
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -50,6 +50,7 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   try {
+    const storage = admin.storage();
     const bucket = storage.bucket("mariachi-app-ygp7h.appspot.com");
     const logoFile = bucket.file("logo.png");
     const [logoExists] = await logoFile.exists();
@@ -156,6 +157,7 @@ export async function POST(req: NextRequest) {
         const pdfBuffer = await generateReceipt(eventData);
         
         console.log("Step 5: PDF buffer created. Uploading to Firebase Storage.");
+        const storage = admin.storage();
         const bucket = storage.bucket("mariachi-app-ygp7h.appspot.com");
         const clientNameForFile = eventData.clientName || "sin_nombre";
         const sanitizedClientName = sanitizeFilename(clientNameForFile);

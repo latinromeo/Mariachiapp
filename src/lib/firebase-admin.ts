@@ -17,5 +17,6 @@ if (!admin.apps.length) {
 }
 
 export const db = admin.firestore();
-export const storage = admin.storage();
+// The storage object will be instantiated within each API route that needs it
+// to avoid potential state issues in the development environment.
 export default admin;
