@@ -65,7 +65,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, message: "Archivo subido exitosamente.", fileId: result.fileId });
 
     } catch (error: any) {
-        console.error('Error en la API de subida de archivos:', error);
+        console.error('--- DETAILED UPLOAD ERROR ---');
+        console.error('Error Message:', error.message);
+        console.error('Error Stack:', error.stack);
+        console.error('Full Error Object:', JSON.stringify(error, null, 2));
+        console.error('--- END DETAILED UPLOAD ERROR ---');
         return NextResponse.json({ success: false, error: error.message || 'Ocurrió un error en el servidor.' }, { status: 500 });
     }
 }
