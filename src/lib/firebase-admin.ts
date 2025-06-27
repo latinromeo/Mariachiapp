@@ -1,4 +1,3 @@
-
 import admin from 'firebase-admin';
 
 // This file ensures the Firebase Admin SDK is initialized only once.
