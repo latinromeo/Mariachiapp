@@ -4,8 +4,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Loader2, Search, Download } from "lucide-react";
+import { Upload, Loader2, Search, Download, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { type ManualFinanceEntry, getManualFinanceEntries } from "@/services/eventService";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,8 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { FINANCE_CATEGORIES } from "@/lib/constants";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import Image from "next/image";
 
 const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -26,7 +26,8 @@ const formatCurrency = (value: number | undefined) => {
 export default function InvoicesPage() {
   const { toast } = useToast();
   
-  const [imageDataUri, setImageDataUri] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const [invoices, setInvoices] = useState<ManualFinanceEntry[]>([]);
@@ -65,12 +66,36 @@ export default function InvoicesPage() {
     );
   }, [invoices, searchTerm]);
   
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setSelectedFile(null);
+      setPreview(null);
+    }
+  };
+  
   const handleAnalyze = async () => {
-    if (!imageDataUri.startsWith("data:image/")) {
+    if (!selectedFile) {
       toast({
         variant: 'destructive',
-        title: 'Formato no válido',
-        description: 'Por favor, pega el texto completo del Data URI de una imagen.',
+        title: 'No hay archivo',
+        description: 'Por favor, selecciona un archivo de imagen para analizar.',
+      });
+      return;
+    }
+    
+    if (!preview) {
+       toast({
+        variant: 'destructive',
+        title: 'Error de archivo',
+        description: 'No se pudo leer el archivo seleccionado. Inténtalo de nuevo.',
       });
       return;
     }
@@ -80,7 +105,7 @@ export default function InvoicesPage() {
       const res = await fetch('/api/analyze-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageDataUri }),
+        body: JSON.stringify({ imageDataUri: preview }),
       });
 
       const data = await res.json();
@@ -94,7 +119,11 @@ export default function InvoicesPage() {
       });
       
       // Clear input and refresh list
-      setImageDataUri("");
+      setSelectedFile(null);
+      setPreview(null);
+      const fileInput = document.getElementById('invoice-upload') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+      
       window.dispatchEvent(new Event('agendaUpdated'));
 
     } catch (error: any) {
@@ -123,27 +152,36 @@ export default function InvoicesPage() {
           <CardHeader>
               <CardTitle>Registrar Gasto con IA</CardTitle>
               <CardDescription>
-                  Pega el Data URI de la imagen de una factura y la IA extraerá los datos para registrar el gasto automáticamente.
+                  Sube la foto de una factura y la IA extraerá los datos para registrar el gasto automáticamente.
               </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid md:grid-cols-2 gap-6 items-start">
               <div className="grid w-full gap-2">
-                  <Label htmlFor="data-uri-input">Pegar Data URI de la Factura</Label>
-                  <Textarea 
-                    id="data-uri-input"
-                    placeholder="Pega aquí el texto que comienza con 'data:image/...;base64,...'"
-                    value={imageDataUri}
-                    onChange={(e) => setImageDataUri(e.target.value)}
+                  <Label htmlFor="invoice-upload">Subir imagen de la factura</Label>
+                  <Input 
+                    id="invoice-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
                     disabled={isAnalyzing}
-                    className="min-h-[120px] font-mono text-xs"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Para probar, puedes usar un conversor online de "imagen a Base64" para obtener el texto de una imagen.
+                    Formatos aceptados: PNG, JPG, WEBP.
                   </p>
+              </div>
+              <div className="flex justify-center items-center bg-muted/50 rounded-lg border border-dashed aspect-video w-full">
+                {preview ? (
+                  <Image src={preview} alt="Vista previa de la factura" width={300} height={200} className="object-contain max-h-full max-w-full rounded-md" />
+                ) : (
+                  <div className="text-center text-muted-foreground p-4">
+                    <ImageIcon className="h-10 w-10 mx-auto mb-2" />
+                    <p className="text-sm">Vista previa</p>
+                  </div>
+                )}
               </div>
           </CardContent>
           <CardFooter>
-              <Button onClick={handleAnalyze} disabled={isAnalyzing || !imageDataUri}>
+              <Button onClick={handleAnalyze} disabled={isAnalyzing || !selectedFile}>
                   {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                   {isAnalyzing ? "Analizando..." : "Analizar y Registrar Gasto"}
               </Button>
