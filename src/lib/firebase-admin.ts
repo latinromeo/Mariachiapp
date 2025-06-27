@@ -1,16 +1,12 @@
 import admin from 'firebase-admin';
 
 // This file ensures the Firebase Admin SDK is initialized only once.
-
+// A parameter-less initializeApp() is the recommended way for App Hosting,
+// as it automatically uses the service account credentials from the environment.
 if (!admin.apps.length) {
   try {
-    // Forcing explicit configuration is more robust in some environments.
-    // This directly tells the SDK which project and bucket to use.
-    admin.initializeApp({
-      projectId: "mariachi-app-ygp7h",
-      storageBucket: "mariachi-app-ygp7h.appspot.com"
-    });
-    console.log("Firebase Admin SDK initialized successfully with explicit config.");
+    admin.initializeApp();
+    console.log("Firebase Admin SDK initialized using environment credentials.");
   } catch (error: any) {
     console.error('Firebase admin initialization error:', error.stack);
     // If it's already initialized, we don't need to throw an error.
