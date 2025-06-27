@@ -235,17 +235,26 @@ export async function POST(req: NextRequest) {
   
   const cleanHistory = (history || []).filter((msg: any): msg is ChatCompletionMessageParam => {
     if (!msg || typeof msg.role !== 'string') return false;
-    if ((msg.role === 'user' || msg.role === 'system') && typeof msg.content === 'string') {
-        return true;
+    
+    // For user and system roles, content must be a non-null string.
+    if (msg.role === 'user' || msg.role === 'system') {
+        return typeof msg.content === 'string';
     }
+
+    // For assistant role, it must have either a string content or tool_calls.
     if (msg.role === 'assistant') {
-        const hasContent = typeof msg.content === 'string';
+        const hasContent = typeof msg.content === 'string' && msg.content.trim() !== '';
         const hasToolCalls = Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0;
+        // The API can return content: null with tool_calls, but for history from the client, we expect string content.
+        // This filter is robust enough for both cases.
         return hasContent || hasToolCalls;
     }
-    if (msg.role === 'tool' && typeof msg.tool_call_id === 'string' && typeof msg.content === 'string') {
-        return true;
+
+    // For tool role, tool_call_id and content are required strings.
+    if (msg.role === 'tool') {
+        return typeof msg.tool_call_id === 'string' && typeof msg.content === 'string';
     }
+    
     return false;
   });
 
@@ -285,7 +294,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    messages.push(responseMessage);
+    // Create a copy of the response message to modify safely
+    const messageToPush: OpenAI.Chat.Completions.ChatCompletionMessageParam = {
+        role: 'assistant',
+        tool_calls: responseMessage.tool_calls,
+    };
+    // The library is strict: if tool_calls are present, 'content' must not be there, even if null.
+    // So we don't add the `content` property at all.
+    messages.push(messageToPush);
 
     let refreshAgenda = false;
     let newEventDataForReceipt: any = null;
