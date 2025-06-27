@@ -396,7 +396,6 @@ export async function POST(req: NextRequest) {
         messages.push({
             tool_call_id: toolCall.id,
             role: 'tool',
-            name: functionName,
             content: functionResponseContent,
         });
       }
