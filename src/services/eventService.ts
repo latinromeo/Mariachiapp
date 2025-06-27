@@ -1,3 +1,4 @@
+
 // src/services/eventService.ts
 'use server';
 
@@ -138,19 +139,19 @@ export interface SongDetail {
   updatedAt?: any;
 }
 
+export type MediaCategory = "scores" | "promo-videos" | "pro-photos" | "client-photos" | "other";
+
 export interface MediaFile {
   id: string;
   name: string;
-  type: "image" | "video" | "audio";
+  category: MediaCategory;
+  fileType: string; // e.g., 'image/png', 'application/pdf'
   url: string;
   size: number; // in bytes
-  uploadedBy: string;
-  linkedEventId?: string;
-  uploadedAt: string;
-  tags?: string[];
-  notes?: string;
-  hint?: string;
+  uploadedBy: string; // user ID or name
+  createdAt: any;
 }
+
 
 export interface ManualFinanceEntry {
   id: string;
@@ -195,6 +196,7 @@ type RehearsalInputData = Omit<RehearsalData, 'id'|'createdAt'|'updatedAt'|'stat
 type ManualFinanceEntryInputData = Omit<ManualFinanceEntry, 'id'|'createdBy'|'createdAt'>;
 type SongInputData = Omit<SongDetail, 'id' | 'createdAt' | 'updatedAt' | 'suggestedEvents'>;
 type MusicianExpenseInput = Omit<MusicianExpense, 'id' | 'userId' | 'createdAt'>;
+export type MediaFileInput = Omit<MediaFile, 'id' | 'createdAt' | 'uploadedBy'>;
 
 
 // --- CLIENT SERVICE FUNCTIONS ---
@@ -885,27 +887,29 @@ export async function deleteSong(id: string): Promise<{ success: boolean; error?
 
 
 export async function getMedia(): Promise<MediaFile[]> {
-    // This function is not fully implemented with firebase-admin yet,
-    // returning dummy data to avoid breaking the UI.
-    const dummyMedia: MediaFile[] = [
-        {
-          id: "1", name: "Boda Pérez 2024", type: "image", url: "https://placehold.co/600x400.png", hint: "wedding mariachi",
-          size: 1200000, uploadedBy: "Admin", uploadedAt: new Date().toISOString(), tags: ["boda", "2024"],
-        },
-         {
-          id: "2", name: "Serenata a Mamá", type: "video", url: "https://placehold.co/600x400.png", hint: "serenade music",
-          size: 25000000, uploadedBy: "Admin", uploadedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), tags: ["serenata", "familia"],
-        },
-        {
-          id: "3", name: "Cumpleaños Sr. Juan", type: "image", url: "https://placehold.co/600x400.png", hint: "birthday party",
-          size: 980000, uploadedBy: "Admin", uploadedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), tags: ["cumpleaños"],
-        },
-         {
-          id: "4", name: "Audio de Referencia - El Rey", type: "audio", url: "",
-          size: 4500000, uploadedBy: "Admin", uploadedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), tags: ["repertorio", "referencia"],
-        }
-    ];
-    return Promise.resolve(dummyMedia);
+    try {
+        const q = query(collection(db, "media"), orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(processDocTimestamps).filter(Boolean) as MediaFile[];
+    } catch (error) {
+        console.error("Error fetching media files:", error);
+        return [];
+    }
+}
+
+export async function createMediaFile(data: MediaFileInput): Promise<{ success: boolean; fileId?: string; error?: string }> {
+    try {
+        const payload = {
+            ...data,
+            uploadedBy: 'admin', // Hardcoded for now, should be dynamic
+            createdAt: new Date(),
+        };
+        const docRef = await addDoc(collection(db, 'media'), cleanForFirestore(payload));
+        return { success: true, fileId: docRef.id };
+    } catch (error) {
+        console.error("Error creating media file record:", error);
+        return { success: false, error: "Failed to create media file record in database." };
+    }
 }
 
 
