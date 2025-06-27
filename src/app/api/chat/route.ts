@@ -305,6 +305,8 @@ export async function POST(req: NextRequest) {
 
     let refreshAgenda = false;
     let newEventDataForReceipt: any = null;
+    let hasCreatedEventThisTurn = false;
+    let hasCreatedRehearsalThisTurn = false;
 
     for (const toolCall of toolCalls) {
       const functionName = toolCall.function.name;
@@ -312,46 +314,56 @@ export async function POST(req: NextRequest) {
       let functionResponseContent = '';
 
       if (functionName === 'create_event') {
-          const validPlans = EVENT_PLANS.map(p => p.value);
-          if (!functionArgs.plan || !validPlans.includes(functionArgs.plan)) {
-            functionArgs.plan = 'personalizado'; 
-          }
-          const selectedPlan = EVENT_PLANS.find(p => p.value === functionArgs.plan);
+          if (hasCreatedEventThisTurn) {
+            functionResponseContent = `Un evento ya fue creado en esta solicitud. Ignorando acción duplicada.`;
+          } else {
+              const validPlans = EVENT_PLANS.map(p => p.value);
+              if (!functionArgs.plan || !validPlans.includes(functionArgs.plan)) {
+                functionArgs.plan = 'personalizado'; 
+              }
+              const selectedPlan = EVENT_PLANS.find(p => p.value === functionArgs.plan);
 
-          let contractedAmount;
-          if (selectedPlan && selectedPlan.value !== 'personalizado') {
-              contractedAmount = selectedPlan.price;
-          } else {
-              contractedAmount = functionArgs.contractedAmount || 0;
-          }
-          
-          const eventPayload = {
-            ...functionArgs,
-            paymentMethod: 'cash',
-            contractedAmount: contractedAmount,
-            amountPaid: functionArgs.amountPaid || 0,
-            musiciansPay: selectedPlan?.musicianPay || 0,
-            externalGroup: false,
-            notes: `Evento agendado por Maestro Mariachi AI.`,
-          };
-          
-          const result = await createEvent(eventPayload);
-          
-          if (result.success && result.eventId) {
-            functionResponseContent = `El evento para ${functionArgs.clientName} ha sido creado exitosamente con el ID: ${result.eventId}. Notifica al usuario que todo está confirmado.`;
-            refreshAgenda = true;
-            const pendingBalance = eventPayload.contractedAmount - eventPayload.amountPaid;
-            newEventDataForReceipt = { ...eventPayload, id: result.eventId, pendingBalance };
-          } else {
-            functionResponseContent = `Hubo un error al crear el evento: ${result.error}. Informa al usuario del problema.`;
+              let contractedAmount;
+              if (selectedPlan && selectedPlan.value !== 'personalizado') {
+                  contractedAmount = selectedPlan.price;
+              } else {
+                  contractedAmount = functionArgs.contractedAmount || 0;
+              }
+              
+              const eventPayload = {
+                ...functionArgs,
+                paymentMethod: 'cash',
+                contractedAmount: contractedAmount,
+                amountPaid: functionArgs.amountPaid || 0,
+                musiciansPay: selectedPlan?.musicianPay || 0,
+                externalGroup: false,
+                notes: `Evento agendado por Maestro Mariachi AI.`,
+              };
+              
+              const result = await createEvent(eventPayload);
+              
+              if (result.success && result.eventId) {
+                hasCreatedEventThisTurn = true; // Set flag on success
+                functionResponseContent = `El evento para ${functionArgs.clientName} ha sido creado exitosamente con el ID: ${result.eventId}. Notifica al usuario que todo está confirmado.`;
+                refreshAgenda = true;
+                const pendingBalance = eventPayload.contractedAmount - eventPayload.amountPaid;
+                newEventDataForReceipt = { ...eventPayload, id: result.eventId, pendingBalance };
+              } else {
+                functionResponseContent = `Hubo un error al crear el evento: ${result.error}. Informa al usuario del problema.`;
+              }
           }
       } else if (functionName === 'create_rehearsal') {
-            const result = await createRehearsal(functionArgs);
-            if (result.success) {
-                functionResponseContent = `El ensayo sobre "${functionArgs.focus}" ha sido creado exitosamente con el ID: ${result.rehearsalId}. Notifica al usuario que todo está confirmado.`;
-                refreshAgenda = true;
+            if (hasCreatedRehearsalThisTurn) {
+                functionResponseContent = `Un ensayo ya fue creado en esta solicitud. Ignorando acción duplicada.`;
             } else {
-                functionResponseContent = `Hubo un error al crear el ensayo: ${result.error}. Informa al usuario del problema.`;
+                const result = await createRehearsal(functionArgs);
+                if (result.success) {
+                    hasCreatedRehearsalThisTurn = true; // Set flag on success
+                    functionResponseContent = `El ensayo sobre "${functionArgs.focus}" ha sido creado exitosamente con el ID: ${result.rehearsalId}. Notifica al usuario que todo está confirmado.`;
+                    refreshAgenda = true;
+                } else {
+                    functionResponseContent = `Hubo un error al crear el ensayo: ${result.error}. Informa al usuario del problema.`;
+                }
             }
       } else if (functionName === 'get_client_count') {
             const count = await getClientCount();
