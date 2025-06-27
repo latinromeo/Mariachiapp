@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Upload, Loader2, Search, Download } from "lucide-react";
@@ -14,6 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { FINANCE_CATEGORIES } from "@/lib/constants";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number' || isNaN(value)) {
@@ -25,9 +26,8 @@ const formatCurrency = (value: number | undefined) => {
 export default function InvoicesPage() {
   const { toast } = useToast();
   
-  const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [fileName, setFileName] = useState("");
+  const [imageDataUri, setImageDataUri] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const [invoices, setInvoices] = useState<ManualFinanceEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,81 +65,47 @@ export default function InvoicesPage() {
     );
   }, [invoices, searchTerm]);
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-        if (!selectedFile.type.startsWith('image/')) {
-            toast({
-                variant: 'destructive',
-                title: 'Archivo no válido',
-                description: 'Por favor, selecciona un archivo de imagen (JPG, PNG, etc.).',
-            });
-            return;
-        }
-        setFile(selectedFile);
-        setFileName(selectedFile.name);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!file) {
+  const handleAnalyze = async () => {
+    if (!imageDataUri.startsWith("data:image/")) {
       toast({
         variant: 'destructive',
-        title: 'Ningún archivo seleccionado',
-        description: 'Por favor, selecciona un archivo para subir.',
+        title: 'Formato no válido',
+        description: 'Por favor, pega el texto completo del Data URI de una imagen.',
       });
       return;
     }
 
-    setIsUploading(true);
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
+    setIsAnalyzing(true);
+    try {
+      const res = await fetch('/api/analyze-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageDataUri }),
+      });
 
-    reader.onload = async () => {
-      const imageDataUri = reader.result as string;
-      try {
-        const res = await fetch('/api/analyze-invoice', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageDataUri }),
-        });
-
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Error en el servidor');
-        }
-
-        toast({
-          title: '¡Gasto Registrado!',
-          description: data.message,
-        });
-        
-        window.dispatchEvent(new Event('agendaUpdated'));
-
-      } catch (error: any) {
-        toast({
-          variant: 'destructive',
-          title: 'Error al Analizar Factura',
-          description: error.message || 'No se pudo procesar el archivo.',
-        });
-      } finally {
-        setIsUploading(false);
-        setFile(null);
-        setFileName('');
-        const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-        if (fileInput) fileInput.value = '';
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Error en el servidor');
       }
-    };
 
-    reader.onerror = (error) => {
-      console.error('Error reading file:', error);
+      toast({
+        title: '¡Gasto Registrado!',
+        description: data.message,
+      });
+      
+      // Clear input and refresh list
+      setImageDataUri("");
+      window.dispatchEvent(new Event('agendaUpdated'));
+
+    } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo leer el archivo seleccionado.',
+        title: 'Error al Analizar Factura',
+        description: error.message || 'No se pudo procesar la imagen.',
       });
-      setIsUploading(false);
-    };
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -155,22 +121,31 @@ export default function InvoicesPage() {
       
       <Card>
           <CardHeader>
-              <CardTitle>Subir y Registrar Gasto</CardTitle>
+              <CardTitle>Registrar Gasto con IA</CardTitle>
               <CardDescription>
-                  Sube una foto de una factura y la IA extraerá los datos para registrar el gasto automáticamente.
+                  Pega el Data URI de la imagen de una factura y la IA extraerá los datos para registrar el gasto automáticamente.
               </CardDescription>
           </CardHeader>
           <CardContent>
-              <div className="grid w-full max-w-sm items-center gap-1.5">
-                  <Label htmlFor="file-upload">Seleccionar factura (imagen)</Label>
-                  <Input id="file-upload" type="file" onChange={handleFileChange} accept="image/*" disabled={isUploading} />
-                  {fileName && <p className="text-sm text-muted-foreground">Archivo: {fileName}</p>}
+              <div className="grid w-full gap-2">
+                  <Label htmlFor="data-uri-input">Pegar Data URI de la Factura</Label>
+                  <Textarea 
+                    id="data-uri-input"
+                    placeholder="Pega aquí el texto que comienza con 'data:image/...;base64,...'"
+                    value={imageDataUri}
+                    onChange={(e) => setImageDataUri(e.target.value)}
+                    disabled={isAnalyzing}
+                    className="min-h-[120px] font-mono text-xs"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Para probar, puedes usar un conversor online de "imagen a Base64" para obtener el texto de una imagen.
+                  </p>
               </div>
           </CardContent>
           <CardFooter>
-              <Button onClick={handleUpload} disabled={isUploading || !file}>
-                  {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                  {isUploading ? "Analizando..." : "Subir y Registrar Gasto"}
+              <Button onClick={handleAnalyze} disabled={isAnalyzing || !imageDataUri}>
+                  {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                  {isAnalyzing ? "Analizando..." : "Analizar y Registrar Gasto"}
               </Button>
           </CardFooter>
       </Card>
