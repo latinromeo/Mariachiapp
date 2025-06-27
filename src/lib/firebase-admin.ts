@@ -4,15 +4,19 @@ import admin from 'firebase-admin';
 
 if (!admin.apps.length) {
   try {
-    // When running in a Google Cloud environment (like App Hosting),
-    // the SDK automatically discovers service account credentials and project info.
-    // Initializing without arguments is the most robust method in this environment.
-    admin.initializeApp();
-    console.log("Firebase Admin SDK initialized successfully using environment credentials.");
+    // Forcing explicit configuration is more robust in some environments.
+    // This directly tells the SDK which project and bucket to use.
+    admin.initializeApp({
+      projectId: "mariachi-app-ygp7h",
+      storageBucket: "mariachi-app-ygp7h.appspot.com"
+    });
+    console.log("Firebase Admin SDK initialized successfully with explicit config.");
   } catch (error: any) {
-    // If running locally, you might need to set up GOOGLE_APPLICATION_CREDENTIALS
-    // See: https://firebase.google.com/docs/admin/setup#initialize-sdk
-    console.error('Firebase admin initialization error. For local development, ensure GOOGLE_APPLICATION_CREDENTIALS is set. Error:', error.stack);
+    console.error('Firebase admin initialization error:', error.stack);
+    // If it's already initialized, we don't need to throw an error.
+    if (!admin.apps.length) {
+      throw new Error("Could not initialize Firebase Admin SDK.");
+    }
   }
 }
 
