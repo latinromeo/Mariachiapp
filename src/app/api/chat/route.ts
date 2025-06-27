@@ -416,14 +416,14 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json({
-        reply: finalResponse.choices[0].message.content,
+        reply: finalResponse.choices[0].message.content || '',
         refreshAgenda: refreshAgenda,
         newEventData: newEventDataForReceipt,
       });
     } else {
       // No tool was called, just return the text response
       return NextResponse.json({
-        reply: responseMessage.content,
+        reply: responseMessage.content || '',
         refreshAgenda: false,
       });
     }
