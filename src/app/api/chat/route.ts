@@ -70,7 +70,12 @@ export async function POST(req: NextRequest) {
 
   // Sanitize history to prevent validation errors. The OpenAI library requires assistant messages 
   // to have content if 'tool_calls' is not present. This filters out any invalid messages.
-  const cleanHistory = history.filter((msg: any) => msg.content != null);
+  const cleanHistory = history.filter((msg: any) => {
+    if (msg.role === 'assistant' && !msg.tool_calls && !msg.content) {
+      return false;
+    }
+    return true;
+  });
 
   const today = new Date();
   const formattedDate = today.toLocaleDateString('es-ES', {
