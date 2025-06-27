@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import admin from '@/lib/firebase-admin';
+import { storage } from '@/lib/firebase-admin';
 import { createMediaFile } from '@/services/eventService';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
@@ -12,6 +12,8 @@ const UploadRequestSchema = z.object({
     fileSize: z.number(),
     category: z.enum(["scores", "promo-videos", "pro-photos", "client-photos", "other"]),
 });
+
+const BUCKET_NAME = "mariachi-app-ygp7h.appspot.com";
 
 export async function POST(req: NextRequest) {
     try {
@@ -36,8 +38,7 @@ export async function POST(req: NextRequest) {
         const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
         const filePath = `media/${category}/${uuidv4()}-${sanitizedFileName}`;
         
-        const storage = admin.storage();
-        const bucket = storage.bucket("mariachi-app-ygp7h.appspot.com");
+        const bucket = storage.bucket(BUCKET_NAME);
         const file = bucket.file(filePath);
 
         await file.save(buffer, { metadata: { contentType: mimeType } });

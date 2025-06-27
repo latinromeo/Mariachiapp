@@ -1,6 +1,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import admin, { db } from '@/lib/firebase-admin';
+import { storage, db } from '@/lib/firebase-admin';
+
+const BUCKET_NAME = "mariachi-app-ygp7h.appspot.com";
 
 // This endpoint acts as a health check for the backend server and its connection to Firebase services.
 export async function GET(req: NextRequest) {
@@ -22,8 +24,7 @@ export async function GET(req: NextRequest) {
     // --- Check Storage Connection ---
     try {
         // Get the metadata of a non-existent file to verify bucket access without creating files.
-        const storage = admin.storage();
-        const bucket = storage.bucket("mariachi-app-ygp7h.appspot.com");
+        const bucket = storage.bucket(BUCKET_NAME);
         await bucket.file('health_check_test.txt').getMetadata().catch(e => {
             // We expect a "Not Found" error (code 404), which means we successfully communicated with the bucket.
             if (e.code !== 404) {

@@ -1,9 +1,11 @@
 import {NextRequest, NextResponse} from 'next/server';
 import { analyzeInvoice, AnalyzeInvoiceOutputSchema } from '@/ai/flows/analyze-invoice-flow';
 import { createManualFinanceEntry } from '@/services/eventService';
-import admin from '@/lib/firebase-admin';
+import { storage } from '@/lib/firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
+
+const BUCKET_NAME = "mariachi-app-ygp7h.appspot.com";
 
 export async function POST(req: NextRequest) {
   const { imageDataUri } = await req.json();
@@ -27,8 +29,7 @@ export async function POST(req: NextRequest) {
     // Step 2: Upload the original invoice image to Firebase Storage
     let invoiceUrl = '';
     try {
-      const storage = admin.storage();
-      const bucket = storage.bucket("mariachi-app-ygp7h.appspot.com");
+      const bucket = storage.bucket(BUCKET_NAME);
       const match = imageDataUri.match(/^data:(image\/.+);base64,(.+)$/);
       if (!match) {
           throw new Error('Formato de imagen no válido.');

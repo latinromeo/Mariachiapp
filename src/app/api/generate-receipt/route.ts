@@ -1,9 +1,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import admin, { db } from '@/lib/firebase-admin';
+import { storage, db } from '@/lib/firebase-admin';
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+
+const BUCKET_NAME = "mariachi-app-ygp7h.appspot.com";
 
 // Helper to format currency consistently.
 const formatCurrency = (value: number | undefined) => {
@@ -50,8 +52,7 @@ async function generateReceipt(eventData: any): Promise<Buffer> {
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   try {
-    const storage = admin.storage();
-    const bucket = storage.bucket("mariachi-app-ygp7h.appspot.com");
+    const bucket = storage.bucket(BUCKET_NAME);
     const logoFile = bucket.file("logo.png");
     const [logoExists] = await logoFile.exists();
     if (logoExists) {
@@ -157,8 +158,7 @@ export async function POST(req: NextRequest) {
         const pdfBuffer = await generateReceipt(eventData);
         
         console.log("Step 5: PDF buffer created. Uploading to Firebase Storage.");
-        const storage = admin.storage();
-        const bucket = storage.bucket("mariachi-app-ygp7h.appspot.com");
+        const bucket = storage.bucket(BUCKET_NAME);
         const clientNameForFile = eventData.clientName || "sin_nombre";
         const sanitizedClientName = sanitizeFilename(clientNameForFile);
         const filePath = `receipts/recibo-${sanitizedClientName}-${eventData.eventDate}.pdf`;
