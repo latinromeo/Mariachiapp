@@ -1,4 +1,3 @@
-
 // src/services/eventService.ts
 'use server';
 
