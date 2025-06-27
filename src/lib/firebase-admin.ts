@@ -2,7 +2,7 @@
 import admin from 'firebase-admin';
 
 // This file ensures the Firebase Admin SDK is initialized only once.
-const storageBucket = "mariachiappdefirebase.appspot.com";
+const storageBucket = "mariachi-app-ygp7h.appspot.com";
 
 if (!admin.apps.length) {
   try {

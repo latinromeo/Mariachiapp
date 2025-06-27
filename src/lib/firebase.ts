@@ -6,9 +6,9 @@ import { getFirestore } from 'firebase/firestore';
 // This ensures the app is always connected to the correct Firebase project.
 const firebaseConfig = {
   apiKey: "AIzaSyDXhKOt63UuXVBOQFXM6LgnpWQFwC5wJhs",
-  authDomain: "mariachiappdefirebase.firebaseapp.com",
-  projectId: "mariachiappdefirebase",
-  storageBucket: "mariachiappdefirebase.appspot.com",
+  authDomain: "mariachi-app-ygp7h.firebaseapp.com",
+  projectId: "mariachi-app-ygp7h",
+  storageBucket: "mariachi-app-ygp7h.appspot.com",
   messagingSenderId: "932231459466",
   appId: "1:932231459466:web:75998c80aba808c7f9b373",
   measurementId: "G-6SY8WZ5PF5"

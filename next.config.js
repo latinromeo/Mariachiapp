@@ -14,7 +14,7 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'storage.googleapis.com',
         port: '',
-        pathname: '/mariachiappdefirebase.appspot.com/**',
+        pathname: '/mariachi-app-ygp7h.appspot.com/**',
       },
     ],
   },
@@ -35,5 +35,3 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
-
-    
