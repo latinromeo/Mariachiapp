@@ -36,7 +36,15 @@ export async function analyzeInvoice(input: AnalyzeInvoiceInput): Promise<Analyz
   return analyzeInvoiceFlow(input);
 }
 
-const systemPrompt = `Eres un asistente contable experto. Tu tarea es analizar la imagen de una factura o recibo que te proporcionará el usuario. Extrae con precisión la descripción del gasto, el monto total, la fecha y asígnale la categoría más adecuada. Si la fecha no es clara, utiliza la fecha actual: ${new Date().toISOString().split('T')[0]}. Responde únicamente con el formato de salida JSON especificado.`;
+const systemPrompt = `Eres un asistente contable experto. Tu tarea es analizar la imagen de una factura o recibo. Extrae con precisión los siguientes campos y responde ÚNICA Y EXCLUSIVAMENTE con un objeto JSON válido, sin texto adicional, explicaciones o markdown.
+
+CAMPOS REQUERIDOS:
+- description: El concepto o descripción detallada del gasto (string).
+- amount: El monto total del gasto, como un NÚMERO (number), no un string. Ej: 1500.50.
+- date: La fecha de la transacción en formato YYYY-MM-DD (string). Si no se encuentra, usa la fecha actual: ${new Date().toISOString().split('T')[0]}.
+- category: La categoría más apropiada para el gasto, debe ser uno de los valores permitidos (string).
+
+Asegúrate de que la salida sea un JSON perfecto que se ajuste al esquema.`;
 
 const analyzeInvoicePrompt = ai.definePrompt({
   name: 'analyzeInvoicePrompt',
